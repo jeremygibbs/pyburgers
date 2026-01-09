@@ -1,68 +1,90 @@
 #!/usr/bin/env python
+"""pyBurgers: 1D Stochastic Burgers Equation Solver.
+
+A tool for studying turbulence using Direct Numerical Simulation (DNS)
+and Large-Eddy Simulation (LES) of the 1D stochastic Burgers equation.
+"""
 import argparse
+import logging
 import sys
 import time
-import numpy as np
+
 from models import DNS, LES
-from utils import io
+from utils import Input, Output, get_logger, setup_logging
 
-import cProfile
 
-# custom error message for user entry
 class InvalidMode(Exception):
-	pass 
-	
-# main program to run pyBurgers
+    """Exception raised for invalid simulation mode selection."""
+
+    pass
+
+
+def main() -> None:
+    """Run the pyBurgers simulation."""
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="Run a case with pyBurgers")
+    parser.add_argument(
+        "-m", "--mode",
+        dest='mode',
+        type=str,
+        default="dns",
+        help="Simulation mode: 'dns' or 'les'"
+    )
+    parser.add_argument(
+        "-o", "--output",
+        dest='outfile',
+        type=str,
+        help="Output file name (default: pyburgers_<mode>.nc)"
+    )
+    args = parser.parse_args()
+    mode = args.mode
+    outfile = args.outfile
+
+    # Create Input instance from namelist (reads log level)
+    namelist = 'namelist.json'
+    input_obj = Input(namelist)
+
+    # Configure logging based on namelist settings
+    setup_logging(level=input_obj.log_level)
+    logger: logging.Logger = get_logger("Main")
+
+    # Welcome message
+    logger.info("##############################################################")
+    logger.info("#                                                            #")
+    logger.info("#                   Welcome to pyBurgers                     #")
+    logger.info("#      A fun tool to study turbulence using DNS and LES      #")
+    logger.info("#                                                            #")
+    logger.info("##############################################################")
+
+    # Create Output instance
+    if not outfile:
+        outfile = f'pyburgers_{mode}.nc'
+    output_obj = Output(outfile)
+
+    # Create simulation instance
+    try:
+        if mode == "dns":
+            burgers = DNS(input_obj, output_obj)
+        elif mode == "les":
+            burgers = LES(input_obj, output_obj)
+        else:
+            raise InvalidMode(f'Error: Invalid mode "{mode}" (must be "dns" or "les")')
+    except InvalidMode as e:
+        logger.error(str(e))
+        sys.exit(1)
+
+    # Time the simulation
+    t1 = time.time()
+
+    # Run the simulation
+    burgers.run()
+
+    # Report timing
+    t2 = time.time()
+    elapsed = t2 - t1
+    logger.info(f"Done! Completed in {elapsed:0.2f} seconds")
+    logger.info("##############################################################")
+
+
 if __name__ == "__main__":
-
-	# a nice welcome message
-	print("##############################################################")
-	print("#                                                            #")
-	print("#                   Welcome to pyBurgers                     #")
-	print("#      A fun tool to study turbulence using DNS and LES      #")
-	print("#                                                            #")
-	print("##############################################################")
-	
-	# get case from user
-	parser = argparse.ArgumentParser(description="Run a case with pyBurgers")
-	parser.add_argument("-m", "--mode", dest='mode', action='store', 
-						type=str, default="dns", help="Choose dns or les")
-	parser.add_argument("-o", "--output", dest='outfile', action='store', 
-						type=str, help="Output file name")
-	args = parser.parse_args()
-	mode = args.mode
-	outf = args.outfile
-	
-	# create Input instance
-	namelist = 'namelist.json'
-	inputObj = io.Input(namelist)
-
-	# create Output instance
-	if not outf:
-		outf='pyburgers_%s.nc'%mode
-	outputObj = io.Output(outf)
-	
-	# create Burgers instance
-	try:
-		if mode == "dns":
-			burgers = DNS(inputObj,outputObj)
-		elif mode == "les":
-			burgers = LES(inputObj,outputObj)
-		else:
-			raise InvalidMode('Error: Invalid mode (must be \"dns\" or \"les\")')
-	except InvalidMode as e:
-		print(e)
-		sys.exit(1)
-	
-	# let's time this thing
-	t1 = time.time()
-	
-	# run the model
-	cProfile.runctx('burgers.run()',globals(),locals())
-	#burgers.run()
-	
-	# time info
-	t2 = time.time()
-	tt = t2 - t1
-	print("\n[pyBurgers: Run] \t Done! Completed in %0.2f seconds"%tt)
-	print("##############################################################")
+    main()

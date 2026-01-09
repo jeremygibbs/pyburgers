@@ -16,5 +16,8 @@
     },
     "output"  : {
         "t_save" : 1000
+    },
+    "logging" : {
+        "level" : "INFO"
     }
 }

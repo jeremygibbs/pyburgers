@@ -1,56 +1,88 @@
-import multiprocessing
+"""Fractional Brownian Motion noise generation for pyBurgers.
+
+This module provides the FBM class for generating stochastic forcing
+with fractional Brownian motion characteristics.
+"""
+from __future__ import annotations
+
 import numpy as np
 import pyfftw
 from scipy.stats import norm
 
-class FBM(object):
-	
-	def __init__(self,alpha,n):
-		
-		# user values
-		self.n = n
-		self.a = alpha
-		
-		# computed values
-		self.m    = int(n/2)
-		self.k    = np.abs(np.fft.fftfreq(n,d=1/n))
-		self.k[0] = 1
-		
-		# Configure pyfftw
-		fftw_nthreads = 4
-		fftw_planning = "FFTW_ESTIMATE"
-		
-		# pyfftw arrays
-		self.x     = pyfftw.empty_aligned(n, np.complex128)
-		self.fx    = pyfftw.empty_aligned(n, np.complex128)
-		self.fxn   = pyfftw.empty_aligned(n, np.complex128)
-		self.noise = pyfftw.empty_aligned(n, np.complex128)
-		
-		# pyfftw functions
-		self.fft = pyfftw.FFTW(self.x,
-							   self.fx,
-							   direction="FFTW_FORWARD",
-		                       flags=(fftw_planning,),
-		                       threads=fftw_nthreads)
-		
-		self.ifft = pyfftw.FFTW(self.fxn,
-		                        self.noise,
-		                        direction="FFTW_BACKWARD",
-		                        flags=(fftw_planning,),
-		                        threads=fftw_nthreads)
-		
-	def compute_noise(self):
-		
-		# compute input
-		self.x[:] = np.sqrt(self.n)*norm.ppf(np.random.rand(self.n))
-		
-		# compute fft
-		self.fft()
-		
-		# zero-out first and nyquist
-		self.fx[0]      = 0
-		self.fx[self.m] = 0
-		self.fxn[:]     = self.fx * ( self.k**(-self.a/2) )
-		self.ifft()
-		
-		return(np.real(self.noise))
+from .config import FFTW_PLANNING, FFTW_THREADS
+
+
+class FBM:
+    """Generates fractional Brownian motion (FBM) noise.
+
+    FBM noise is used as the stochastic forcing term in the Burgers
+    equation. The noise has a power spectrum that scales as k^(-alpha).
+
+    Attributes:
+        n: Number of grid points.
+        a: FBM exponent (alpha), controls spectral slope.
+        m: Nyquist mode index (n/2).
+        k: Wavenumber array for spectral coloring.
+    """
+
+    def __init__(self, alpha: float, n: int) -> None:
+        """Initialize the FBM noise generator.
+
+        Args:
+            alpha: FBM exponent controlling the spectral slope.
+                Typical value is 0.75 for Burgers turbulence.
+            n: Number of grid points.
+        """
+        self.n = n
+        self.a = alpha
+
+        # computed values
+        self.m = int(n / 2)
+        self.k = np.abs(np.fft.fftfreq(n, d=1 / n))
+        self.k[0] = 1  # Avoid div-by-zero; DC component is zeroed in compute_noise()
+
+        # pyfftw arrays
+        self.x = pyfftw.empty_aligned(n, np.complex128)
+        self.fx = pyfftw.empty_aligned(n, np.complex128)
+        self.fxn = pyfftw.empty_aligned(n, np.complex128)
+        self.noise = pyfftw.empty_aligned(n, np.complex128)
+
+        # pyfftw functions
+        self.fft = pyfftw.FFTW(
+            self.x, self.fx,
+            direction="FFTW_FORWARD",
+            flags=(FFTW_PLANNING,),
+            threads=FFTW_THREADS
+        )
+
+        self.ifft = pyfftw.FFTW(
+            self.fxn, self.noise,
+            direction="FFTW_BACKWARD",
+            flags=(FFTW_PLANNING,),
+            threads=FFTW_THREADS
+        )
+
+    def compute_noise(self) -> np.ndarray:
+        """Generate a realization of FBM noise.
+
+        Creates white noise, transforms to spectral space, applies
+        the FBM spectral coloring (k^(-alpha/2)), and transforms back.
+
+        Returns:
+            Real-valued noise array with FBM spectral characteristics.
+        """
+        # Generate white noise input using inverse normal CDF
+        self.x[:] = np.sqrt(self.n) * norm.ppf(np.random.rand(self.n))
+
+        # Transform to spectral space
+        self.fft()
+
+        # Zero-out DC and Nyquist modes, apply spectral coloring
+        self.fx[0] = 0
+        self.fx[self.m] = 0
+        self.fxn[:] = self.fx * (self.k ** (-self.a / 2))
+
+        # Transform back to physical space
+        self.ifft()
+
+        return np.real(self.noise)
