@@ -29,7 +29,7 @@ class SGS:
     """
 
     @staticmethod
-    def get_model(model: int, input_obj: Input) -> SGS:
+    def get_model(model: int, input_obj: Input, derivs: Any = None) -> SGS:
         """Factory method to create the appropriate SGS model.
 
         Args:
@@ -40,6 +40,7 @@ class SGS:
                 3 = Dynamic Wong-Lilly
                 4 = Deardorff 1.5-order TKE
             input_obj: Input configuration object.
+            derivs: Optional Derivatives object to share (for Deardorff model).
 
         Returns:
             Instance of the requested SGS model subclass.
@@ -57,7 +58,7 @@ class SGS:
             return WongLilly(input_obj)
         if model == 4:
             from .deardorff import Deardorff
-            return Deardorff(input_obj)
+            return Deardorff(input_obj, derivs)
         raise ValueError(f"Unknown SGS model ID: {model}. Valid options: 0-4.")
 
     def __init__(self, input_obj: Input) -> None:

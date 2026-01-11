@@ -2,3 +2,4 @@ __pycache__
 .vscode/
 *nc
 CLAUDE.md
+.DS_Store

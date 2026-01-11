@@ -124,7 +124,11 @@ class Derivatives:
                 derivatives['3'] = self.fac**3 * np.real(self.der)
             if key == 'sq':
                 # Dealiased computation of d(u^2)/dx using zero-padding
-                self.fup[:] = np.insert(self.fu, self.m, self.zp)
+                # Optimized: use slice assignment instead of np.insert()
+                # fup has size 2*nx, insert nx zeros at position m
+                self.fup[0:self.m] = self.fu[0:self.m]
+                self.fup[self.m:self.m + self.nx] = 0  # nx zeros in the middle
+                self.fup[self.m + self.nx:] = self.fu[self.m:]
                 self.ifftp()
                 self.up[:] = self.up[:] ** 2
                 self.fftp()

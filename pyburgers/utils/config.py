@@ -3,6 +3,12 @@
 This module provides centralized configuration for FFT operations
 and other simulation parameters that should be consistent across
 all modules.
+
+FFTW Configuration:
+Namelist settings (fftw.planning, fftw.threads in namelist.json)
+
+The main script (burgers.py) will override these values with namelist
+settings after the Input object is created.
 """
 from __future__ import annotations
 
@@ -11,15 +17,19 @@ import pickle
 from pathlib import Path
 
 import pyfftw
+import pyfftw.interfaces.cache as fftw_cache
 
-# FFT Configuration
-# Can be overridden via environment variables
-FFTW_THREADS = int(os.environ.get('PYBURGERS_FFTW_THREADS', 4))
-FFTW_PLANNING = os.environ.get('PYBURGERS_FFTW_PLANNING', 'FFTW_ESTIMATE')
+# FFT Configuration - will be set from namelist by burgers.py
+# Default values if not set
+FFTW_PLANNING = 'FFTW_MEASURE'
+FFTW_THREADS = 4
+
+# Enable interface cache for automatic FFT function reuse
+fftw_cache.enable()
+fftw_cache.set_keepalive_time(30)
 
 # Wisdom cache file location
 WISDOM_FILE = Path.home() / '.pyburgers_fftw_wisdom'
-
 
 def load_wisdom() -> bool:
     """Load FFTW wisdom from cache file.

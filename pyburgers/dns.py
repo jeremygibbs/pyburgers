@@ -12,11 +12,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pyfftw
 
-from utils import Derivatives, FBM, FFTW_PLANNING, FFTW_THREADS, get_logger
-
-if TYPE_CHECKING:
-    from utils.io import Input, Output
-
+from utils import Derivatives, FBM, get_logger, Input, Output
 
 class DNS:
     """Direct numerical simulation solver for the Burgers equation.
@@ -160,7 +156,7 @@ class DNS:
             else:
                 self.u[:] = self.u[:] + dt * (1.5 * rhs - 0.5 * rhsp)
 
-            # Zero Nyquist mode to prevent aliasing
+            # Zero Nyquist mode after time integration to prevent aliasing
             self.fft()
             self.fu[mp] = 0
             self.ifft()

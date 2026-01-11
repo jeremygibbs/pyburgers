@@ -59,7 +59,6 @@ def setup_logging(
     # Prevent propagation to root logger
     root_logger.propagate = False
 
-
 def get_logger(name: str) -> logging.Logger:
     """Get a logger for the specified module/class.
 
@@ -84,7 +83,6 @@ def get_logger(name: str) -> logging.Logger:
         _loggers[full_name] = logging.getLogger(full_name)
 
     return _loggers[full_name]
-
 
 def get_log_level(level_name: str) -> int:
     """Convert a log level name to its integer value.

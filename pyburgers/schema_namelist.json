@@ -1,0 +1,81 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "PyBurgers Namelist Validation Schema",
+    "description": "Schema to validate the configuration namelist for PyBurgers.",
+    "type": "object",
+    "properties": {
+        "time": {
+            "type": "object",
+            "properties": {
+                "nt": { "type": "integer", "minimum": 1 },
+                "dt": { "type": "number", "exclusiveMinimum": 0 }
+            },
+            "required": ["nt", "dt"]
+        },
+        "physics": {
+            "type": "object",
+            "properties": {
+                "noise": {
+                    "type": "object",
+                    "properties": {
+                        "alpha": { "type": "number" },
+                        "amplitude": { "type": "number", "exclusiveMinimum": 0 }
+                    },
+                    "required": ["alpha", "amplitude"]
+                },
+                "viscosity": { "type": "number", "exclusiveMinimum": 0 }
+            },
+            "required": ["noise", "viscosity"]
+        },
+        "models": {
+            "type": "object",
+            "properties": {
+                "dns": {
+                    "type": "object",
+                    "properties": {
+                        "nx": { "type": "integer", "minimum": 1 }
+                    },
+                    "required": ["nx"]
+                },
+                "les": {
+                    "type": "object",
+                    "properties": {
+                        "nx": { "type": "integer", "minimum": 1 },
+                        "sgs": { "type": "integer", "minimum": 0, "maximum": 4 }
+                    },
+                    "required": ["nx", "sgs"]
+                }
+            },
+            "required": ["dns", "les"]
+        },
+        "output": {
+            "type": "object",
+            "properties": {
+                "step_save": { "type": "integer", "minimum": 1 }
+            },
+            "required": ["step_save"]
+        },
+        "logging": {
+            "type": "object",
+            "properties": {
+                "level": {
+                    "type": "string",
+                    "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+                }
+            },
+            "required": ["level"]
+        },
+        "fftw": {
+            "type": "object",
+            "properties": {
+                "planning": {
+                    "type": "string",
+                    "enum": ["FFTW_ESTIMATE", "FFTW_MEASURE", "FFTW_PATIENT", "FFTW_EXHAUSTIVE"]
+                },
+                "threads": { "type": "integer", "minimum": 1 }
+            },
+            "required": ["planning", "threads"]
+        }
+    },
+    "required": ["time", "physics", "models", "output", "logging", "fftw"]
+}

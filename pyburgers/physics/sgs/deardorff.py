@@ -29,18 +29,21 @@ class Deardorff(SGS):
         derivs: Derivatives object for TKE gradients.
     """
 
-    def __init__(self, input_obj: Input) -> None:
+    def __init__(self, input_obj: Input, derivs: Derivatives | None = None) -> None:
         """Initialize the Deardorff TKE model.
 
         Args:
             input_obj: Input configuration object.
+            derivs: Optional shared Derivatives object for performance.
+                If not provided, creates a new instance.
         """
         super().__init__(input_obj)
         self.logger: logging.Logger = get_logger("SGS")
         self.logger.info("Using the Deardorff TKE model")
         self.dealias = Dealias(self.nx)
         self.filter = Filter(self.nx)
-        self.derivs = Derivatives(self.nx, self.dx)
+        # Use shared derivatives object if provided, otherwise create new one
+        self.derivs = derivs if derivs is not None else Derivatives(self.nx, self.dx)
 
     def compute(
         self,

@@ -77,8 +77,8 @@ class LES:
         # Filter for downscaling DNS noise to LES grid
         self.filter = Filter(self.nx, nx2=self.nxDNS)
 
-        # SGS model
-        self.subgrid = SGS.get_model(self.model, self.input)
+        # SGS model (pass derivatives to Deardorff for sharing)
+        self.subgrid = SGS.get_model(self.model, self.input, self.derivs)
 
         # Grid coordinates
         self.x = np.arange(0, 2 * np.pi, self.dx)
@@ -211,7 +211,7 @@ class LES:
             else:
                 self.u[:] = self.u[:] + self.dt * (1.5 * rhs - 0.5 * rhsp)
 
-            # Zero Nyquist mode to prevent aliasing
+            # Zero Nyquist mode after time integration to prevent aliasing
             self.fft()
             self.fu[self.mp] = 0
             self.ifft()

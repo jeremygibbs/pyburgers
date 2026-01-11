@@ -1,23 +1,41 @@
 #!/usr/bin/env python
-"""pyBurgers: 1D Stochastic Burgers Equation Solver.
+#
+# PyBurgers
+#
+# Copyright (c) 2017–2026 Jeremy A. Gibbs
+#
+# This file is part of PyBurgers.
+#
+# This software is free and is distributed under the WTFPL license.
+# See accompanying LICENSE file or visit https://www.wtfpl.net.
+#
+"""PyBurgers: 1D Stochastic Burgers Equation Solver.
 
 A tool for studying turbulence using Direct Numerical Simulation (DNS)
 and Large-Eddy Simulation (LES) of the 1D stochastic Burgers equation.
 """
 import argparse
+import atexit
 import logging
 import sys
 import time
 
 from models import DNS, LES
 from utils import Input, Output, get_logger, setup_logging
+from utils import config
+from utils.config import load_wisdom, save_wisdom
+
+# Load FFTW wisdom at startup for optimized FFT plans
+load_wisdom()
+
+# Save FFTW wisdom at exit for future runs
+atexit.register(save_wisdom)
 
 
 class InvalidMode(Exception):
     """Exception raised for invalid simulation mode selection."""
 
     pass
-
 
 def main() -> None:
     """Run the pyBurgers simulation."""
@@ -44,9 +62,16 @@ def main() -> None:
     namelist = 'namelist.json'
     input_obj = Input(namelist)
 
+    # Apply FFTW settings from namelist to config module
+    config.FFTW_PLANNING = input_obj.fftw_planning
+    config.FFTW_THREADS = input_obj.fftw_threads
+
     # Configure logging based on namelist settings
     setup_logging(level=input_obj.log_level)
     logger: logging.Logger = get_logger("Main")
+
+    # Log FFTW configuration
+    logger.debug(f"FFTW Planning: {config.FFTW_PLANNING}, Threads: {config.FFTW_THREADS}")
 
     # Welcome message
     logger.info("##############################################################")
@@ -61,7 +86,8 @@ def main() -> None:
         outfile = f'pyburgers_{mode}.nc'
     output_obj = Output(outfile)
 
-    # Create simulation instance
+    # Create simulation instance (includes FFTW planning)
+    logger.info("Initializing simulation and planning FFTs...")
     try:
         if mode == "dns":
             burgers = DNS(input_obj, output_obj)
@@ -73,7 +99,8 @@ def main() -> None:
         logger.error(str(e))
         sys.exit(1)
 
-    # Time the simulation
+    # Initialization complete - now start timing the actual simulation
+    logger.info("Initialization complete. Starting simulation run...")
     t1 = time.time()
 
     # Run the simulation

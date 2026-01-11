@@ -1,4 +1,16 @@
-"""Fractional Brownian Motion noise generation for pyBurgers.
+#!/usr/bin/env python
+#
+# PyBurgers
+#
+# Copyright (c) 2017–2026 Jeremy A. Gibbs
+#
+# This file is part of PyBurgers.
+#
+# This software is free and is distributed under the WTFPL license.
+# See accompanying LICENSE file or visit https://www.wtfpl.net.
+#
+
+"""Fractional Brownian Motion noise generation.
 
 This module provides the FBM class for generating stochastic forcing
 with fractional Brownian motion characteristics.
@@ -11,7 +23,6 @@ from scipy.stats import norm
 
 from .config import FFTW_PLANNING, FFTW_THREADS
 
-
 class FBM:
     """Generates fractional Brownian motion (FBM) noise.
 
@@ -19,27 +30,27 @@ class FBM:
     equation. The noise has a power spectrum that scales as k^(-alpha).
 
     Attributes:
-        n: Number of grid points.
-        a: FBM exponent (alpha), controls spectral slope.
-        m: Nyquist mode index (n/2).
-        k: Wavenumber array for spectral coloring.
+        n_pts: Number of grid points.
+        alpha: FBM exponent, controls spectral slope.
+        nyquist: Nyquist mode index (n/2).
+        wavenumber: Wavenumber array for spectral coloring.
     """
 
-    def __init__(self, alpha: float, n: int) -> None:
+    def __init__(self, alpha: float, n_pts: int) -> None:
         """Initialize the FBM noise generator.
 
         Args:
-            alpha: FBM exponent controlling the spectral slope.
-                Typical value is 0.75 for Burgers turbulence.
-            n: Number of grid points.
+            alpha: FBM exponent controlling the spectral slope. Typical value 
+				is 0.75 for Burgers turbulence.
+            n_pts: Number of grid points.
         """
-        self.n = n
-        self.a = alpha
+        self.n_pts = n_pts
+        self.alpha = alpha
 
         # computed values
-        self.m = int(n / 2)
-        self.k = np.abs(np.fft.fftfreq(n, d=1 / n))
-        self.k[0] = 1  # Avoid div-by-zero; DC component is zeroed in compute_noise()
+        self.nyquist = int(0.5 * n_pts)
+        self.wavenumber = np.abs(np.fft.fftfreq(n_pts, d=1/n_pts))
+        self.wavenumber[0] = 1  # Avoid /0; DC component is 0 in compute_noise()
 
         # pyfftw arrays
         self.x = pyfftw.empty_aligned(n, np.complex128)
@@ -72,15 +83,15 @@ class FBM:
             Real-valued noise array with FBM spectral characteristics.
         """
         # Generate white noise input using inverse normal CDF
-        self.x[:] = np.sqrt(self.n) * norm.ppf(np.random.rand(self.n))
+        self.x[:] = np.sqrt(self.n_pts)*norm.ppf(np.random.rand(self.n_pts))
 
         # Transform to spectral space
         self.fft()
 
         # Zero-out DC and Nyquist modes, apply spectral coloring
         self.fx[0] = 0
-        self.fx[self.m] = 0
-        self.fxn[:] = self.fx * (self.k ** (-self.a / 2))
+        self.fx[self.nyquist] = 0
+        self.fxn[:] = self.fx * (self.wavenumber ** (-0.5 * self.alpha )
 
         # Transform back to physical space
         self.ifft()

@@ -31,6 +31,9 @@ class Input:
         t_save: Output save interval in time steps.
         n_save: Number of saves (computed from t_save/dt).
         log_level: Logging level ("DEBUG", "INFO", "WARNING", etc.).
+        fftw_planning: FFTW planning strategy ("FFTW_ESTIMATE", "FFTW_MEASURE",
+                       "FFTW_PATIENT", or "FFTW_EXHAUSTIVE").
+        fftw_threads: Number of threads for FFTW operations.
     """
 
     def __init__(self, namelist: str) -> None:
@@ -81,13 +84,17 @@ class Input:
                 # logging section (optional, defaults to INFO)
                 self.log_level: str = data.get("logging", {}).get("level", "INFO")
 
+                # FFTW section (optional, with sensible defaults)
+                fftw_config = data.get("fftw", {})
+                self.fftw_planning: str = fftw_config.get("planning", "FFTW_MEASURE")
+                self.fftw_threads: int = int(fftw_config.get("threads", 4))
+
             except KeyError as e:
                 # Create logger only when needed for error reporting
                 logger = get_logger("Input")
                 logger.error(f"There was an issue accessing data from '{namelist}'")
                 logger.error(f"Error: The key {e} does not exist")
                 sys.exit(1)
-
 
 class Output:
     """Handles NetCDF output for simulation results.
