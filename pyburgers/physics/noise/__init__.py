@@ -11,8 +11,11 @@
 #
 """PyBurgers Noise Subpackage.
 
-This module serves to generate noise for the model.
+This module provides noise generation for stochastic forcing in the
+Burgers equation.
 """
 from .noise import Noise
+from .noise_fbm import FBM
+from .factory import get_noise_model
 
-__all__ = ['Noise']
+__all__ = ['Noise', 'FBM', 'get_noise_model']

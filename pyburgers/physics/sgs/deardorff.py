@@ -10,10 +10,10 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 from .sgs import SGS
-from utils import Dealias, Derivatives, Filter, get_logger
+from ...utils import Dealias, Derivatives, Filter, get_logger
 
 if TYPE_CHECKING:
-    from utils.io import Input
+    from ...utils.io import Input
 
 
 class Deardorff(SGS):
@@ -40,10 +40,27 @@ class Deardorff(SGS):
         super().__init__(input_obj)
         self.logger: logging.Logger = get_logger("SGS")
         self.logger.info("Using the Deardorff TKE model")
-        self.dealias = Dealias(self.nx)
-        self.filter = Filter(self.nx)
+        self.dealias = Dealias(
+            self.nx,
+            fftw_planning=self.fftw_planning,
+            fftw_threads=self.fftw_threads,
+        )
+        self.filter = Filter(
+            self.nx,
+            fftw_planning=self.fftw_planning,
+            fftw_threads=self.fftw_threads,
+        )
         # Use shared derivatives object if provided, otherwise create new one
-        self.derivs = derivs if derivs is not None else Derivatives(self.nx, self.dx)
+        self.derivs = (
+            derivs
+            if derivs is not None
+            else Derivatives(
+                self.nx,
+                self.dx,
+                fftw_planning=self.fftw_planning,
+                fftw_threads=self.fftw_threads,
+            )
+        )
 
     def compute(
         self,

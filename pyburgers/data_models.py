@@ -44,13 +44,13 @@ class FFTWConfig:
 @dataclass(frozen=True)
 class LESConfig:
     """Large-eddy simulation configuration.
-    
+
     Attributes:
         nx: Number of grid points.
-        model: Integer ID for the subgrid-scale model to use.
+        sgs: Integer ID for the subgrid-scale model to use (0-4).
     """
     nx: int
-    model: int
+    sgs: int
 
 @dataclass(frozen=True)
 class ModelConfig:
@@ -73,15 +73,15 @@ class LoggingConfig:
     level: str
 
 @dataclass(frozen=True)
-    class NoiseConfig:
-        """Noise method parameters.
-        
-        Attributes:
-            alpha: FBM exponent controlling the spectral slope.
-            amplitude: noise amplitude
-        """
-        alpha: float
-        amplitude: float
+class NoiseConfig:
+    """Noise method parameters.
+    
+    Attributes:
+        alpha: FBM exponent controlling the spectral slope.
+        amplitude: noise amplitude
+    """
+    alpha: float
+    amplitude: float
 
 @dataclass(frozen=True)
 class NumericsConfig:
@@ -103,14 +103,14 @@ class OutputConfig:
 
 @dataclass(frozen=True)
 class PhysicsConfig:
-    """Output file configuration.
+    """Physics configuration.
 
     Attributes:
         noise: NoiseConfig configuration
         viscosity: The fluid's kinematic viscosity [m^2/s].
     """
     noise: NoiseConfig
-    viscosity: int
+    viscosity: float
 
 @dataclass(frozen=True)
 class TimeConfig:
@@ -121,4 +121,4 @@ class TimeConfig:
         dt: Change in time between iterations [s].
     """
     nt: int
-    dt: int
+    dt: float

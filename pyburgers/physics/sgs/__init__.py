@@ -6,4 +6,7 @@ base class and factory method, making it accessible to the rest of the model.
 """
 from .sgs import SGS
 
-__all__ = ['SGS']
+# Export factory method as module-level function
+get_model = SGS.get_model
+
+__all__ = ['SGS', 'get_model']

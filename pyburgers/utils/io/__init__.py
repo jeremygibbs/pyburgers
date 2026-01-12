@@ -11,9 +11,9 @@
 #
 """PyBurgers Input/Output Subpackage.
 
-This module serves as the entry point for the I/O utilities. It imports and exposes the main `Input` and `Output`
-classes, making them directly accessible under the `pyburgers.util.io`
-namespace for convenience.
+This module serves as the entry point for the I/O utilities. It imports
+and exposes the main `Input` and `Output` classes, making them directly
+accessible under the `pyburgers.utils.io` namespace for convenience.
 """
 from .input import Input
 from .output import Output

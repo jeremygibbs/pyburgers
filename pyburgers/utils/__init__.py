@@ -1,20 +1,36 @@
-from .config import FFTW_PLANNING, FFTW_THREADS, load_wisdom, save_wisdom
-from .fbm import FBM
+#!/usr/bin/env python
+#
+# PyBurgers
+#
+# Copyright (c) 2017–2026 Jeremy A. Gibbs
+#
+# This file is part of PyBurgers.
+#
+# This software is free and is distributed under the WTFPL license.
+# See accompanying LICENSE file or visit https://www.wtfpl.net.
+#
+"""PyBurgers utilities subpackage.
+
+This module provides re-exports of commonly used utilities for convenience.
+"""
+from .fftw import load_wisdom, save_wisdom, warmup_fftw_plans
 from .io import Input, Output
 from .logging_helper import get_logger, setup_logging
 from .spectral import Dealias, Derivatives, Filter
 
 __all__ = [
-    'FFTW_PLANNING',
-    'FFTW_THREADS',
+    # FFTW wisdom management
     'load_wisdom',
     'save_wisdom',
-    'FBM',
+    'warmup_fftw_plans',
+    # I/O classes
     'Input',
     'Output',
+    # Spectral utilities
     'Dealias',
     'Derivatives',
     'Filter',
+    # Logging
     'get_logger',
     'setup_logging',
 ]

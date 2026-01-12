@@ -8,8 +8,6 @@ from __future__ import annotations
 import numpy as np
 import pyfftw
 
-from .config import FFTW_PLANNING, FFTW_THREADS
-
 
 class Derivatives:
     """Computes spectral derivatives using FFT.
@@ -26,12 +24,20 @@ class Derivatives:
         k: Wavenumber array.
     """
 
-    def __init__(self, nx: int, dx: float) -> None:
+    def __init__(
+        self,
+        nx: int,
+        dx: float,
+        fftw_planning: str = 'FFTW_MEASURE',
+        fftw_threads: int = 1
+    ) -> None:
         """Initialize the Derivatives calculator.
 
         Args:
             nx: Number of grid points.
             dx: Grid spacing.
+            fftw_planning: FFTW planning strategy.
+            fftw_threads: Number of threads for FFTW.
         """
         self.nx = nx
         self.dx = dx
@@ -58,29 +64,29 @@ class Derivatives:
         self.fft = pyfftw.FFTW(
             self.u, self.fu,
             direction="FFTW_FORWARD",
-            flags=(FFTW_PLANNING,),
-            threads=FFTW_THREADS
+            flags=(fftw_planning,),
+            threads=fftw_threads
         )
 
         self.ifft = pyfftw.FFTW(
             self.fun, self.der,
             direction="FFTW_BACKWARD",
-            flags=(FFTW_PLANNING,),
-            threads=FFTW_THREADS
+            flags=(fftw_planning,),
+            threads=fftw_threads
         )
 
         self.fftp = pyfftw.FFTW(
             self.up, self.fup,
             direction="FFTW_FORWARD",
-            flags=(FFTW_PLANNING,),
-            threads=FFTW_THREADS
+            flags=(fftw_planning,),
+            threads=fftw_threads
         )
 
         self.ifftp = pyfftw.FFTW(
             self.fup, self.up,
             direction="FFTW_BACKWARD",
-            flags=(FFTW_PLANNING,),
-            threads=FFTW_THREADS
+            flags=(fftw_planning,),
+            threads=fftw_threads
         )
 
     def compute(
@@ -152,11 +158,18 @@ class Dealias:
         m: Nyquist mode index (nx/2).
     """
 
-    def __init__(self, nx: int) -> None:
+    def __init__(
+        self,
+        nx: int,
+        fftw_planning: str = 'FFTW_MEASURE',
+        fftw_threads: int = 1
+    ) -> None:
         """Initialize the Dealias calculator.
 
         Args:
             nx: Number of grid points.
+            fftw_planning: FFTW planning strategy.
+            fftw_threads: Number of threads for FFTW.
         """
         self.nx = nx
         self.m = int(self.nx / 2)
@@ -175,29 +188,29 @@ class Dealias:
         self.fft = pyfftw.FFTW(
             self.x, self.fx,
             direction="FFTW_FORWARD",
-            flags=(FFTW_PLANNING,),
-            threads=FFTW_THREADS
+            flags=(fftw_planning,),
+            threads=fftw_threads
         )
 
         self.ifft = pyfftw.FFTW(
             self.fx, self.x,
             direction="FFTW_BACKWARD",
-            flags=(FFTW_PLANNING,),
-            threads=FFTW_THREADS
+            flags=(fftw_planning,),
+            threads=fftw_threads
         )
 
         self.fftp = pyfftw.FFTW(
             self.xp, self.fxp,
             direction="FFTW_FORWARD",
-            flags=(FFTW_PLANNING,),
-            threads=FFTW_THREADS
+            flags=(fftw_planning,),
+            threads=fftw_threads
         )
 
         self.ifftp = pyfftw.FFTW(
             self.fxp, self.xp,
             direction="FFTW_BACKWARD",
-            flags=(FFTW_PLANNING,),
-            threads=FFTW_THREADS
+            flags=(fftw_planning,),
+            threads=fftw_threads
         )
 
     def compute(self, x: np.ndarray) -> np.ndarray:
@@ -274,13 +287,21 @@ class Filter:
         nx2: Number of grid points for the source field (DNS resolution).
     """
 
-    def __init__(self, nx: int, nx2: int | None = None) -> None:
+    def __init__(
+        self,
+        nx: int,
+        nx2: int | None = None,
+        fftw_planning: str = 'FFTW_MEASURE',
+        fftw_threads: int = 1
+    ) -> None:
         """Initialize the Filter.
 
         Args:
             nx: Number of grid points for the target (filtered) field.
             nx2: Optional number of grid points for source field
                 (used for downscaling from DNS to LES).
+            fftw_planning: FFTW planning strategy.
+            fftw_threads: Number of threads for FFTW.
         """
         self.nx = nx
 
@@ -293,15 +314,15 @@ class Filter:
         self.fft = pyfftw.FFTW(
             self.x, self.fx,
             direction="FFTW_FORWARD",
-            flags=(FFTW_PLANNING,),
-            threads=FFTW_THREADS
+            flags=(fftw_planning,),
+            threads=fftw_threads
         )
 
         self.ifft = pyfftw.FFTW(
             self.fxf, self.x,
             direction="FFTW_BACKWARD",
-            flags=(FFTW_PLANNING,),
-            threads=FFTW_THREADS
+            flags=(fftw_planning,),
+            threads=fftw_threads
         )
 
         # check for optional larger nx (for downscaling from DNS->LES)
@@ -316,8 +337,8 @@ class Filter:
             self.fft2 = pyfftw.FFTW(
                 self.x2, self.fx2,
                 direction="FFTW_FORWARD",
-                flags=(FFTW_PLANNING,),
-                threads=FFTW_THREADS
+                flags=(fftw_planning,),
+                threads=fftw_threads
             )
 
     def cutoff(self, x: np.ndarray, ratio: int) -> np.ndarray:

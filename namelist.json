@@ -16,7 +16,7 @@
         },
         "les" : {
             "nx" : 512,
-            "sgs" : 1
+            "sgs" : 2
         }
     },
     "output"  : {
@@ -27,6 +27,6 @@
     },
     "fftw" : {
         "planning" : "FFTW_PATIENT",
-        "threads" : 4
+        "threads" : 8
     }
 }

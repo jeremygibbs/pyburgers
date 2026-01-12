@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 if TYPE_CHECKING:
-    from utils.io import Input
+    from ...utils.io import Input
 
 
 class SGS:
@@ -70,8 +70,10 @@ class SGS:
         """
         self.input = input_obj
         self.dt = input_obj.dt
-        self.nx = input_obj.nxLES
+        self.nx = input_obj.models.les.nx
         self.dx = 2 * np.pi / self.nx
+        self.fftw_planning = input_obj.fftw_planning
+        self.fftw_threads = input_obj.fftw_threads
 
         # SGS terms dictionary
         self.sgs: dict[str, Any] = {

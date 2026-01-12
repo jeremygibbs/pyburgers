@@ -1,3 +1,14 @@
+#!/usr/bin/env python
+#
+# PyBurgers
+#
+# Copyright (c) 2017–2026 Jeremy A. Gibbs
+#
+# This file is part of PyBurgers.
+#
+# This software is free and is distributed under the WTFPL license.
+# See accompanying LICENSE file or visit https://www.wtfpl.net.
+#
 """Large-Eddy Simulation (LES) for pyBurgers.
 
 Implements the LES solver for the 1D stochastic Burgers equation
@@ -5,40 +16,38 @@ with subgrid-scale modeling.
 """
 from __future__ import annotations
 
-import logging
-import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
-import pyfftw
 
-from .sgs import SGS
-from utils import Derivatives, FBM, Filter, FFTW_PLANNING, FFTW_THREADS, get_logger
+from .core import Burgers
+from .physics.sgs import get_model as get_sgs_model
+from .physics.noise import get_noise_model
+from .utils import Filter
 
 if TYPE_CHECKING:
-    from utils.io import Input, Output
+    from .utils.io import Input, Output
 
 
-class LES:
+class LES(Burgers):
     """Large-eddy simulation solver for the Burgers equation.
 
     Solves the filtered 1D stochastic Burgers equation using Fourier
     collocation for spatial derivatives, Adams-Bashforth time integration,
     and subgrid-scale models for unresolved turbulence.
 
+    This class inherits common functionality from Burgers and implements
+    LES-specific behavior including SGS modeling and filtered noise.
+
     Attributes:
-        input: Input configuration object.
-        output: Output handler for NetCDF writing.
-        nx: Number of LES grid points.
-        nxDNS: Number of DNS grid points (for noise generation).
-        dx: Grid spacing.
-        dt: Time step.
-        nt: Number of time steps.
-        visc: Kinematic viscosity.
-        namp: Noise amplitude.
-        model: SGS model type (0-4).
-        t_save: Output save interval.
+        nx_dns: Number of DNS grid points (for noise generation).
+        sgs_model_id: SGS model type identifier (0-4).
+        filter: Filter for downscaling DNS noise to LES grid.
+        subgrid: SGS model instance.
+        tke_sgs: Subgrid TKE (for Deardorff model).
     """
+
+    mode_name = "LES"
 
     def __init__(self, input_obj: Input, output_obj: Output) -> None:
         """Initialize the LES solver.
@@ -47,68 +56,57 @@ class LES:
             input_obj: Input configuration containing simulation parameters.
             output_obj: Output handler for writing results to NetCDF.
         """
-        self.logger: logging.Logger = get_logger("LES")
+        # Store LES-specific config before calling parent __init__
+        # (needed because _setup_mode_specific is called during parent init)
+        self._nx_dns = input_obj.models.dns.nx
+        self._sgs_model_id = input_obj.models.les.sgs
 
-        self.logger.info("You are running in LES mode")
+        super().__init__(input_obj, output_obj)
 
-        # Initialize random number generator for reproducibility
-        np.random.seed(1)
+    def _get_nx(self) -> int:
+        """Return the LES grid resolution.
 
-        # Read configuration variables
-        self.logger.debug("Reading input settings")
-        self.input = input_obj
-        self.dt = self.input.dt
-        self.nt = self.input.nt
-        self.visc = self.input.visc
-        self.namp = self.input.namp
-        self.nx = self.input.nxLES
-        self.nxDNS = self.input.nxDNS
-        self.model = self.input.sgs
-        self.t_save = self.input.t_save
-        self.mp = int(self.nx / 2)
-        self.dx = 2 * np.pi / self.nx
+        Returns:
+            Number of grid points from LES configuration.
+        """
+        return self.input.models.les.nx
+
+    def _setup_mode_specific(self) -> None:
+        """Initialize LES-specific components.
+
+        Sets up FBM noise at DNS resolution, filter for downscaling,
+        and the SGS model.
+        """
+        self.nx_dns = self._nx_dns
+        self.sgs_model_id = self._sgs_model_id
 
         # FBM noise at DNS resolution (will be filtered down)
-        self.fbm = FBM(0.75, self.nxDNS)
-
-        # Derivatives object
-        self.derivs = Derivatives(self.nx, self.dx)
+        self.fbm = get_noise_model(
+            1,
+            self.noise_alpha,
+            self.nx_dns,
+            fftw_planning=self.fftw_planning,
+            fftw_threads=self.fftw_threads,
+        )
 
         # Filter for downscaling DNS noise to LES grid
-        self.filter = Filter(self.nx, nx2=self.nxDNS)
-
-        # SGS model (pass derivatives to Deardorff for sharing)
-        self.subgrid = SGS.get_model(self.model, self.input, self.derivs)
-
-        # Grid coordinates
-        self.x = np.arange(0, 2 * np.pi, self.dx)
-
-        # Velocity field (complex for FFT operations)
-        self.u = pyfftw.empty_aligned(self.nx, dtype='complex128')
-        self.fu = pyfftw.empty_aligned(self.nx, dtype='complex128')
-
-        # FFT functions
-        self.fft = pyfftw.FFTW(
-            self.u, self.fu,
-            direction='FFTW_FORWARD',
-            flags=(FFTW_PLANNING,),
-            threads=FFTW_THREADS
+        self.filter = Filter(
+            self.nx,
+            nx2=self.nx_dns,
+            fftw_planning=self.fftw_planning,
+            fftw_threads=self.fftw_threads,
         )
-        self.ifft = pyfftw.FFTW(
-            self.fu, self.u,
-            direction='FFTW_BACKWARD',
-            flags=(FFTW_PLANNING,),
-            threads=FFTW_THREADS
-        )
+
+        # SGS model (pass derivatives for Deardorff model)
+        self.subgrid = get_sgs_model(self.sgs_model_id, self.input, self.derivs)
 
         # Initialize subgrid TKE for Deardorff model
-        if self.model == 4:
+        if self.sgs_model_id == 4:
             self.tke_sgs: np.ndarray | float = np.ones(self.nx)
         else:
-            self.tke_sgs = 0
+            self.tke_sgs = 0.0
 
-        # Output diagnostic fields
-        self.tke = np.zeros(1)
+        # LES diagnostic fields
         self.C_sgs = np.zeros(1)
         self.diss_sgs = np.zeros(1)
         self.diss_mol = np.zeros(1)
@@ -116,12 +114,17 @@ class LES:
         self.ens_dsgs = np.zeros(1)
         self.ens_dmol = np.zeros(1)
 
-        # Setup output
-        self.output = output_obj
-        self.output_dims = {'t': 0, 'x': self.nx}
-        self.output.set_dims(self.output_dims)
+        # Store last computed values for diagnostics
+        self._last_tau: np.ndarray | None = None
+        self._last_coeff: float = 0.0
 
-        self.output_fields = {
+    def _setup_output_fields(self) -> dict[str, Any]:
+        """Configure LES output fields.
+
+        Returns:
+            Dictionary with grid, velocity, TKE, and SGS diagnostic fields.
+        """
+        fields = {
             'x': self.x,
             'u': self.u,
             'tke': self.tke,
@@ -130,109 +133,109 @@ class LES:
             'diss_mol': self.diss_mol,
             'ens_prod': self.ens_prod,
             'ens_diss_sgs': self.ens_dsgs,
-            'ens_diss_mol': self.ens_dmol
+            'ens_diss_mol': self.ens_dmol,
         }
 
         # Add subgrid TKE output for Deardorff model
-        if self.model == 4:
-            self.output_fields['tke_sgs'] = self.tke_sgs
+        if self.sgs_model_id == 4:
+            fields['tke_sgs'] = self.tke_sgs
 
-        self.output.set_fields(self.output_fields)
+        return fields
 
-        # Write initial data
-        self.output.save(self.output_fields, 0, 0, initial=True)
+    def _compute_derivatives(self, t: int) -> dict[str, np.ndarray]:
+        """Compute spatial derivatives for LES.
 
-    def run(self) -> None:
-        """Execute the LES time integration loop.
+        LES needs 1st, 2nd derivatives and du²/dx. At output times,
+        also computes 3rd derivative for enstrophy budget.
 
-        Advances the simulation using 2nd-order Adams-Bashforth time
-        stepping, with Euler for the first step. Computes SGS stress
-        at each step and writes output at intervals specified by t_save.
+        Args:
+            t: Current time step index.
+
+        Returns:
+            Dictionary with '1', '2', 'sq' (and '3' at output times).
         """
-        # Placeholder for previous RHS (Adams-Bashforth)
-        rhsp = 0
+        if t % self.step_save == 0:
+            return self.derivs.compute(self.u, [1, 2, 3, 'sq'])
+        return self.derivs.compute(self.u, [1, 2, 'sq'])
 
-        # Time loop
-        for t in range(1, int(self.nt)):
-            # Current simulation time
-            looptime = t * self.dt
+    def _compute_noise(self) -> np.ndarray:
+        """Generate and filter FBM noise from DNS to LES scales.
 
-            # Progress reporting: DEBUG logs every step, INFO shows overwriting progress bar
-            if self.logger.isEnabledFor(logging.DEBUG):
-                self.logger.debug(f"Running for time {looptime:05.2f} of {int(self.nt) * self.dt:05.2f}")
-            elif self.logger.isEnabledFor(logging.INFO):
-                # Use carriage return for overwriting progress bar at INFO level
-                sys.stdout.write(
-                    f"\r[pyBurgers: pyburgers.LES] \t Running for time {looptime:05.2f} "
-                    f"of {int(self.nt) * self.dt:05.2f}"
-                )
-                sys.stdout.flush()
+        Returns:
+            Filtered noise array at LES grid resolution.
+        """
+        noise = self.fbm.compute_noise()
+        return self.filter.downscale(noise, self.nx_dns // self.nx)
 
-            # Compute spatial derivatives
-            # Include 3rd derivative at output times for enstrophy budget
-            if t % self.t_save == 0:
-                derivatives = self.derivs.compute(self.u, [1, 2, 3, 'sq'])
-                d3udx3 = derivatives['3']
-            else:
-                derivatives = self.derivs.compute(self.u, [1, 2, 'sq'])
+    def _compute_rhs(
+        self,
+        derivatives: dict[str, np.ndarray],
+        noise: np.ndarray
+    ) -> np.ndarray:
+        """Compute the LES right-hand side including SGS term.
 
-            dudx = derivatives['1']
-            du2dx = derivatives['sq']
-            d2udx2 = derivatives['2']
+        RHS = ν∂²u/∂x² - ½∂u²/∂x + √(2ε/dt) * noise - ½∂τ/∂x
 
-            # Generate and filter FBM noise from DNS to LES scales
-            noise = self.fbm.compute_noise()
-            noise = self.filter.downscale(noise, int(self.nxDNS / self.nx))
+        Args:
+            derivatives: Dictionary with derivatives.
+            noise: Filtered FBM noise array.
 
-            # Compute SGS stress
-            sgs = self.subgrid.compute(self.u, dudx, self.tke_sgs)
-            tau = sgs["tau"]
-            coeff = sgs["coeff"]
+        Returns:
+            RHS array for time integration.
+        """
+        dudx = derivatives['1']
+        d2udx2 = derivatives['2']
+        du2dx = derivatives['sq']
 
-            # Update subgrid TKE for Deardorff model
-            if self.model == 4:
-                self.tke_sgs[:] = sgs["tke_sgs"]
+        # Compute SGS stress
+        sgs = self.subgrid.compute(self.u, dudx, self.tke_sgs)
+        tau = sgs["tau"]
+        self._last_tau = tau
+        self._last_coeff = sgs["coeff"]
 
-            # Compute SGS stress divergence
-            sgsder = self.derivs.compute(tau, [1])
-            dtaudx = sgsder['1']
+        # Update subgrid TKE for Deardorff model
+        if self.sgs_model_id == 4:
+            self.tke_sgs = sgs["tke_sgs"]
 
-            # Compute RHS: diffusion - advection + forcing - SGS
-            rhs = (
-                self.visc * d2udx2
-                - 0.5 * du2dx
-                + np.sqrt(2 * self.namp / self.dt) * noise
-                - 0.5 * dtaudx
-            )
+        # Compute SGS stress divergence
+        sgsder = self.derivs.compute(tau, [1])
+        dtaudx = sgsder['1']
 
-            # Time integration (Adams-Bashforth, Euler for t=0)
-            if t == 0:
-                self.u[:] = self.u[:] + self.dt * rhs
-            else:
-                self.u[:] = self.u[:] + self.dt * (1.5 * rhs - 0.5 * rhsp)
+        return (
+            self.visc * d2udx2
+            - 0.5 * du2dx
+            + np.sqrt(2 * self.noise_amp / self.dt) * noise
+            - 0.5 * dtaudx
+        )
 
-            # Zero Nyquist mode after time integration to prevent aliasing
-            self.fft()
-            self.fu[self.mp] = 0
-            self.ifft()
+    def _save_diagnostics(
+        self,
+        derivatives: dict[str, np.ndarray],
+        t_out: int,
+        t_loop: float
+    ) -> None:
+        """Compute LES diagnostics and save output.
 
-            # Store RHS for next step
-            rhsp = rhs
+        Computes TKE, dissipation rates, enstrophy budget terms,
+        and SGS coefficient.
 
-            # Write output at save intervals
-            if t % self.t_save == 0:
-                t_out = int(t / self.t_save)
+        Args:
+            derivatives: Dictionary of spatial derivatives.
+            t_out: Output time index.
+            t_loop: Current simulation time.
+        """
+        dudx = derivatives['1']
+        d2udx2 = derivatives['2']
+        d3udx3 = derivatives.get('3', np.zeros_like(dudx))
+        tau = self._last_tau if self._last_tau is not None else np.zeros(self.nx)
 
-                # Compute diagnostics
-                self.tke[:] = np.var(self.u)
-                self.diss_sgs[:] = np.mean(-tau * dudx)
-                self.diss_mol[:] = np.mean(self.visc * dudx ** 2)
-                self.ens_prod[:] = np.mean(dudx ** 3)
-                self.ens_dsgs[:] = np.mean(-tau * d3udx3)
-                self.ens_dmol[:] = np.mean(self.visc * d2udx2 ** 2)
-                self.C_sgs[:] = coeff
+        # Compute diagnostics
+        self.tke[:] = np.var(self.u)
+        self.diss_sgs[:] = np.mean(-tau * dudx)
+        self.diss_mol[:] = np.mean(self.visc * dudx ** 2)
+        self.ens_prod[:] = np.mean(dudx ** 3)
+        self.ens_dsgs[:] = np.mean(-tau * d3udx3)
+        self.ens_dmol[:] = np.mean(self.visc * d2udx2 ** 2)
+        self.C_sgs[:] = self._last_coeff
 
-                self.output.save(self.output_fields, t_out, looptime, initial=False)
-
-        # Close output file
-        self.output.close()
+        self.output.save(self.output_fields, t_out, t_loop, initial=False)

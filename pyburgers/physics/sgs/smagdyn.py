@@ -11,10 +11,10 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 from .sgs import SGS
-from utils import Dealias, Filter, get_logger
+from ...utils import Dealias, Filter, get_logger
 
 if TYPE_CHECKING:
-    from utils.io import Input
+    from ...utils.io import Input
 
 
 class SmagDynamic(SGS):
@@ -38,8 +38,16 @@ class SmagDynamic(SGS):
         super().__init__(input_obj)
         self.logger: logging.Logger = get_logger("SGS")
         self.logger.info("Using the Dynamic Smagorinsky model")
-        self.dealias = Dealias(self.nx)
-        self.filter = Filter(self.nx)
+        self.dealias = Dealias(
+            self.nx,
+            fftw_planning=self.fftw_planning,
+            fftw_threads=self.fftw_threads,
+        )
+        self.filter = Filter(
+            self.nx,
+            fftw_planning=self.fftw_planning,
+            fftw_threads=self.fftw_threads,
+        )
 
     def compute(
         self,

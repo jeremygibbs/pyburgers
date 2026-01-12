@@ -1,5 +1,6 @@
 __pycache__
 .vscode/
 *nc
+AGENTS.md
 CLAUDE.md
 .DS_Store

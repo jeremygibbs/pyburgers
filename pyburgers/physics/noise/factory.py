@@ -10,42 +10,54 @@
 # See accompanying LICENSE file or visit https://www.wtfpl.net.
 #
 """Factory for creating noise model instances."""
-
-from ...data_models import SurfaceConfig
 from ...exceptions import NamelistError
-from ...util.io import logging_helper
+from ...utils.logging_helper import get_logger
 from .noise import Noise
 from .noise_fbm import FBM
 
-logger = logging_helper.get_logger('Noise')
+logger = get_logger('Noise')
 
-def get_noise_model(surface: SurfaceConfig) -> Surface:
+
+def get_noise_model(
+    model_id: int,
+    alpha: float,
+    n_pts: int,
+    fftw_planning: str,
+    fftw_threads: int,
+) -> Noise:
     """Factory function to select and instantiate a noise model.
 
     Args:
-        surface: Surface layer configuration.
+        model_id: Integer ID for the noise model (1 = FBM).
+        alpha: Spectral exponent for noise coloring.
+        n_pts: Number of grid points.
+        fftw_planning: FFTW planning strategy.
+        fftw_threads: Number of FFTW threads.
 
     Returns:
-        An instance of a concrete `Surface` subclass.
+        An instance of a concrete `Noise` subclass.
 
     Raises:
-        NamelistError: If the provided `key` is not a valid model ID.
+        NamelistError: If the provided `model_id` is not a valid model ID.
     """
-    # Dictionary to map keys to classes
-    sfc_models = {
-        1: SurfaceMOST,
+    noise_models = {
+        1: FBM,
     }
 
     try:
-        if surface.model == 1:
-            return SurfaceMOST(psi_stable=surface.psi_stable)
-        return sfc_models[surface.model]()
+        model_class = noise_models[model_id]
+        return model_class(
+            alpha,
+            n_pts,
+            fftw_planning=fftw_planning,
+            fftw_threads=fftw_threads,
+        )
     except KeyError as e:
-        error_msg = f'{surface.model} is an invalid surface model.'
+        error_msg = f'{model_id} is an invalid noise model.'
         logger.error('x' * 62)
         logger.error('Namelist Error: %s', error_msg)
         logger.error('Valid options are:')
-        for k, v in sfc_models.items():
+        for k, v in noise_models.items():
             logger.error('\t%d (%s)', k, v.__name__)
         logger.error('x' * 62)
         raise NamelistError(error_msg) from e
