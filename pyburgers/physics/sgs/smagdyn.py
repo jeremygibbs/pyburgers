@@ -11,10 +11,11 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 from .sgs import SGS
-from ...utils import Dealias, Filter, get_logger
+from ...utils import get_logger
 
 if TYPE_CHECKING:
     from ...utils.io import Input
+    from ...utils.spectral_workspace import SpectralWorkspace
 
 
 class SmagDynamic(SGS):
@@ -24,30 +25,23 @@ class SmagDynamic(SGS):
     coefficient from the resolved velocity field. This removes the
     need for tuning Cs and allows it to adapt to local flow conditions.
 
-    Attributes:
-        dealias: Dealias object for computing nonlinear terms.
-        filter: Filter object for test filtering.
+    Uses the shared spectral workspace for filtering and dealiasing operations.
     """
 
-    def __init__(self, input_obj: Input) -> None:
+    def __init__(
+        self,
+        input_obj: Input,
+        spectral: SpectralWorkspace
+    ) -> None:
         """Initialize the dynamic Smagorinsky model.
 
         Args:
             input_obj: Input configuration object.
+            spectral: SpectralWorkspace with shared Dealias and Filter utilities.
         """
-        super().__init__(input_obj)
+        super().__init__(input_obj, spectral)
         self.logger: logging.Logger = get_logger("SGS")
         self.logger.info("Using the Dynamic Smagorinsky model")
-        self.dealias = Dealias(
-            self.nx,
-            fftw_planning=self.fftw_planning,
-            fftw_threads=self.fftw_threads,
-        )
-        self.filter = Filter(
-            self.nx,
-            fftw_planning=self.fftw_planning,
-            fftw_threads=self.fftw_threads,
-        )
 
     def compute(
         self,
@@ -69,18 +63,18 @@ class SmagDynamic(SGS):
             Dictionary with 'tau' (SGS stress) and 'coeff' (Cs).
         """
         # Leonard stress L11 = <uu> - <u><u>
-        uf = self.filter.cutoff(u, 2)
-        uuf = self.filter.cutoff(u ** 2, 2)
+        uf = self.spectral.filter.cutoff(u, 2)
+        uuf = self.spectral.filter.cutoff(u ** 2, 2)
         L11 = uuf - uf * uf
 
         # Model tensor M11
-        dudxf = self.filter.cutoff(dudx, 2)
+        dudxf = self.spectral.filter.cutoff(dudx, 2)
         T = np.abs(dudx) * dudx
-        Tf = self.filter.cutoff(T, 2)
+        Tf = self.spectral.filter.cutoff(T, 2)
         M11 = (self.dx ** 2) * (4 * np.abs(dudxf) * dudxf - Tf)
 
         # Dealiased strain rate
-        dudx2 = self.dealias.compute(dudx)
+        dudx2 = self.spectral.dealias.compute(dudx)
 
         # Dynamic Smagorinsky coefficient
         if np.mean(M11 * M11) == 0:

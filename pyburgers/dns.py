@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 from .core import Burgers
-from .physics.noise import get_noise_model
+from .utils.spectral_workspace import SpectralWorkspace
 
 if TYPE_CHECKING:
     from .utils.io import Input, Output
@@ -35,7 +35,9 @@ class DNS(Burgers):
     time integration.
 
     This class inherits common functionality from Burgers and implements
-    DNS-specific behavior for noise generation and diagnostics.
+    DNS-specific behavior for noise generation and diagnostics. Uses a
+    SpectralWorkspace with Derivatives and Dealias utilities (no Filter
+    needed for DNS).
     """
 
     mode_name = "DNS"
@@ -57,19 +59,31 @@ class DNS(Burgers):
         """
         return self.input.models.dns.nx
 
+    def _create_spectral_workspace(self) -> SpectralWorkspace:
+        """Create the spectral workspace for DNS mode.
+
+        DNS mode does not need filtering (no nx2), but includes FBM
+        noise generation at full resolution.
+
+        Returns:
+            SpectralWorkspace configured for DNS with noise.
+        """
+        return SpectralWorkspace(
+            nx=self.nx,
+            dx=self.dx,
+            noise_alpha=self.noise_alpha,
+            noise_nx=self.nx,
+            fftw_planning=self.fftw_planning,
+            fftw_threads=self.fftw_threads
+        )
+
     def _setup_mode_specific(self) -> None:
         """Initialize DNS-specific components.
 
-        Sets up the FBM noise generator at full resolution.
+        DNS mode has no additional setup beyond the spectral workspace.
+        FBM noise is initialized as part of the workspace.
         """
-        # Fractional Brownian motion noise at full resolution
-        self.fbm = get_noise_model(
-            1,
-            self.noise_alpha,
-            self.nx,
-            fftw_planning=self.fftw_planning,
-            fftw_threads=self.fftw_threads,
-        )
+        pass
 
     def _setup_output_fields(self) -> dict[str, Any]:
         """Configure DNS output fields.
@@ -94,7 +108,7 @@ class DNS(Burgers):
         Returns:
             Dictionary with '2' and 'sq' derivatives.
         """
-        return self.derivs.compute(self.u, [2, 'sq'])
+        return self.spectral.derivatives.compute(self.u, [2, 'sq'])
 
     def _compute_noise(self) -> np.ndarray:
         """Generate FBM noise at full resolution.
@@ -102,7 +116,7 @@ class DNS(Burgers):
         Returns:
             Noise array at DNS grid resolution.
         """
-        return self.fbm.compute_noise()
+        return self.spectral.noise.compute_noise()
 
     def _compute_rhs(
         self,

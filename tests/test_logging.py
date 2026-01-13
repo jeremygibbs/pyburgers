@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from utils import get_logger, setup_logging
-from utils.io import Input
+from pyburgers.utils import get_logger, setup_logging
+from pyburgers.utils.io import Input
 
 
 class TestLoggingHelper:

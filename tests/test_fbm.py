@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from utils import FBM
+from pyburgers.utils import FBM
 
 
 class TestFBM:

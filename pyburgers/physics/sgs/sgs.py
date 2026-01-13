@@ -11,6 +11,7 @@ import numpy as np
 
 if TYPE_CHECKING:
     from ...utils.io import Input
+    from ...utils.spectral_workspace import SpectralWorkspace
 
 
 class SGS:
@@ -22,6 +23,7 @@ class SGS:
 
     Attributes:
         input: Input configuration object.
+        spectral: SpectralWorkspace with shared spectral utilities.
         dt: Time step size.
         nx: Number of LES grid points.
         dx: Grid spacing.
@@ -29,7 +31,11 @@ class SGS:
     """
 
     @staticmethod
-    def get_model(model: int, input_obj: Input, derivs: Any = None) -> SGS:
+    def get_model(
+        model: int,
+        input_obj: Input,
+        spectral: SpectralWorkspace
+    ) -> SGS:
         """Factory method to create the appropriate SGS model.
 
         Args:
@@ -40,35 +46,44 @@ class SGS:
                 3 = Dynamic Wong-Lilly
                 4 = Deardorff 1.5-order TKE
             input_obj: Input configuration object.
-            derivs: Optional Derivatives object to share (for Deardorff model).
+            spectral: SpectralWorkspace containing shared spectral utilities
+                (Derivatives, Dealias, Filter). REQUIRED for all SGS models.
 
         Returns:
             Instance of the requested SGS model subclass.
         """
         if model == 0:
-            return SGS(input_obj)
+            return SGS(input_obj, spectral)
         if model == 1:
             from .smagcon import SmagConstant
-            return SmagConstant(input_obj)
+            return SmagConstant(input_obj, spectral)
         if model == 2:
             from .smagdyn import SmagDynamic
-            return SmagDynamic(input_obj)
+            return SmagDynamic(input_obj, spectral)
         if model == 3:
             from .wonglilly import WongLilly
-            return WongLilly(input_obj)
+            return WongLilly(input_obj, spectral)
         if model == 4:
             from .deardorff import Deardorff
-            return Deardorff(input_obj, derivs)
+            return Deardorff(input_obj, spectral)
         raise ValueError(f"Unknown SGS model ID: {model}. Valid options: 0-4.")
 
-    def __init__(self, input_obj: Input) -> None:
+    def __init__(
+        self,
+        input_obj: Input,
+        spectral: SpectralWorkspace
+    ) -> None:
         """Initialize the SGS model.
 
         Args:
             input_obj: Input configuration object containing simulation
                 parameters.
+            spectral: SpectralWorkspace containing shared spectral utilities.
+                The base SGS class does not use this, but accepts it for
+                consistency with subclasses.
         """
         self.input = input_obj
+        self.spectral = spectral
         self.dt = input_obj.dt
         self.nx = input_obj.models.les.nx
         self.dx = 2 * np.pi / self.nx

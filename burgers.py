@@ -37,7 +37,6 @@ from pyburgers.utils import (
     warmup_fftw_plans,
 )
 
-
 def main() -> None:
     """Parse arguments, run the simulation, and print timing information.
 
@@ -47,12 +46,6 @@ def main() -> None:
         PyBurgersError: If an error occurs during model setup or execution.
         FileNotFoundError: If required input files cannot be found.
     """
-    # Load FFTW wisdom at startup for optimized FFT plans
-    wisdom_loaded = load_wisdom()
-
-    # Save FFTW wisdom at exit for future runs
-    atexit.register(save_wisdom)
-
     # Set up command-line argument parsing
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
         description="Run a simulation with PyBurgers"
@@ -90,17 +83,56 @@ def main() -> None:
             input_obj.fftw_threads
         )
 
+        # Load FFTW wisdom at startup for optimized FFT plans
+        # Validates that wisdom matches current grid sizes and parameters
+        wisdom_loaded, wisdom_msg = load_wisdom(
+            input_obj.models.dns.nx,
+            input_obj.models.les.nx,
+            input_obj.physics.noise.alpha,
+            input_obj.fftw_planning,
+            input_obj.fftw_threads,
+        )
+
+        if wisdom_loaded:
+            logger.debug("FFTW wisdom: %s", wisdom_msg)
+        else:
+            logger.debug("FFTW wisdom: %s", wisdom_msg)
+
+        # Register save_wisdom to run at exit
+        atexit.register(
+            save_wisdom,
+            input_obj.models.dns.nx,
+            input_obj.models.les.nx,
+            input_obj.physics.noise.alpha,
+            input_obj.fftw_planning,
+            input_obj.fftw_threads,
+        )
+
         # Generate FFTW plans if no wisdom is available yet
         if not wisdom_loaded:
             logger.info("Building FFTW plans to populate wisdom cache...")
-            warmup_fftw_plans(
+            warmup_success, warmup_msg = warmup_fftw_plans(
                 input_obj.models.dns.nx,
                 input_obj.models.les.nx,
                 input_obj.physics.noise.alpha,
                 input_obj.fftw_planning,
                 input_obj.fftw_threads,
             )
-            save_wisdom()
+
+            if warmup_success:
+                logger.debug("FFTW warmup: %s", warmup_msg)
+                # Save wisdom immediately after successful warmup
+                save_wisdom(
+                    input_obj.models.dns.nx,
+                    input_obj.models.les.nx,
+                    input_obj.physics.noise.alpha,
+                    input_obj.fftw_planning,
+                    input_obj.fftw_threads,
+                )
+                logger.debug("FFTW wisdom saved to cache")
+            else:
+                logger.warning("FFTW warmup: %s", warmup_msg)
+                logger.warning("Continuing without pre-warmed plans (will plan on-demand)")
 
         # Welcome message
         logger.info("##############################################################")

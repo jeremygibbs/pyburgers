@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from utils import Filter
+from pyburgers.utils import Filter
 
 
 class TestFilter:

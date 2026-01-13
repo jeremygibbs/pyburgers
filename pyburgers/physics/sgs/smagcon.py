@@ -10,10 +10,11 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 from .sgs import SGS
-from ...utils import Dealias, get_logger
+from ...utils import get_logger
 
 if TYPE_CHECKING:
     from ...utils.io import Input
+    from ...utils.spectral_workspace import SpectralWorkspace
 
 
 class SmagConstant(SGS):
@@ -24,24 +25,23 @@ class SmagConstant(SGS):
 
     where Cs is a constant (typically 0.16) and S is the strain rate.
 
-    Attributes:
-        dealias: Dealias object for computing |dudx| * dudx.
+    Uses the shared spectral workspace for dealiasing operations.
     """
 
-    def __init__(self, input_obj: Input) -> None:
+    def __init__(
+        self,
+        input_obj: Input,
+        spectral: SpectralWorkspace
+    ) -> None:
         """Initialize the constant Smagorinsky model.
 
         Args:
             input_obj: Input configuration object.
+            spectral: SpectralWorkspace with shared Dealias utility.
         """
-        super().__init__(input_obj)
+        super().__init__(input_obj, spectral)
         self.logger: logging.Logger = get_logger("SGS")
         self.logger.info("Using the Smagorinsky model")
-        self.dealias = Dealias(
-            self.nx,
-            fftw_planning=self.fftw_planning,
-            fftw_threads=self.fftw_threads,
-        )
 
     def compute(
         self,
@@ -60,7 +60,7 @@ class SmagConstant(SGS):
             Dictionary with 'tau' (SGS stress) and 'coeff' (Cs).
         """
         cs2 = 0.16 ** 2
-        dudx2 = self.dealias.compute(dudx)
+        dudx2 = self.spectral.dealias.compute(dudx)
 
         self.sgs['tau'] = -2 * cs2 * (self.dx ** 2) * dudx2
         self.sgs['coeff'] = np.sqrt(cs2)

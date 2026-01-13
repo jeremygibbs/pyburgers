@@ -24,7 +24,8 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import pyfftw
 
-from .utils import Derivatives, get_logger
+from .utils import get_logger
+from .utils.spectral_workspace import SpectralWorkspace
 
 if TYPE_CHECKING:
     from .utils.io import Input, Output
@@ -39,6 +40,7 @@ class Burgers(ABC):
 
     Subclasses must implement:
         - _get_nx(): Return the grid resolution for this mode
+        - _create_spectral_workspace(): Create the spectral workspace for this mode
         - _setup_mode_specific(): Initialize mode-specific components
         - _setup_output_fields(): Configure output fields dictionary
         - _compute_noise(): Generate/process noise for this time step
@@ -93,34 +95,18 @@ class Burgers(ABC):
         self.mp = self.nx // 2
         self.dx = 2 * np.pi / self.nx
 
-        # Derivatives object
-        self.derivs = Derivatives(
-            self.nx,
-            self.dx,
-            fftw_planning=self.fftw_planning,
-            fftw_threads=self.fftw_threads,
-        )
+        # Create spectral workspace (bundles Derivatives, Dealias, Filter)
+        self.spectral = self._create_spectral_workspace()
 
         # Grid coordinates
         self.x = np.arange(0, 2 * np.pi, self.dx)
 
-        # Velocity field (complex for FFT operations)
-        self.u = pyfftw.empty_aligned(self.nx, dtype='complex128')
-        self.fu = pyfftw.empty_aligned(self.nx, dtype='complex128')
+        # Reference workspace buffers (zero-copy)
+        self.u = self.spectral.u
+        self.fu = self.spectral.fu
 
-        # FFT functions
-        self.fft = pyfftw.FFTW(
-            self.u, self.fu,
-            direction='FFTW_FORWARD',
-            flags=(self.fftw_planning,),
-            threads=self.fftw_threads
-        )
-        self.ifft = pyfftw.FFTW(
-            self.fu, self.u,
-            direction='FFTW_BACKWARD',
-            flags=(self.fftw_planning,),
-            threads=self.fftw_threads
-        )
+        # Initialize velocity field to zero
+        self.u[:] = 0
 
         # Common output field
         self.tke = np.zeros(1)
@@ -144,6 +130,20 @@ class Burgers(ABC):
 
         Returns:
             Number of grid points.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def _create_spectral_workspace(self) -> SpectralWorkspace:
+        """Create the spectral workspace for this mode.
+
+        This method is called during initialization to create the
+        SpectralWorkspace that bundles all spectral utilities.
+        Subclasses should configure the workspace based on their needs
+        (e.g., LES needs nx2 for downscaling, DNS does not).
+
+        Returns:
+            Configured SpectralWorkspace instance.
         """
         raise NotImplementedError
 
@@ -253,9 +253,9 @@ class Burgers(ABC):
                 self.u[:] = self.u + self.dt * (1.5 * rhs - 0.5 * rhsp)
 
             # Zero Nyquist mode to prevent aliasing
-            self.fft()
+            self.spectral.derivatives.fft()
             self.fu[self.mp] = 0
-            self.ifft()
+            self.spectral.derivatives.ifft()
 
             # Store RHS for next step
             rhsp = rhs

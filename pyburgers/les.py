@@ -22,8 +22,7 @@ import numpy as np
 
 from .core import Burgers
 from .physics.sgs import get_model as get_sgs_model
-from .physics.noise import get_noise_model
-from .utils import Filter
+from .utils.spectral_workspace import SpectralWorkspace
 
 if TYPE_CHECKING:
     from .utils.io import Input, Output
@@ -42,7 +41,7 @@ class LES(Burgers):
     Attributes:
         nx_dns: Number of DNS grid points (for noise generation).
         sgs_model_id: SGS model type identifier (0-4).
-        filter: Filter for downscaling DNS noise to LES grid.
+        spectral: SpectralWorkspace with derivatives, dealias, and filter.
         subgrid: SGS model instance.
         tke_sgs: Subgrid TKE (for Deardorff model).
     """
@@ -71,34 +70,36 @@ class LES(Burgers):
         """
         return self.input.models.les.nx
 
+    def _create_spectral_workspace(self) -> SpectralWorkspace:
+        """Create the spectral workspace for LES mode.
+
+        LES mode needs filtering capability for downscaling DNS noise
+        to LES grid, and generates FBM noise at DNS resolution.
+
+        Returns:
+            SpectralWorkspace configured for LES with filtering and noise.
+        """
+        return SpectralWorkspace(
+            nx=self.nx,
+            dx=self.dx,
+            nx2=self._nx_dns,  # DNS resolution for downscaling
+            noise_alpha=self.noise_alpha,
+            noise_nx=self._nx_dns,  # Generate noise at DNS resolution
+            fftw_planning=self.fftw_planning,
+            fftw_threads=self.fftw_threads
+        )
+
     def _setup_mode_specific(self) -> None:
         """Initialize LES-specific components.
 
-        Sets up FBM noise at DNS resolution, filter for downscaling,
-        and the SGS model.
+        Sets up the SGS model. FBM noise and filtering are handled
+        by the spectral workspace.
         """
         self.nx_dns = self._nx_dns
         self.sgs_model_id = self._sgs_model_id
 
-        # FBM noise at DNS resolution (will be filtered down)
-        self.fbm = get_noise_model(
-            1,
-            self.noise_alpha,
-            self.nx_dns,
-            fftw_planning=self.fftw_planning,
-            fftw_threads=self.fftw_threads,
-        )
-
-        # Filter for downscaling DNS noise to LES grid
-        self.filter = Filter(
-            self.nx,
-            nx2=self.nx_dns,
-            fftw_planning=self.fftw_planning,
-            fftw_threads=self.fftw_threads,
-        )
-
-        # SGS model (pass derivatives for Deardorff model)
-        self.subgrid = get_sgs_model(self.sgs_model_id, self.input, self.derivs)
+        # SGS model (pass spectral workspace for shared utilities)
+        self.subgrid = get_sgs_model(self.sgs_model_id, self.input, self.spectral)
 
         # Initialize subgrid TKE for Deardorff model
         if self.sgs_model_id == 4:
@@ -155,8 +156,8 @@ class LES(Burgers):
             Dictionary with '1', '2', 'sq' (and '3' at output times).
         """
         if t % self.step_save == 0:
-            return self.derivs.compute(self.u, [1, 2, 3, 'sq'])
-        return self.derivs.compute(self.u, [1, 2, 'sq'])
+            return self.spectral.derivatives.compute(self.u, [1, 2, 3, 'sq'])
+        return self.spectral.derivatives.compute(self.u, [1, 2, 'sq'])
 
     def _compute_noise(self) -> np.ndarray:
         """Generate and filter FBM noise from DNS to LES scales.
@@ -164,8 +165,8 @@ class LES(Burgers):
         Returns:
             Filtered noise array at LES grid resolution.
         """
-        noise = self.fbm.compute_noise()
-        return self.filter.downscale(noise, self.nx_dns // self.nx)
+        noise = self.spectral.noise.compute_noise()
+        return self.spectral.filter.downscale(noise, self.nx_dns // self.nx)
 
     def _compute_rhs(
         self,
@@ -198,7 +199,7 @@ class LES(Burgers):
             self.tke_sgs = sgs["tke_sgs"]
 
         # Compute SGS stress divergence
-        sgsder = self.derivs.compute(tau, [1])
+        sgsder = self.spectral.derivatives.compute(tau, [1])
         dtaudx = sgsder['1']
 
         return (

@@ -13,6 +13,7 @@
 
 This module provides re-exports of commonly used utilities for convenience.
 """
+from .fbm import FBM
 from .fftw import load_wisdom, save_wisdom, warmup_fftw_plans
 from .io import Input, Output
 from .logging_helper import get_logger, setup_logging
@@ -29,6 +30,7 @@ __all__ = [
     # Spectral utilities
     'Dealias',
     'Derivatives',
+    'FBM',
     'Filter',
     # Logging
     'get_logger',

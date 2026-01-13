@@ -10,8 +10,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from models import DNS, LES
-from utils.io import Input, Output
+from pyburgers import DNS, LES
+from pyburgers.utils.io import Input, Output
 
 
 @pytest.fixture(autouse=True)
