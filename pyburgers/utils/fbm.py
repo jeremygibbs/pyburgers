@@ -19,6 +19,7 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 import pyfftw
+from scipy.stats import norm
 
 
 class FBM:
@@ -96,9 +97,8 @@ class FBM:
         Returns:
             Real-valued noise array with FBM spectral characteristics.
         """
-        # Generate white noise using numpy's optimized Ziggurat algorithm
-        # (faster than scipy.stats.norm.ppf with inverse CDF method)
-        self.x[:] = np.sqrt(self.n_pts) * np.random.standard_normal(self.n_pts)
+        # Generate white noise input using inverse normal CDF
+        self.x[:] = np.sqrt(self.n_pts) * norm.ppf(np.random.rand(self.n_pts))
 
         # Transform to spectral space
         self.fft()

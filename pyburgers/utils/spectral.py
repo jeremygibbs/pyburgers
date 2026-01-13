@@ -75,6 +75,15 @@ class Derivatives:
             threads=fftw_threads
         )
 
+        # Inverse FFT for Nyquist zeroing: fu -> u
+        # Used by core.py to zero the Nyquist mode and transform back
+        self.ifft_nyquist = pyfftw.FFTW(
+            self.fu, self.u,
+            direction="FFTW_BACKWARD",
+            flags=(fftw_planning,),
+            threads=fftw_threads
+        )
+
         self.fftp = pyfftw.FFTW(
             self.up, self.fup,
             direction="FFTW_FORWARD",

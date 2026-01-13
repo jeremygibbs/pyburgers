@@ -255,7 +255,7 @@ class Burgers(ABC):
             # Zero Nyquist mode to prevent aliasing
             self.spectral.derivatives.fft()
             self.fu[self.mp] = 0
-            self.spectral.derivatives.ifft()
+            self.spectral.derivatives.ifft_nyquist()
 
             # Store RHS for next step
             rhsp = rhs
