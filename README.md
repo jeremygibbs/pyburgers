@@ -1,4 +1,4 @@
-![Image of pyburgers logo](https://gibbs.science/img/pyburgers.png)
+![Image of pyburgers logo](https://gibbs.science/img/pyburgers_v2.png)
 
 # Burgers Turbulence (Burgulence)
 * Originally conceived by Dutch scientist, J.M. Burgers in the 1930s
