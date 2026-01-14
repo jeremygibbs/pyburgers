@@ -417,4 +417,6 @@ class Filter:
         self.ifft()
 
         # return filtered downscaled field
-        return (1 / ratio) * np.real(self.x)
+        # pyfftw >= 0.15.0 defaults to normalise_idft=True (divides by nx).
+        # To match old behavior with unnormalized IFFT, multiply by nx.
+        return (self.nx / ratio) * np.real(self.x)
