@@ -18,6 +18,7 @@ access all setup information.
 """
 import json
 import logging
+import math
 from typing import Any
 
 from ..logging_helper import get_logger, setup_logging
@@ -73,10 +74,13 @@ class Input:
         self._validate_namelist(namelist_data)
 
         # Extract and finalize logging config first so we can adjust log level
-        logging_data = namelist_data.get('logging', {})
-        log_level = logging_data.get('level', 'INFO')
-        self.logging: LoggingConfig = LoggingConfig(level=log_level)
-        setup_logging(level=log_level)
+        logging_data = namelist_data.get("logging", {})
+        log_level = logging_data.get("level", "INFO")
+        log_file = logging_data.get("file")
+        if log_file == "":
+            log_file = None
+        self.logging: LoggingConfig = LoggingConfig(level=log_level, file=log_file)
+        setup_logging(level=log_level, log_file=log_file)
 
         # Time configuration
         time_data = namelist_data['time']
@@ -109,10 +113,26 @@ class Input:
         )
 
         # Output configuration
-        output_data = namelist_data.get('output', {})
+        output_data = namelist_data.get("output", {})
+        default_t_save = 1000 * self.time.dt
         self.output: OutputConfig = OutputConfig(
-            step_save=int(output_data.get('t_save', 1000))
+            t_save=float(output_data.get("t_save", default_t_save))
         )
+        self._step_save = max(1, int(round(self.output.t_save / self.time.dt)))
+        self._t_save_effective = self._step_save * self.time.dt
+        if not math.isclose(
+            self._t_save_effective,
+            self.output.t_save,
+            rel_tol=0.0,
+            abs_tol=0.5 * self.time.dt,
+        ):
+            self.logger.warning(
+                "Requested t_save=%g not aligned with dt=%g; using %g (steps=%d)",
+                self.output.t_save,
+                self.time.dt,
+                self._t_save_effective,
+                self._step_save,
+            )
 
         # FFTW configuration
         fftw_data = namelist_data.get('fftw', {})
@@ -156,8 +176,13 @@ class Input:
 
     @property
     def step_save(self) -> int:
-        """Convenience accessor for save interval."""
-        return self.output.step_save
+        """Convenience accessor for save interval (in time steps)."""
+        return self._step_save
+
+    @property
+    def t_save(self) -> float:
+        """Convenience accessor for save interval (in seconds)."""
+        return self.output.t_save
 
     def _load_namelist(self, namelist_path: str) -> dict[str, Any]:
         """Load the JSON namelist file.
@@ -239,6 +264,12 @@ class Input:
                         f"LES 'sgs' must be 0-4, got {sgs}"
                     )
 
+        # Validate output config if present
+        if "output" in data:
+            output_data = data["output"]
+            if "t_save" in output_data and float(output_data["t_save"]) <= 0:
+                raise NamelistError("'t_save' must be positive")
+
         # Validate FFTW config if present
         if 'fftw' in data:
             fftw_data = data['fftw']
@@ -271,7 +302,17 @@ class Input:
             self.models.les.nx,
             self.models.les.sgs
         )
-        self.logger.debug('Output: step_save=%d', self.output.step_save)
+        self.logger.debug(
+            "Output: t_save=%g (steps=%d, effective=%g)",
+            self.output.t_save,
+            self._step_save,
+            self._t_save_effective,
+        )
+        self.logger.debug(
+            "Logging: level=%s, file=%s",
+            self.logging.level,
+            self.logging.file,
+        )
         self.logger.debug(
             'FFTW: planning=%s, threads=%d',
             self.fftw.planning,
@@ -291,7 +332,7 @@ class Input:
             'viscosity': self.physics.viscosity,
             'noise_alpha': self.physics.noise.alpha,
             'noise_amplitude': self.physics.noise.amplitude,
-            'step_save': self.output.step_save,
+            't_save': self.output.t_save,
         }
 
     def get_les_config(self) -> dict[str, Any]:
@@ -308,5 +349,5 @@ class Input:
             'viscosity': self.physics.viscosity,
             'noise_alpha': self.physics.noise.alpha,
             'noise_amplitude': self.physics.noise.amplitude,
-            'step_save': self.output.step_save,
+            't_save': self.output.t_save,
         }

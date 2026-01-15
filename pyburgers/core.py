@@ -56,7 +56,7 @@ class Burgers(ABC):
         nt: Number of time steps.
         visc: Kinematic viscosity.
         noise_amp: Noise amplitude.
-        step_save: Output save interval.
+        step_save: Output save interval in time steps (derived from t_save).
     """
 
     # Mode name for logging (override in subclasses)
@@ -87,6 +87,7 @@ class Burgers(ABC):
         self.noise_amp = input_obj.physics.noise.amplitude
         self.noise_alpha = input_obj.physics.noise.alpha
         self.step_save = input_obj.step_save
+        self.progress_stride = max(1, self.step_save)
         self.fftw_planning = input_obj.fftw_planning
         self.fftw_threads = input_obj.fftw_threads
 
@@ -224,7 +225,7 @@ class Burgers(ABC):
 
         Advances the simulation using 2nd-order Adams-Bashforth time
         stepping, with Euler for the first step. Writes output at
-        intervals specified by step_save.
+        intervals specified by t_save.
         """
         # Placeholder for previous RHS (Adams-Bashforth)
         rhsp: np.ndarray | int = 0
@@ -282,8 +283,15 @@ class Burgers(ABC):
                 "Running for time %05.2f of %05.2f", t_loop, total_time
             )
         elif self.logger.isEnabledFor(logging.INFO):
+            if (
+                t != 1
+                and t != (self.nt - 1)
+                and self.progress_stride > 1
+                and t % self.progress_stride != 0
+            ):
+                return
             sys.stdout.write(
-                f"\r[pyBurgers: pyBurgers.{self.mode_name}] \t "
+                f"\r[PyBurgers: PyBurgers.{self.mode_name}] \t "
                 f"Running for time {t_loop:05.2f} of {total_time:05.2f}"
             )
             sys.stdout.flush()

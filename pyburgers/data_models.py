@@ -69,8 +69,10 @@ class LoggingConfig:
 
     Attributes:
         level: Logging level for the simulation (e.g., 'info', 'debug').
+        file: Optional log file path for file logging.
     """
     level: str
+    file: str | None = None
 
 @dataclass(frozen=True)
 class NoiseConfig:
@@ -97,9 +99,9 @@ class OutputConfig:
     """Output file configuration.
 
     Attributes:
-        step_save: Frequency of save calls in time steps
+        t_save: Save interval in physical time [s]
     """
-    step_save: int
+    t_save: float
 
 @dataclass(frozen=True)
 class PhysicsConfig:

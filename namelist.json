@@ -16,14 +16,15 @@
         },
         "les" : {
             "nx" : 512,
-            "sgs" : 2
+            "sgs" : 4
         }
     },
     "output"  : {
-        "t_save" : 1000
+        "t_save" : 0.1
     },
     "logging" : {
-        "level" : "INFO"
+        "level" : "INFO",
+        "file" : "pyburgers.log"
     },
     "fftw" : {
         "planning" : "FFTW_PATIENT",

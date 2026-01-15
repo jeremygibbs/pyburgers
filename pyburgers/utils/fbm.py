@@ -19,7 +19,6 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 import pyfftw
-from scipy.stats import norm
 
 
 class FBM:
@@ -60,18 +59,19 @@ class FBM:
 
         # Computed values
         self.nyquist = int(0.5 * n_pts)
-        wavenumber = np.abs(np.fft.fftfreq(n_pts, d=1/n_pts))
+        self.nk = self.nyquist + 1
+        wavenumber = np.fft.rfftfreq(n_pts, d=1 / n_pts)
         wavenumber[0] = 1  # Avoid /0; DC component is 0 in compute_noise()
 
         # Precompute spectral coloring coefficients (k^(-alpha/2))
         # This avoids redundant power computation in compute_noise()
         self._coloring = wavenumber ** (-0.5 * alpha)
 
-        # pyfftw arrays
-        self.x = pyfftw.empty_aligned(n_pts, np.complex128)
-        self.fx = pyfftw.empty_aligned(n_pts, np.complex128)
-        self.fxn = pyfftw.empty_aligned(n_pts, np.complex128)
-        self.noise = pyfftw.empty_aligned(n_pts, np.complex128)
+        # pyfftw arrays (real <-> complex rfft/irfft)
+        self.x = pyfftw.empty_aligned(n_pts, np.float64)
+        self.fx = pyfftw.empty_aligned(self.nk, np.complex128)
+        self.fxn = pyfftw.empty_aligned(self.nk, np.complex128)
+        self.noise = pyfftw.empty_aligned(n_pts, np.float64)
 
         # pyfftw functions
         self.fft = pyfftw.FFTW(
@@ -97,8 +97,8 @@ class FBM:
         Returns:
             Real-valued noise array with FBM spectral characteristics.
         """
-        # Generate white noise input using inverse normal CDF
-        self.x[:] = np.sqrt(self.n_pts) * norm.ppf(np.random.rand(self.n_pts))
+        # Generate white noise input (faster than inverse CDF)
+        self.x[:] = np.sqrt(self.n_pts) * np.random.standard_normal(self.n_pts)
 
         # Transform to spectral space
         self.fft()
@@ -111,4 +111,4 @@ class FBM:
         # Transform back to physical space
         self.ifft()
 
-        return np.real(self.noise)
+        return self.noise

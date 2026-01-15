@@ -12,11 +12,11 @@ import numpy as np
 
 from .sgs import SGS
 from ...utils import get_logger
+from ...utils import constants as c
 
 if TYPE_CHECKING:
     from ...utils.io import Input
     from ...utils.spectral_workspace import SpectralWorkspace
-
 
 class WongLilly(SGS):
     """Dynamic Wong-Lilly subgrid-scale model.
@@ -59,14 +59,20 @@ class WongLilly(SGS):
         Returns:
             Dictionary with 'tau' (SGS stress) and 'coeff' (C_WL).
         """
+        
+        # Model constants
+        ratio = c.sgs.TEST_FILTER_RATIO
+        exponent = c.sgs.WONGLILLY_EXPONENT
+        
         # Leonard stress L11
-        uf = self.spectral.filter.cutoff(u, 2)
-        uuf = self.spectral.filter.cutoff(u ** 2, 2)
+        uf = self.spectral.filter.cutoff(u, ratio)
+        uuf = self.spectral.filter.cutoff(u ** 2, ratio)
         L11 = uuf - uf * uf
 
         # Model tensor M11 (Wong-Lilly scaling)
-        dudxf = self.spectral.filter.cutoff(dudx, 2)
-        M11 = self.dx ** (4 / 3) * (1 - 2 ** (4 / 3)) * dudxf
+        dudxf = self.spectral.filter.cutoff(dudx, ratio)
+        ratio_pow = ratio ** exponent
+        M11 = self.dx ** exponent * (1 - ratio_pow) * dudxf
 
         # Wong-Lilly coefficient
         if np.mean(M11 * M11) == 0:
@@ -76,7 +82,7 @@ class WongLilly(SGS):
             if cwl < 0:
                 cwl = 0
 
-        self.sgs['tau'] = -2 * cwl * (self.dx ** (4 / 3)) * dudx
+        self.sgs['tau'] = -2 * cwl * (self.dx ** exponent) * dudx
         self.sgs['coeff'] = cwl
 
         return self.sgs

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from pathlib import Path
 from typing import Literal
 
 # Valid log level names
@@ -23,6 +24,8 @@ _loggers: dict[str, logging.Logger] = {}
 def setup_logging(
     level: str | int = "INFO",
     format_string: str | None = None,
+    log_file: str | None = None,
+    file_mode: str = "w",
 ) -> None:
     """Configure the root logger for pyBurgers.
 
@@ -33,6 +36,8 @@ def setup_logging(
         level: Log level as string ("DEBUG", "INFO", etc.) or int.
         format_string: Optional custom format string. If None, uses
             DEBUG_FORMAT for DEBUG level, DEFAULT_FORMAT otherwise.
+        log_file: Optional log file path for file logging.
+        file_mode: File mode for log file handler (default: "w").
     """
     # Convert string level to int if needed
     if isinstance(level, str):
@@ -55,6 +60,15 @@ def setup_logging(
     handler.setFormatter(logging.Formatter(format_string))
 
     root_logger.addHandler(handler)
+
+    if log_file:
+        log_path = Path(log_file).expanduser()
+        if log_path.parent != Path("."):
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(log_path, mode=file_mode, encoding="utf-8")
+        file_handler.setLevel(level)
+        file_handler.setFormatter(logging.Formatter(format_string))
+        root_logger.addHandler(file_handler)
 
     # Prevent propagation to root logger
     root_logger.propagate = False

@@ -51,9 +51,9 @@
         "output": {
             "type": "object",
             "properties": {
-                "step_save": { "type": "integer", "minimum": 1 }
+                "t_save": { "type": "number", "exclusiveMinimum": 0 }
             },
-            "required": ["step_save"]
+            "required": ["t_save"]
         },
         "logging": {
             "type": "object",
@@ -61,7 +61,8 @@
                 "level": {
                     "type": "string",
                     "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-                }
+                },
+                "file": { "type": "string" }
             },
             "required": ["level"]
         },

@@ -32,8 +32,8 @@ class SpectralWorkspace:
         dealias: Dealias calculator for nonlinear products.
         filter: Filter for spectral cutoff and downscaling.
         noise: FBM noise generator (only if noise_alpha provided).
-        u: Primary velocity buffer (reference to derivatives.u).
-        fu: Primary Fourier space buffer (reference to derivatives.fu).
+        u: Primary velocity buffer (float64, size nx).
+        fu: Primary Fourier space buffer (complex128, size nx//2+1 for rfft).
 
     Example:
         >>> # DNS workspace with noise

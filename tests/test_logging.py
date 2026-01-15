@@ -37,6 +37,19 @@ class TestLoggingHelper:
         setup_logging(level=logging.WARNING)
         assert logging.getLogger("pyBurgers").level == logging.WARNING
 
+    def test_setup_logging_file_handler(self, tmp_path: Path) -> None:
+        """Test that file logging writes to the specified log file."""
+        log_file = tmp_path / "pyburgers.log"
+        setup_logging(level="INFO", log_file=str(log_file))
+        logger = get_logger("Test")
+
+        logger.info("File log message")
+        for handler in logging.getLogger("pyBurgers").handlers:
+            handler.flush()
+
+        assert log_file.exists()
+        assert "File log message" in log_file.read_text()
+
     def test_get_logger_returns_logger(self) -> None:
         """Test that get_logger returns a Logger instance."""
         logger = get_logger("Test")

@@ -4,3 +4,4 @@ __pycache__
 AGENTS.md
 CLAUDE.md
 .DS_Store
+*.log

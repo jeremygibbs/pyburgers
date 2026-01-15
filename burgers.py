@@ -137,7 +137,7 @@ def main() -> None:
         # Welcome message
         logger.info("##############################################################")
         logger.info("#                                                            #")
-        logger.info("#                   Welcome to pyBurgers                     #")
+        logger.info("#                   Welcome to PyBurgers                     #")
         logger.info("#      A fun tool to study turbulence using DNS and LES      #")
         logger.info("#                                                            #")
         logger.info("##############################################################")

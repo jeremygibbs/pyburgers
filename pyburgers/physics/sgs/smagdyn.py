@@ -12,11 +12,11 @@ import numpy as np
 
 from .sgs import SGS
 from ...utils import get_logger
+from ...utils import constants as c
 
 if TYPE_CHECKING:
     from ...utils.io import Input
     from ...utils.spectral_workspace import SpectralWorkspace
-
 
 class SmagDynamic(SGS):
     """Dynamic Smagorinsky subgrid-scale model.
@@ -62,16 +62,19 @@ class SmagDynamic(SGS):
         Returns:
             Dictionary with 'tau' (SGS stress) and 'coeff' (Cs).
         """
+        # Model constants
+        ratio = c.sgs.TEST_FILTER_RATIO
+        
         # Leonard stress L11 = <uu> - <u><u>
-        uf = self.spectral.filter.cutoff(u, 2)
-        uuf = self.spectral.filter.cutoff(u ** 2, 2)
+        uf = self.spectral.filter.cutoff(u, ratio)
+        uuf = self.spectral.filter.cutoff(u ** 2, ratio)
         L11 = uuf - uf * uf
 
         # Model tensor M11
-        dudxf = self.spectral.filter.cutoff(dudx, 2)
+        dudxf = self.spectral.filter.cutoff(dudx, ratio)
         T = np.abs(dudx) * dudx
-        Tf = self.spectral.filter.cutoff(T, 2)
-        M11 = (self.dx ** 2) * (4 * np.abs(dudxf) * dudxf - Tf)
+        Tf = self.spectral.filter.cutoff(T, ratio)
+        M11 = (self.dx ** 2) * ((ratio ** 2) * np.abs(dudxf) * dudxf - Tf)
 
         # Dealiased strain rate
         dudx2 = self.spectral.dealias.compute(dudx)

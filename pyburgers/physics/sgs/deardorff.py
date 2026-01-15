@@ -11,11 +11,11 @@ import numpy as np
 
 from .sgs import SGS
 from ...utils import get_logger
+from ...utils import constants as c
 
 if TYPE_CHECKING:
     from ...utils.io import Input
     from ...utils.spectral_workspace import SpectralWorkspace
-
 
 class Deardorff(SGS):
     """Deardorff 1.5-order TKE subgrid-scale model.
@@ -62,9 +62,10 @@ class Deardorff(SGS):
             Dictionary with 'tau' (SGS stress), 'coeff' (c1),
             and 'tke_sgs' (updated subgrid TKE).
         """
+        
         # Model constants
-        ce = 0.70  # Dissipation coefficient
-        c1 = 0.10  # Eddy viscosity coefficient
+        ce = c.sgs.DEARDORFF_CE  # Dissipation coefficient
+        c1 = c.sgs.DEARDORFF_C1  # Eddy viscosity coefficient
 
         # Dealiased strain rate squared
         dudx2 = self.spectral.dealias.compute(dudx)

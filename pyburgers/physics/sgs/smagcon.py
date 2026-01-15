@@ -11,11 +11,11 @@ import numpy as np
 
 from .sgs import SGS
 from ...utils import get_logger
+from ...utils import constants as c
 
 if TYPE_CHECKING:
     from ...utils.io import Input
     from ...utils.spectral_workspace import SpectralWorkspace
-
 
 class SmagConstant(SGS):
     """Constant-coefficient Smagorinsky subgrid-scale model.
@@ -59,7 +59,10 @@ class SmagConstant(SGS):
         Returns:
             Dictionary with 'tau' (SGS stress) and 'coeff' (Cs).
         """
-        cs2 = 0.16 ** 2
+        # Model constants
+        cs = c.sgs.SMAG_CONSTANT_CS
+        cs2 = cs ** 2
+        
         dudx2 = self.spectral.dealias.compute(dudx)
 
         self.sgs['tau'] = -2 * cs2 * (self.dx ** 2) * dudx2

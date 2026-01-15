@@ -199,8 +199,12 @@ class LES(Burgers):
             self.tke_sgs = sgs["tke_sgs"]
 
         # Compute SGS stress divergence
+        # Save u because compute() overwrites the internal buffer
+        u_saved = self.u.copy()
         sgsder = self.spectral.derivatives.compute(tau, [1])
         dtaudx = sgsder['1']
+        # Restore u
+        self.u[:] = u_saved
 
         return (
             self.visc * d2udx2
