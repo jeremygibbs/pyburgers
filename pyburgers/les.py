@@ -57,8 +57,8 @@ class LES(Burgers):
         """
         # Store LES-specific config before calling parent __init__
         # (needed because _setup_mode_specific is called during parent init)
-        self._nx_dns = input_obj.models.dns.nx
-        self._sgs_model_id = input_obj.models.les.sgs
+        self._nx_dns = input_obj.grid.dns.nx
+        self._sgs_model_id = input_obj.physics.sgs_model
 
         super().__init__(input_obj, output_obj)
 
@@ -68,7 +68,7 @@ class LES(Burgers):
         Returns:
             Number of grid points from LES configuration.
         """
-        return self.input.models.les.nx
+        return self.input.grid.les.nx
 
     def _create_spectral_workspace(self) -> SpectralWorkspace:
         """Create the spectral workspace for LES mode.

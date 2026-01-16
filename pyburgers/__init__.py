@@ -18,10 +18,11 @@ A tool for studying turbulence using DNS and LES.
 # Core data structures from the namelist file
 from .data_models import (
     DNSConfig,
+    DomainConfig,
     FFTWConfig,
+    GridConfig,
     LESConfig,
     LoggingConfig,
-    ModelConfig,
     NoiseConfig,
     NumericsConfig,
     OutputConfig,
@@ -43,10 +44,11 @@ from .les import LES
 __all__ = [
     # Data models
     'DNSConfig',
+    'DomainConfig',
     'FFTWConfig',
+    'GridConfig',
     'LESConfig',
     'LoggingConfig',
-    'ModelConfig',
     'NoiseConfig',
     'NumericsConfig',
     'OutputConfig',

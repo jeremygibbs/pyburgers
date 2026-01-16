@@ -90,17 +90,18 @@ class Burgers(ABC):
         self.progress_stride = max(1, self.step_save)
         self.fftw_planning = input_obj.fftw_planning
         self.fftw_threads = input_obj.fftw_threads
+        self.domain_length = input_obj.domain_length
 
         # Get mode-specific grid resolution
         self.nx = self._get_nx()
         self.mp = self.nx // 2
-        self.dx = 2 * np.pi / self.nx
+        self.dx = self.domain_length / self.nx
 
         # Create spectral workspace (bundles Derivatives, Dealias, Filter)
         self.spectral = self._create_spectral_workspace()
 
         # Grid coordinates
-        self.x = np.arange(0, 2 * np.pi, self.dx)
+        self.x = np.arange(0, self.domain_length, self.dx)
 
         # Reference workspace buffers (zero-copy)
         self.u = self.spectral.u

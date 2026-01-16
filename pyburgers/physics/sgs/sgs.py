@@ -85,8 +85,8 @@ class SGS:
         self.input = input_obj
         self.spectral = spectral
         self.dt = input_obj.dt
-        self.nx = input_obj.models.les.nx
-        self.dx = 2 * np.pi / self.nx
+        self.nx = input_obj.grid.les.nx
+        self.dx = input_obj.domain_length / self.nx
         self.fftw_planning = input_obj.fftw_planning
         self.fftw_threads = input_obj.fftw_threads
 

@@ -34,17 +34,21 @@
 * LES took 62 minutes on a 2019 iMac
 
 # Namelist Settings
-* nx: number of grid points in the x-direction
-* nt: number of time steps
-* dt: time step (s)
-* visc: kinematic viscosity (m^2 s^-3)
-* damp: noise amplitude for FBM noise
-* sgs: subgrid-scale model
+* grid.domain_length: domain length (default 2π)
+* grid.dns.nx: DNS grid points in x
+* grid.les.nx: LES grid points in x
+* time.nt: number of time steps
+* time.dt: time step (s)
+* physics.viscosity: kinematic viscosity (m^2 s^-1)
+* physics.noise.alpha: FBM spectral exponent
+* physics.noise.amplitude: noise amplitude
+* physics.sgs_model: subgrid-scale model
   * 0 = no model
   * 1 = constant-coefficient Smagorinsky
   * 2 = dynamic Smagorinsky
   * 3 = dynamic Wong-Lilly
   * 4 = Deardorff 1.5-order TKE
+* output.t_save: output interval in seconds
 
 # Requirements
 * PyBurgers requires Python 3, NumPy, json, and netCDF4

@@ -23,13 +23,15 @@
                     },
                     "required": ["alpha", "amplitude"]
                 },
-                "viscosity": { "type": "number", "exclusiveMinimum": 0 }
+                "viscosity": { "type": "number", "exclusiveMinimum": 0 },
+                "sgs_model": { "type": "integer", "minimum": 0, "maximum": 4 }
             },
             "required": ["noise", "viscosity"]
         },
-        "models": {
+        "grid": {
             "type": "object",
             "properties": {
+                "domain_length": { "type": "number", "exclusiveMinimum": 0 },
                 "dns": {
                     "type": "object",
                     "properties": {
@@ -40,10 +42,9 @@
                 "les": {
                     "type": "object",
                     "properties": {
-                        "nx": { "type": "integer", "minimum": 1 },
-                        "sgs": { "type": "integer", "minimum": 0, "maximum": 4 }
+                        "nx": { "type": "integer", "minimum": 1 }
                     },
-                    "required": ["nx", "sgs"]
+                    "required": ["nx"]
                 }
             },
             "required": ["dns", "les"]
@@ -78,5 +79,5 @@
             "required": ["planning", "threads"]
         }
     },
-    "required": ["time", "physics", "models", "output", "logging", "fftw"]
+    "required": ["time", "physics", "grid", "output", "logging", "fftw"]
 }

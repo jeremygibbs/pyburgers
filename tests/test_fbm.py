@@ -1,5 +1,5 @@
 """Tests for fractional Brownian motion noise generation."""
-from __future__ import annotations
+##from __future__ import annotations
 
 import numpy as np
 import pytest

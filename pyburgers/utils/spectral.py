@@ -254,7 +254,7 @@ class Dealias:
             Dealiased result of |x| * x.
         """
         # constants
-        scale = c.sgs.DEALIAS_SCALE
+        scale = c.spectral.DEALIAS_SCALE
         
         # copy input array
         self.x[:] = x

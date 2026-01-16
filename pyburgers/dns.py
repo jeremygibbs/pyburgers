@@ -57,7 +57,7 @@ class DNS(Burgers):
         Returns:
             Number of grid points from DNS configuration.
         """
-        return self.input.models.dns.nx
+        return self.input.grid.dns.nx
 
     def _create_spectral_workspace(self) -> SpectralWorkspace:
         """Create the spectral workspace for DNS mode.

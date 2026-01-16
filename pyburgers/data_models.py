@@ -31,6 +31,15 @@ class DNSConfig:
     nx: int
 
 @dataclass(frozen=True)
+class DomainConfig:
+    """Domain configuration.
+
+    Attributes:
+        length: Domain length (periodic) [m].
+    """
+    length: float
+
+@dataclass(frozen=True)
 class FFTWConfig:
     """FFTW parameters.
     
@@ -47,18 +56,16 @@ class LESConfig:
 
     Attributes:
         nx: Number of grid points.
-        sgs: Integer ID for the subgrid-scale model to use (0-4).
     """
     nx: int
-    sgs: int
 
 @dataclass(frozen=True)
-class ModelConfig:
-    """Models configurations.
+class GridConfig:
+    """Grid configurations.
 
     Attributes:
-        dns: Direct numerical simulation configuration
-        les: Large-eddy simulation configuration
+        dns: Direct numerical simulation grid configuration
+        les: Large-eddy simulation grid configuration
     """
     dns: DNSConfig
     les: LESConfig
@@ -110,9 +117,11 @@ class PhysicsConfig:
     Attributes:
         noise: NoiseConfig configuration
         viscosity: The fluid's kinematic viscosity [m^2/s].
+        sgs_model: Subgrid-scale model ID (0-4) for LES.
     """
     noise: NoiseConfig
     viscosity: float
+    sgs_model: int
 
 @dataclass(frozen=True)
 class TimeConfig:

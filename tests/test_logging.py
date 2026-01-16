@@ -80,11 +80,15 @@ class TestInputLogging:
         namelist_content = """
         {
             "time": {"nt": 10, "dt": 0.001},
-            "dns": {"nx": 64},
-            "les": {"nx": 32, "sgs": 1},
-            "physics": {"visc": 0.01, "namp": 0.1},
-            "output": {"t_save": 5},
-            "logging": {"level": "DEBUG"}
+            "grid": {"domain_length": 6.283185307179586, "dns": {"nx": 64}, "les": {"nx": 32}},
+            "physics": {
+                "noise": {"alpha": 0.75, "amplitude": 0.1},
+                "viscosity": 0.01,
+                "sgs_model": 1
+            },
+            "output": {"t_save": 0.005},
+            "logging": {"level": "DEBUG"},
+            "fftw": {"planning": "FFTW_ESTIMATE", "threads": 1}
         }
         """
         namelist_file.write_text(namelist_content)
@@ -98,10 +102,15 @@ class TestInputLogging:
         namelist_content = """
         {
             "time": {"nt": 10, "dt": 0.001},
-            "dns": {"nx": 64},
-            "les": {"nx": 32, "sgs": 1},
-            "physics": {"visc": 0.01, "namp": 0.1},
-            "output": {"t_save": 5}
+            "grid": {"domain_length": 6.283185307179586, "dns": {"nx": 64}, "les": {"nx": 32}},
+            "physics": {
+                "noise": {"alpha": 0.75, "amplitude": 0.1},
+                "viscosity": 0.01,
+                "sgs_model": 1
+            },
+            "output": {"t_save": 0.005},
+            "logging": {"level": "INFO"},
+            "fftw": {"planning": "FFTW_ESTIMATE", "threads": 1}
         }
         """
         namelist_file.write_text(namelist_content)
@@ -115,11 +124,15 @@ class TestInputLogging:
         namelist_content = """
         {
             "time": {"nt": 10, "dt": 0.001},
-            "dns": {"nx": 64},
-            "les": {"nx": 32, "sgs": 1},
-            "physics": {"visc": 0.01, "namp": 0.1},
-            "output": {"t_save": 5},
-            "logging": {"level": "debug"}
+            "grid": {"domain_length": 6.283185307179586, "dns": {"nx": 64}, "les": {"nx": 32}},
+            "physics": {
+                "noise": {"alpha": 0.75, "amplitude": 0.1},
+                "viscosity": 0.01,
+                "sgs_model": 1
+            },
+            "output": {"t_save": 0.005},
+            "logging": {"level": "debug"},
+            "fftw": {"planning": "FFTW_ESTIMATE", "threads": 1}
         }
         """
         namelist_file.write_text(namelist_content)

@@ -16,18 +16,21 @@ class MockInput:
         nxLES: int = 64,
         visc: float = 0.01,
         dt: float = 0.001,
-        fftw_planning: str = 'FFTW_ESTIMATE',
+        domain_length: float = 2 * np.pi,
+        fftw_planning: str = "FFTW_ESTIMATE",
         fftw_threads: int = 1,
     ) -> None:
         # Create nested structure matching Input class
-        class Models:
+        class Grid:
             class LES:
                 def __init__(self, nx):
                     self.nx = nx
+
             def __init__(self, nx):
                 self.les = self.LES(nx)
 
-        self.models = Models(nxLES)
+        self.grid = Grid(nxLES)
+        self.domain_length = domain_length
         self.dt = dt
         self.fftw_planning = fftw_planning
         self.fftw_threads = fftw_threads

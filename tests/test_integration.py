@@ -34,17 +34,62 @@ class MockInput:
         namp: float = 0.1,
         nxDNS: int = 64,
         nxLES: int = 32,
-        sgs: int = 1,
-        t_save: int = 5,
+        sgs_model: int = 1,
+        t_save: float = 0.005,
+        domain_length: float = 2 * np.pi,
     ) -> None:
-        self.dt = dt
-        self.nt = nt
-        self.visc = visc
-        self.namp = namp
-        self.nxDNS = nxDNS
-        self.nxLES = nxLES
-        self.sgs = sgs
-        self.t_save = t_save
+        class Time:
+            def __init__(self, dt, nt):
+                self.dt = dt
+                self.nt = nt
+
+        class Noise:
+            def __init__(self, amplitude):
+                self.alpha = 0.75
+                self.amplitude = amplitude
+
+        class Physics:
+            def __init__(self, viscosity, noise, sgs_model):
+                self.viscosity = viscosity
+                self.noise = noise
+                self.sgs_model = sgs_model
+
+        class DNS:
+            def __init__(self, nx):
+                self.nx = nx
+
+        class LES:
+            def __init__(self, nx):
+                self.nx = nx
+
+        class Grid:
+            def __init__(self, nx_dns, nx_les):
+                self.dns = DNS(nx_dns)
+                self.les = LES(nx_les)
+
+        self.time = Time(dt, nt)
+        self.physics = Physics(visc, Noise(namp), sgs_model)
+        self.grid = Grid(nxDNS, nxLES)
+        self.domain_length = domain_length
+        self.fftw_planning = "FFTW_ESTIMATE"
+        self.fftw_threads = 1
+        self._t_save = t_save
+
+    @property
+    def dt(self) -> float:
+        return self.time.dt
+
+    @property
+    def nt(self) -> int:
+        return self.time.nt
+
+    @property
+    def viscosity(self) -> float:
+        return self.physics.viscosity
+
+    @property
+    def step_save(self) -> int:
+        return max(1, int(round(self._t_save / self.dt)))
 
 
 class TestDNSIntegration:
@@ -52,7 +97,7 @@ class TestDNSIntegration:
 
     def test_dns_runs_without_error(self, tmp_path: Path) -> None:
         """Test that DNS simulation runs without errors."""
-        input_obj = MockInput(nt=10, t_save=5)
+        input_obj = MockInput(nt=10, t_save=0.005)
         output_file = tmp_path / "test_dns.nc"
         output_obj = Output(str(output_file))
 
@@ -63,7 +108,7 @@ class TestDNSIntegration:
 
     def test_dns_velocity_bounded(self, tmp_path: Path) -> None:
         """Test that DNS velocity remains bounded."""
-        input_obj = MockInput(nt=20, t_save=10)
+        input_obj = MockInput(nt=20, t_save=0.01)
         output_file = tmp_path / "test_dns.nc"
         output_obj = Output(str(output_file))
 
@@ -76,7 +121,7 @@ class TestDNSIntegration:
 
     def test_dns_tke_positive(self, tmp_path: Path) -> None:
         """Test that DNS TKE is non-negative."""
-        input_obj = MockInput(nt=20, t_save=5)
+        input_obj = MockInput(nt=20, t_save=0.005)
         output_file = tmp_path / "test_dns.nc"
         output_obj = Output(str(output_file))
 
@@ -87,7 +132,7 @@ class TestDNSIntegration:
 
     def test_dns_zero_mean_velocity(self, tmp_path: Path) -> None:
         """Test that DNS velocity has approximately zero mean."""
-        input_obj = MockInput(nt=50, t_save=10, namp=0.01)
+        input_obj = MockInput(nt=50, t_save=0.01, namp=0.01)
         output_file = tmp_path / "test_dns.nc"
         output_obj = Output(str(output_file))
 
@@ -105,7 +150,7 @@ class TestLESIntegration:
     @pytest.mark.parametrize("sgs_model", [1, 2, 3])
     def test_les_runs_all_sgs_models(self, tmp_path: Path, sgs_model: int) -> None:
         """Test that LES runs with all SGS model options."""
-        input_obj = MockInput(nt=10, t_save=5, sgs=sgs_model)
+        input_obj = MockInput(nt=10, t_save=0.005, sgs_model=sgs_model)
         output_file = tmp_path / f"test_les_sgs{sgs_model}.nc"
         output_obj = Output(str(output_file))
 
@@ -116,7 +161,7 @@ class TestLESIntegration:
 
     def test_les_velocity_bounded(self, tmp_path: Path) -> None:
         """Test that LES velocity remains bounded."""
-        input_obj = MockInput(nt=20, t_save=10, sgs=1)
+        input_obj = MockInput(nt=20, t_save=0.01, sgs_model=1)
         output_file = tmp_path / "test_les.nc"
         output_obj = Output(str(output_file))
 
@@ -128,7 +173,7 @@ class TestLESIntegration:
 
     def test_les_diagnostics_computed(self, tmp_path: Path) -> None:
         """Test that LES computes all diagnostic fields."""
-        input_obj = MockInput(nt=20, t_save=10, sgs=1)
+        input_obj = MockInput(nt=20, t_save=0.01, sgs_model=1)
         output_file = tmp_path / "test_les.nc"
         output_obj = Output(str(output_file))
 
@@ -142,7 +187,7 @@ class TestLESIntegration:
 
     def test_les_deardorff_model(self, tmp_path: Path) -> None:
         """Test that LES with Deardorff TKE model runs."""
-        input_obj = MockInput(nt=10, t_save=5, sgs=4)
+        input_obj = MockInput(nt=10, t_save=0.005, sgs_model=4)
         output_file = tmp_path / "test_les_deardorff.nc"
         output_obj = Output(str(output_file))
 
@@ -161,7 +206,7 @@ class TestReproducibility:
         """Test that DNS produces identical results with same seed."""
         # Run 1
         np.random.seed(1)
-        input_obj1 = MockInput(nt=20, t_save=10)
+        input_obj1 = MockInput(nt=20, t_save=0.01)
         output1 = tmp_path / "test_dns1.nc"
         dns1 = DNS(input_obj1, Output(str(output1)))
         dns1.run()
@@ -171,7 +216,7 @@ class TestReproducibility:
 
         # Run 2
         np.random.seed(1)
-        input_obj2 = MockInput(nt=20, t_save=10)
+        input_obj2 = MockInput(nt=20, t_save=0.01)
         output2 = tmp_path / "test_dns2.nc"
         dns2 = DNS(input_obj2, Output(str(output2)))
         dns2.run()
@@ -183,7 +228,7 @@ class TestReproducibility:
         """Test that LES produces identical results with same seed."""
         # Run 1
         np.random.seed(1)
-        input_obj1 = MockInput(nt=20, t_save=10, sgs=1)
+        input_obj1 = MockInput(nt=20, t_save=0.01, sgs_model=1)
         output1 = tmp_path / "test_les1.nc"
         les1 = LES(input_obj1, Output(str(output1)))
         les1.run()
@@ -193,7 +238,7 @@ class TestReproducibility:
 
         # Run 2
         np.random.seed(1)
-        input_obj2 = MockInput(nt=20, t_save=10, sgs=1)
+        input_obj2 = MockInput(nt=20, t_save=0.01, sgs_model=1)
         output2 = tmp_path / "test_les2.nc"
         les2 = LES(input_obj2, Output(str(output2)))
         les2.run()

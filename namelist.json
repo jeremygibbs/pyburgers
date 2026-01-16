@@ -8,15 +8,16 @@
             "alpha" : 0.75,
             "amplitude" : 1E-6
         },
-        "viscosity" : 1E-5
+        "viscosity" : 1E-5,
+        "sgs_model" : 4
     },
-    "models" : {
+    "grid" : {
+        "domain_length" : 6.283185307179586,
         "dns" : {
             "nx" : 8192
         },
         "les" : {
-            "nx" : 512,
-            "sgs" : 4
+            "nx" : 512
         }
     },
     "output"  : {

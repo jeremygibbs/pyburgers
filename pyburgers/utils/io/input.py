@@ -24,10 +24,11 @@ from typing import Any
 from ..logging_helper import get_logger, setup_logging
 from ...data_models import (
     DNSConfig,
+    DomainConfig,
     FFTWConfig,
+    GridConfig,
     LESConfig,
     LoggingConfig,
-    ModelConfig,
     NoiseConfig,
     OutputConfig,
     PhysicsConfig,
@@ -44,8 +45,9 @@ class Input:
 
     Attributes:
         time: Dataclass with time-related parameters (nt, dt).
+        domain: Dataclass with domain length configuration.
         physics: Dataclass with physics parameters (noise, viscosity).
-        models: Dataclass with DNS and LES configurations.
+        grid: Dataclass with DNS and LES configurations.
         output: Dataclass with output file configuration.
         logging: Dataclass with logging settings.
         fftw: Dataclass with FFTW configuration.
@@ -83,33 +85,37 @@ class Input:
         setup_logging(level=log_level, log_file=log_file)
 
         # Time configuration
-        time_data = namelist_data['time']
+        time_data = namelist_data["time"]
         self.time: TimeConfig = TimeConfig(
-            nt=int(time_data['nt']),
-            dt=float(time_data['dt'])
+            nt=int(time_data["nt"]),
+            dt=float(time_data["dt"])
+        )
+
+        # Grid configuration (DNS and LES)
+        grid_data = namelist_data["grid"]
+        self.domain: DomainConfig = DomainConfig(
+            length=float(grid_data.get("domain_length", math.tau))
         )
 
         # Physics configuration
-        physics_data = namelist_data['physics']
-        noise_data = physics_data.get('noise', {})
+        physics_data = namelist_data["physics"]
+        noise_data = physics_data.get("noise", {})
         self.physics: PhysicsConfig = PhysicsConfig(
             noise=NoiseConfig(
-                alpha=float(noise_data.get('alpha', 0.75)),
-                amplitude=float(noise_data.get('amplitude', 1e-6))
+                alpha=float(noise_data.get("alpha", 0.75)),
+                amplitude=float(noise_data.get("amplitude", 1e-6))
             ),
-            viscosity=float(physics_data['viscosity'])
+            viscosity=float(physics_data["viscosity"]),
+            sgs_model=int(physics_data.get("sgs_model", 1)),
         )
 
-        # Models configuration (DNS and LES)
-        models_data = namelist_data['models']
-        dns_data = models_data.get('dns', {})
-        les_data = models_data.get('les', {})
-        self.models: ModelConfig = ModelConfig(
-            dns=DNSConfig(nx=int(dns_data.get('nx', 8192))),
+        dns_data = grid_data.get("dns", {})
+        les_data = grid_data.get("les", {})
+        self.grid: GridConfig = GridConfig(
+            dns=DNSConfig(nx=int(dns_data.get("nx", 8192))),
             les=LESConfig(
-                nx=int(les_data.get('nx', 512)),
-                sgs=int(les_data.get('sgs', 1))
-            )
+                nx=int(les_data.get("nx", 512)),
+            ),
         )
 
         # Output configuration
@@ -170,6 +176,11 @@ class Input:
         return self.time.nt
 
     @property
+    def domain_length(self) -> float:
+        """Convenience accessor for domain length."""
+        return self.domain.length
+
+    @property
     def viscosity(self) -> float:
         """Convenience accessor for viscosity."""
         return self.physics.viscosity
@@ -216,7 +227,7 @@ class Input:
         Raises:
             NamelistError: If required sections or values are missing.
         """
-        required_sections = ['time', 'physics', 'models']
+        required_sections = ["time", "physics", "grid"]
         for section in required_sections:
             if section not in data:
                 raise NamelistError(f"Missing required section: '{section}'")
@@ -232,6 +243,9 @@ class Input:
         if int(time_data['nt']) <= 0:
             raise NamelistError("'nt' must be positive")
 
+        if "domain_length" in data["grid"] and float(data["grid"]["domain_length"]) <= 0:
+            raise NamelistError("'domain_length' must be positive")
+
         # Validate physics section
         physics_data = data['physics']
         if 'viscosity' not in physics_data:
@@ -239,30 +253,30 @@ class Input:
         if float(physics_data['viscosity']) <= 0:
             raise NamelistError("'viscosity' must be positive")
 
-        # Validate models section
-        models_data = data['models']
-        if 'dns' not in models_data and 'les' not in models_data:
+        # Validate grid section
+        grid_data = data["grid"]
+        if "dns" not in grid_data and "les" not in grid_data:
             raise NamelistError(
-                "At least one of 'dns' or 'les' must be in models section"
+                "At least one of 'dns' or 'les' must be in grid section"
             )
 
         # Validate DNS config if present
-        if 'dns' in models_data:
-            dns_data = models_data['dns']
-            if 'nx' in dns_data and int(dns_data['nx']) <= 0:
+        if "dns" in grid_data:
+            dns_data = grid_data["dns"]
+            if "nx" in dns_data and int(dns_data["nx"]) <= 0:
                 raise NamelistError("DNS 'nx' must be positive")
 
         # Validate LES config if present
-        if 'les' in models_data:
-            les_data = models_data['les']
-            if 'nx' in les_data and int(les_data['nx']) <= 0:
+        if "les" in grid_data:
+            les_data = grid_data["les"]
+            if "nx" in les_data and int(les_data["nx"]) <= 0:
                 raise NamelistError("LES 'nx' must be positive")
-            if 'sgs' in les_data:
-                sgs = int(les_data['sgs'])
-                if sgs < 0 or sgs > 4:
-                    raise NamelistError(
-                        f"LES 'sgs' must be 0-4, got {sgs}"
-                    )
+        if "sgs_model" in data["physics"]:
+            sgs = int(data["physics"]["sgs_model"])
+            if sgs < 0 or sgs > 4:
+                raise NamelistError(
+                    f"physics 'sgs_model' must be 0-4, got {sgs}"
+                )
 
         # Validate output config if present
         if "output" in data:
@@ -296,11 +310,12 @@ class Input:
             self.physics.noise.alpha,
             self.physics.noise.amplitude
         )
-        self.logger.debug('DNS: nx=%d', self.models.dns.nx)
+        self.logger.debug("Domain: length=%g", self.domain.length)
+        self.logger.debug('DNS: nx=%d', self.grid.dns.nx)
         self.logger.debug(
             'LES: nx=%d, sgs=%d',
-            self.models.les.nx,
-            self.models.les.sgs
+            self.grid.les.nx,
+            self.physics.sgs_model
         )
         self.logger.debug(
             "Output: t_save=%g (steps=%d, effective=%g)",
@@ -326,13 +341,14 @@ class Input:
             Dictionary with DNS configuration values.
         """
         return {
-            'nx': self.models.dns.nx,
+            'nx': self.grid.dns.nx,
             'dt': self.time.dt,
             'nt': self.time.nt,
             'viscosity': self.physics.viscosity,
             'noise_alpha': self.physics.noise.alpha,
             'noise_amplitude': self.physics.noise.amplitude,
             't_save': self.output.t_save,
+            'domain_length': self.domain.length,
         }
 
     def get_les_config(self) -> dict[str, Any]:
@@ -342,12 +358,13 @@ class Input:
             Dictionary with LES configuration values.
         """
         return {
-            'nx': self.models.les.nx,
-            'sgs': self.models.les.sgs,
+            'nx': self.grid.les.nx,
+            'sgs_model': self.physics.sgs_model,
             'dt': self.time.dt,
             'nt': self.time.nt,
             'viscosity': self.physics.viscosity,
             'noise_alpha': self.physics.noise.alpha,
             'noise_amplitude': self.physics.noise.amplitude,
             't_save': self.output.t_save,
+            'domain_length': self.domain.length,
         }
