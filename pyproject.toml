@@ -16,6 +16,11 @@ dev = [
     "pytest-cov>=4.0",
     "ruff>=0.1",
 ]
+docs = [
+    "mkdocs>=1.5",
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.24",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
