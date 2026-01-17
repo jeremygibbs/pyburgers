@@ -47,9 +47,9 @@ def extract_options(schema: dict) -> str:
                         options.append(f"{value}: {description}")
                     else:
                         options.append(str(value))
-        return "; ".join(options) if options else "none"
+        return "<br>".join(options) if options else "none"
     if "enum" in schema:
-        return ", ".join(str(value) for value in schema["enum"])
+        return "<br>".join(str(value) for value in schema["enum"])
     return "none"
 
 

@@ -64,7 +64,7 @@ Required top-level sections: `time`, `physics`, `grid`, `output`, `logging`, `ff
 | physics.noise.alpha | number | yes | none | none | none |
 | physics.noise.amplitude | number | yes | none | none | exclusiveMinimum: 0 |
 | physics.viscosity | number | yes | none | none | exclusiveMinimum: 0 |
-| physics.sgs_model | integer | no | Subgrid-scale model selector. | 0: No SGS model; 1: Constant Smagorinsky; 2: Dynamic Smagorinsky; 3: Dynamic Wong-Lilly; 4: Deardorff 1.5-order TKE | minimum: 0; maximum: 4 |
+| physics.sgs_model | integer | no | Subgrid-scale model selector. | 0: No SGS model<br>1: Constant Smagorinsky<br>2: Dynamic Smagorinsky<br>3: Dynamic Wong-Lilly<br>4: Deardorff 1.5-order TKE | minimum: 0; maximum: 4 |
 
 ### grid
 
@@ -84,12 +84,12 @@ Required top-level sections: `time`, `physics`, `grid`, `output`, `logging`, `ff
 
 | Key | Type | Required | Description | Options | Constraints |
 | --- | --- | --- | --- | --- | --- |
-| logging.level | string | yes | Logging severity. | DEBUG: Verbose diagnostics.; INFO: Normal runtime info.; WARNING: Potential issues.; ERROR: Errors that stop work.; CRITICAL: Serious failures. | none |
+| logging.level | string | yes | Logging severity. | DEBUG: Verbose diagnostics.<br>INFO: Normal runtime info.<br>WARNING: Potential issues.<br>ERROR: Errors that stop work.<br>CRITICAL: Serious failures. | none |
 | logging.file | string | no | none | none | none |
 
 ### fftw
 
 | Key | Type | Required | Description | Options | Constraints |
 | --- | --- | --- | --- | --- | --- |
-| fftw.planning | string | yes | none | FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE | none |
+| fftw.planning | string | yes | none | FFTW_ESTIMATE<br>FFTW_MEASURE<br>FFTW_PATIENT<br>FFTW_EXHAUSTIVE | none |
 | fftw.threads | integer | yes | none | none | minimum: 1 |
