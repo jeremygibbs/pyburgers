@@ -52,44 +52,44 @@ Required top-level sections: `time`, `physics`, `grid`, `output`, `logging`, `ff
 
 ### time
 
-| Key | Type | Required | Description | Options | Constraints |
-| --- | --- | --- | --- | --- | --- |
-| time.nt | integer | yes | none | none | minimum: 1 |
-| time.dt | number | yes | none | none | exclusiveMinimum: 0 |
+| Key | Type | Required | Description | Constraints |
+| --- | --- | --- | --- | --- |
+| time.nt | integer | yes | none | minimum: 1 |
+| time.dt | number | yes | none | exclusiveMinimum: 0 |
 
 ### physics
 
-| Key | Type | Required | Description | Options | Constraints |
-| --- | --- | --- | --- | --- | --- |
-| physics.noise.alpha | number | yes | none | none | none |
-| physics.noise.amplitude | number | yes | none | none | exclusiveMinimum: 0 |
-| physics.viscosity | number | yes | none | none | exclusiveMinimum: 0 |
-| physics.sgs_model | integer | no | Subgrid-scale model selector. | 0: No SGS model<br>1: Constant Smagorinsky<br>2: Dynamic Smagorinsky<br>3: Dynamic Wong-Lilly<br>4: Deardorff 1.5-order TKE | minimum: 0; maximum: 4 |
+| Key | Type | Required | Description | Constraints |
+| --- | --- | --- | --- | --- |
+| physics.noise.alpha | number | yes | none | none |
+| physics.noise.amplitude | number | yes | none | exclusiveMinimum: 0 |
+| physics.viscosity | number | yes | none | exclusiveMinimum: 0 |
+| physics.sgs_model<br>options:<br>0: No SGS model<br>1: Constant Smagorinsky<br>2: Dynamic Smagorinsky<br>3: Dynamic Wong-Lilly<br>4: Deardorff 1.5-order TKE | integer | no | Subgrid-scale model selector. | minimum: 0; maximum: 4 |
 
 ### grid
 
-| Key | Type | Required | Description | Options | Constraints |
-| --- | --- | --- | --- | --- | --- |
-| grid.domain_length | number | no | none | none | exclusiveMinimum: 0 |
-| grid.dns.nx | integer | yes | none | none | minimum: 1 |
-| grid.les.nx | integer | yes | none | none | minimum: 1 |
+| Key | Type | Required | Description | Constraints |
+| --- | --- | --- | --- | --- |
+| grid.domain_length | number | no | none | exclusiveMinimum: 0 |
+| grid.dns.nx | integer | yes | none | minimum: 1 |
+| grid.les.nx | integer | yes | none | minimum: 1 |
 
 ### output
 
-| Key | Type | Required | Description | Options | Constraints |
-| --- | --- | --- | --- | --- | --- |
-| output.t_save | number | yes | Output interval in seconds. | none | exclusiveMinimum: 0 |
+| Key | Type | Required | Description | Constraints |
+| --- | --- | --- | --- | --- |
+| output.t_save | number | yes | Output interval in seconds. | exclusiveMinimum: 0 |
 
 ### logging
 
-| Key | Type | Required | Description | Options | Constraints |
-| --- | --- | --- | --- | --- | --- |
-| logging.level | string | yes | Logging severity. | DEBUG: Verbose diagnostics.<br>INFO: Normal runtime info.<br>WARNING: Potential issues.<br>ERROR: Errors that stop work.<br>CRITICAL: Serious failures. | none |
-| logging.file | string | no | none | none | none |
+| Key | Type | Required | Description | Constraints |
+| --- | --- | --- | --- | --- |
+| logging.level<br>options:<br>DEBUG: Verbose diagnostics.<br>INFO: Normal runtime info.<br>WARNING: Potential issues.<br>ERROR: Errors that stop work.<br>CRITICAL: Serious failures. | string | yes | Logging severity. | none |
+| logging.file | string | no | none | none |
 
 ### fftw
 
-| Key | Type | Required | Description | Options | Constraints |
-| --- | --- | --- | --- | --- | --- |
-| fftw.planning | string | yes | none | FFTW_ESTIMATE<br>FFTW_MEASURE<br>FFTW_PATIENT<br>FFTW_EXHAUSTIVE | none |
-| fftw.threads | integer | yes | none | none | minimum: 1 |
+| Key | Type | Required | Description | Constraints |
+| --- | --- | --- | --- | --- |
+| fftw.planning<br>options:<br>FFTW_ESTIMATE<br>FFTW_MEASURE<br>FFTW_PATIENT<br>FFTW_EXHAUSTIVE | string | yes | none | none |
+| fftw.threads | integer | yes | none | minimum: 1 |

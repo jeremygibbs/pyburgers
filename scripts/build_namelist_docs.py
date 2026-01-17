@@ -83,18 +83,20 @@ def group_entries(entries: list[dict]) -> dict[str, list[dict]]:
 
 def format_table(entries: list[dict]) -> str:
     lines = [
-        "| Key | Type | Required | Description | Options | Constraints |",
-        "| --- | --- | --- | --- | --- | --- |",
+        "| Key | Type | Required | Description | Constraints |",
+        "| --- | --- | --- | --- | --- |",
     ]
     for entry in entries:
         required = "yes" if entry["required"] else "no"
+        key_cell = entry["path"]
+        if entry["options"] != "none":
+            key_cell = f"{key_cell}<br>options:<br>{entry['options']}"
         lines.append(
-            "| {path} | {type} | {required} | {description} | {options} | {constraints} |".format(
-                path=entry["path"],
+            "| {path} | {type} | {required} | {description} | {constraints} |".format(
+                path=key_cell,
                 type=entry["type"],
                 required=required,
                 description=entry["description"],
-                options=entry["options"],
                 constraints=entry["constraints"],
             )
         )
