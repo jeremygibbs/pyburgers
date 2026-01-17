@@ -1,9 +1,9 @@
 # Getting Started
 
-## Install for docs
+## Install for local runs
 
 ```bash
-python -m pip install -e ".[docs]"
+python -m pip install -e .
 ```
 
 ## Run a simulation
@@ -13,14 +13,6 @@ python burgers.py -m dns
 python burgers.py -m les -o output.nc
 ```
 
-## Build the docs
+## Documentation
 
-```bash
-mkdocs build
-```
-
-## Preview the docs
-
-```bash
-mkdocs serve
-```
+See [Contributing](contributing.md) for documentation tooling and commands.

@@ -7,8 +7,16 @@
         "time": {
             "type": "object",
             "properties": {
-                "nt": { "type": "integer", "minimum": 1 },
-                "dt": { "type": "number", "exclusiveMinimum": 0 }
+                "nt": { 
+                    "type": "integer", 
+                    "minimum": 1,
+                    "description": "Simulation length [s]."
+                },
+                "dt": { 
+                    "type": "number", 
+                    "exclusiveMinimum": 0,
+                    "description": "Time step [s]."
+                }
             },
             "required": ["nt", "dt"]
         },
@@ -18,12 +26,23 @@
                 "noise": {
                     "type": "object",
                     "properties": {
-                        "alpha": { "type": "number" },
-                        "amplitude": { "type": "number", "exclusiveMinimum": 0 }
+                        "alpha": { 
+                            "type": "number",
+                            "description": "Spectral exponent of FBM."
+                        },
+                        "amplitude": { 
+                            "type": "number", 
+                            "exclusiveMinimum": 0,
+                            "description": "Amplitude of FBM."
+                        }
                     },
                     "required": ["alpha", "amplitude"]
                 },
-                "viscosity": { "type": "number", "exclusiveMinimum": 0 },
+                "viscosity": { 
+                    "type": "number", 
+                    "exclusiveMinimum": 0,
+                    "description": "Kinematic viscosity [m^2/s]"
+                },
                 "sgs_model": { 
                     "type": "integer", 
                     "minimum": 0, 
@@ -43,18 +62,30 @@
         "grid": {
             "type": "object",
             "properties": {
-                "domain_length": { "type": "number", "exclusiveMinimum": 0 },
+                "domain_length": { 
+                    "type": "number", 
+                    "exclusiveMinimum": 0,
+                    "description": "Domain length [m]."
+                },
                 "dns": {
                     "type": "object",
                     "properties": {
-                        "nx": { "type": "integer", "minimum": 1 }
+                        "nx": { 
+                            "type": "integer", 
+                            "minimum": 1,
+                            "description": "Number of grid poiints."
+                        }
                     },
                     "required": ["nx"]
                 },
                 "les": {
                     "type": "object",
                     "properties": {
-                        "nx": { "type": "integer", "minimum": 1 }
+                        "nx": { 
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "Number of grid poiints."
+                        }
                     },
                     "required": ["nx"]
                 }
@@ -67,7 +98,7 @@
                 "t_save": { 
                     "type": "number", 
                     "exclusiveMinimum": 0,
-                    "description": "Output interval in seconds."
+                    "description": "Output interval [s]."
                 }
             },
             "required": ["t_save"]
@@ -96,9 +127,20 @@
             "properties": {
                 "planning": {
                     "type": "string",
-                    "enum": ["FFTW_ESTIMATE", "FFTW_MEASURE", "FFTW_PATIENT", "FFTW_EXHAUSTIVE"]
+                    "enum": ["FFTW_ESTIMATE", "FFTW_MEASURE", "FFTW_PATIENT", "FFTW_EXHAUSTIVE"],
+                    "description": "FFTW planning strategy.",
+                    "oneOf": [
+                      { "const": "FFTW_ESTIMATE", "description": "Fastest plan; Slower FFTs." },
+                      { "const": "FFTW_MEASURE", "description": "Balances planning vs speed." },
+                      { "const": "FFTW_PATIENT", "description": "Slower plan; Faster FFTs." },
+                      { "const": "FFTW_EXHAUSTIVE", "description": "Slowest plan; Fastest FFTs."}
+                    ]
                 },
-                "threads": { "type": "integer", "minimum": 1 }
+                "threads": { 
+                    "type": "integer", 
+                    "minimum": 1,
+                    "description": "FFTW thread count"
+                }
             },
             "required": ["planning", "threads"]
         }
