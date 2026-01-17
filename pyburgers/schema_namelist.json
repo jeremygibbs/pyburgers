@@ -24,7 +24,19 @@
                     "required": ["alpha", "amplitude"]
                 },
                 "viscosity": { "type": "number", "exclusiveMinimum": 0 },
-                "sgs_model": { "type": "integer", "minimum": 0, "maximum": 4 }
+                "sgs_model": { 
+                    "type": "integer", 
+                    "minimum": 0, 
+                    "maximum": 4,
+                    "description": "Subgrid-scale model selector.",
+                    "oneOf": [
+                        { "const": 0, "description": "No SGS model" },
+                        { "const": 1, "description": "Constant Smagorinsky" },
+                        { "const": 2, "description": "Dynamic Smagorinsky" },
+                        { "const": 3, "description": "Dynamic Wong-Lilly" },
+                        { "const": 4, "description": "Deardorff 1.5-order TKE" }
+                    ]
+                }
             },
             "required": ["noise", "viscosity"]
         },
@@ -52,7 +64,11 @@
         "output": {
             "type": "object",
             "properties": {
-                "t_save": { "type": "number", "exclusiveMinimum": 0 }
+                "t_save": { 
+                    "type": "number", 
+                    "exclusiveMinimum": 0,
+                    "description": "Output interval in seconds."
+                }
             },
             "required": ["t_save"]
         },
@@ -61,7 +77,15 @@
             "properties": {
                 "level": {
                     "type": "string",
-                    "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+                    "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                    "description": "Logging severity.",
+                    "oneOf": [
+                      { "const": "DEBUG", "description": "Verbose diagnostics." },
+                      { "const": "INFO", "description": "Normal runtime info." },
+                      { "const": "WARNING", "description": "Potential issues." },
+                      { "const": "ERROR", "description": "Errors that stop work." },
+                      { "const": "CRITICAL", "description": "Serious failures." }
+                    ]
                 },
                 "file": { "type": "string" }
             },

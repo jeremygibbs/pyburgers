@@ -26,5 +26,8 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[docs]"
 
+      - name: Build namelist docs
+        run: python scripts/build_namelist_docs.py
+
       - name: Deploy docs
         run: mkdocs gh-deploy --clean

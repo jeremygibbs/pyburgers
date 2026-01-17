@@ -4,6 +4,7 @@ site_description: 1D Stochastic Burgers Equation Solver using DNS and LES
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
+  - Namelist: namelist.md
   - API Reference: reference.md
 
 theme:
