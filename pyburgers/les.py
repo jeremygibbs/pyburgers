@@ -104,6 +104,10 @@ class LES(Burgers):
         # Initialize subgrid TKE for Deardorff model
         if self.sgs_model_id == 4:
             self.tke_sgs: np.ndarray | float = np.ones(self.nx)
+            self.tke_sgs_mean = np.zeros(1)
+            self.tke_sgs_prod = np.zeros(1)
+            self.tke_sgs_diff = np.zeros(1)
+            self.tke_sgs_diss = np.zeros(1)
         else:
             self.tke_sgs = 0.0
 
@@ -118,6 +122,9 @@ class LES(Burgers):
         # Store last computed values for diagnostics
         self._last_tau: np.ndarray | None = None
         self._last_coeff: float = 0.0
+        self._last_tke_prod: float = 0.0
+        self._last_tke_diff: float = 0.0
+        self._last_tke_diss: float = 0.0
 
     def _setup_output_fields(self) -> dict[str, Any]:
         """Configure LES output fields.
@@ -139,7 +146,10 @@ class LES(Burgers):
 
         # Add subgrid TKE output for Deardorff model
         if self.sgs_model_id == 4:
-            fields['tke_sgs'] = self.tke_sgs
+            fields['tke_sgs'] = self.tke_sgs_mean
+            fields['tke_sgs_prod'] = self.tke_sgs_prod
+            fields['tke_sgs_diff'] = self.tke_sgs_diff
+            fields['tke_sgs_diss'] = self.tke_sgs_diss
 
         return fields
 
@@ -196,7 +206,14 @@ class LES(Burgers):
 
         # Update subgrid TKE for Deardorff model
         if self.sgs_model_id == 4:
-            self.tke_sgs = sgs["tke_sgs"]
+            tke_sgs_new = sgs["tke_sgs"]
+            if isinstance(self.tke_sgs, np.ndarray):
+                self.tke_sgs[:] = tke_sgs_new
+            else:
+                self.tke_sgs = tke_sgs_new
+            self._last_tke_prod = sgs.get("tke_prod", 0.0)
+            self._last_tke_diff = sgs.get("tke_diff", 0.0)
+            self._last_tke_diss = sgs.get("tke_diss", 0.0)
 
         # Compute SGS stress divergence
         # Save u because compute() overwrites the internal buffer
@@ -242,5 +259,10 @@ class LES(Burgers):
         self.ens_dsgs[:] = np.mean(-tau * d3udx3)
         self.ens_dmol[:] = np.mean(self.visc * d2udx2 ** 2)
         self.C_sgs[:] = self._last_coeff
+        if self.sgs_model_id == 4:
+            self.tke_sgs_mean[:] = np.mean(self.tke_sgs)
+            self.tke_sgs_prod[:] = self._last_tke_prod
+            self.tke_sgs_diff[:] = self._last_tke_diff
+            self.tke_sgs_diss[:] = self._last_tke_diss
 
         self.output.save(self.output_fields, t_out, t_loop, initial=False)

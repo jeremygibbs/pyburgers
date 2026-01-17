@@ -88,6 +88,21 @@ class Output:
                 'long_name': 'subgrid turbulence kinetic energy',
                 'units': 'm2 s-2'
             },
+            'tke_sgs_prod': {
+                'dimension': ('t',),
+                'long_name': 'subgrid TKE production',
+                'units': 'm2 s-3'
+            },
+            'tke_sgs_diff': {
+                'dimension': ('t',),
+                'long_name': 'subgrid TKE diffusion',
+                'units': 'm2 s-3'
+            },
+            'tke_sgs_diss': {
+                'dimension': ('t',),
+                'long_name': 'subgrid TKE dissipation',
+                'units': 'm2 s-3'
+            },
             'C_sgs': {
                 'dimension': ('t',),
                 'long_name': 'subgrid model coefficient',

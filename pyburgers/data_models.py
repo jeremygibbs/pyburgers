@@ -95,9 +95,9 @@ class NoiseConfig:
 @dataclass(frozen=True)
 class NumericsConfig:
     """Numerical method parameters.
-    
+
     Attributes:
-        fftw = FFTW parameters
+        fftw: FFTW parameters.
     """
     fftw: FFTWConfig
 

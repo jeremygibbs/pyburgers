@@ -13,12 +13,44 @@ from typing import Literal
 # Valid log level names
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
-# Default format for log messages
-DEFAULT_FORMAT = "[pyBurgers: %(name)s] \t %(message)s"
-DEBUG_FORMAT = "[pyBurgers: %(name)s] \t %(levelname)s - %(message)s"
+class _ShortNameFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        original_name = record.name
+        record.name = original_name.rsplit(".", 1)[-1]
+        try:
+            return super().format(record)
+        finally:
+            record.name = original_name
+
+
+# Log format
+log_format = _ShortNameFormatter(
+    '{asctime} [{levelname:^8s}] {name:.>10s}: {message}',
+    datefmt='%Y-%m-%d %H:%M:%S', style='{'
+)
 
 # Cache of created loggers
 _loggers: dict[str, logging.Logger] = {}
+
+
+class _ProgressOnlyFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return getattr(record, "progress", False)
+
+
+class _SkipProgressFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return not getattr(record, "progress", False)
+
+
+class _ProgressHandler(logging.StreamHandler):
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            msg = self.format(record)
+            self.stream.write(f"\r{msg}")
+            self.flush()
+        except Exception:
+            self.handleError(record)
 
 
 def setup_logging(
@@ -44,11 +76,11 @@ def setup_logging(
         level = getattr(logging, level.upper(), logging.INFO)
 
     # Choose format based on level
-    if format_string is None:
-        format_string = DEBUG_FORMAT if level <= logging.DEBUG else DEFAULT_FORMAT
+    #if format_string is None:
+    #    format_string = log_format
 
     # Configure root logger
-    root_logger = logging.getLogger("pyBurgers")
+    root_logger = logging.getLogger("PyBurgers")
     root_logger.setLevel(level)
 
     # Remove existing handlers to avoid duplicates
@@ -57,9 +89,16 @@ def setup_logging(
     # Create console handler
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(level)
-    handler.setFormatter(logging.Formatter(format_string))
-
+    handler.setFormatter(log_format)
+    handler.addFilter(_SkipProgressFilter())
     root_logger.addHandler(handler)
+
+    # Create progress handler (same format, overwrites current line)
+    progress_handler = _ProgressHandler(sys.stdout)
+    progress_handler.setLevel(level)
+    progress_handler.setFormatter(log_format)
+    progress_handler.addFilter(_ProgressOnlyFilter())
+    root_logger.addHandler(progress_handler)
 
     if log_file:
         log_path = Path(log_file).expanduser()
@@ -67,7 +106,8 @@ def setup_logging(
             log_path.parent.mkdir(parents=True, exist_ok=True)
         file_handler = logging.FileHandler(log_path, mode=file_mode, encoding="utf-8")
         file_handler.setLevel(level)
-        file_handler.setFormatter(logging.Formatter(format_string))
+        file_handler.setFormatter(log_format)
+        file_handler.addFilter(_SkipProgressFilter())
         root_logger.addHandler(file_handler)
 
     # Prevent propagation to root logger
@@ -91,7 +131,7 @@ def get_logger(name: str) -> logging.Logger:
         >>> logger.info("Starting simulation")
         [pyBurgers: DNS]     Starting simulation
     """
-    full_name = f"pyBurgers.{name}"
+    full_name = f"PyBurgers.{name}"
 
     if full_name not in _loggers:
         _loggers[full_name] = logging.getLogger(full_name)

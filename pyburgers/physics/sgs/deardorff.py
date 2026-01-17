@@ -67,19 +67,23 @@ class Deardorff(SGS):
         ce = c.sgs.DEARDORFF_CE  # Dissipation coefficient
         c1 = c.sgs.DEARDORFF_C1  # Eddy viscosity coefficient
 
-        # Dealiased strain rate squared
-        dudx2 = self.spectral.dealias.compute(dudx)
+        # Derivatives.compute uses the shared velocity buffer; preserve u.
+        u_local = u.copy()
+
+        # Strain rate squared (1D), used for production
+        dudx2 = dudx * dudx
 
         # Compute TKE gradients
         derivs_k = self.spectral.derivatives.compute(tke_sgs, [1])
         dkdx = derivs_k['1']
 
-        derivs_ku = self.spectral.derivatives.compute(tke_sgs * u, [1])
+        derivs_ku = self.spectral.derivatives.compute(tke_sgs * u_local, [1])
         dkudx = derivs_ku['1']
 
         # Eddy viscosity and SGS stress
-        Vt = c1 * self.dx * (tke_sgs ** 0.5)
-        tau = -2.0 * Vt * dudx2
+        tke_sgs_safe = np.maximum(tke_sgs, 0.0)
+        Vt = c1 * self.dx * np.sqrt(tke_sgs_safe)
+        tau = -2.0 * Vt * dudx
 
         # TKE diffusion term
         zz = 2 * Vt * dkdx
@@ -87,18 +91,25 @@ class Deardorff(SGS):
         dzzdx = derivs_zz["1"]
 
         # TKE tendency: advection + production + diffusion - dissipation
+        prod = 2 * Vt * dudx2
+        diff = dzzdx
+        diss = -ce * (tke_sgs ** 1.5) / self.dx
         dtke = (
             (-1 * dkudx)
-            + (2 * Vt * dudx2 * dudx2)
-            + dzzdx
-            - (ce * (tke_sgs ** 1.5) / self.dx)
+            + prod
+            + diff
+            + diss
         ) * self.dt
 
         # Update subgrid TKE
-        tke_sgs_new = tke_sgs + dtke
+        tke_sgs_new = np.maximum(tke_sgs + dtke, 0.0)
+        self.spectral.u[:] = u_local
 
         self.sgs['tau'] = tau
         self.sgs['coeff'] = c1
         self.sgs['tke_sgs'] = tke_sgs_new
+        self.sgs['tke_prod'] = float(np.mean(prod))
+        self.sgs['tke_diff'] = float(np.mean(diff))
+        self.sgs['tke_diss'] = float(np.mean(diss))
 
         return self.sgs

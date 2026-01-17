@@ -17,12 +17,10 @@ Burgers equation. Both DNS and LES solvers inherit from this class.
 from __future__ import annotations
 
 import logging
-import sys
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-import pyfftw
 
 from .utils import get_logger
 from .utils.spectral_workspace import SpectralWorkspace
@@ -291,8 +289,9 @@ class Burgers(ABC):
                 and t % self.progress_stride != 0
             ):
                 return
-            sys.stdout.write(
-                f"\r[PyBurgers: PyBurgers.{self.mode_name}] \t "
-                f"Running for time {t_loop:05.2f} of {total_time:05.2f}"
+            self.logger.info(
+                "Running for time %05.2f of %05.2f",
+                t_loop,
+                total_time,
+                extra={"progress": True},
             )
-            sys.stdout.flush()

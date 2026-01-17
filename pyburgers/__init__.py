@@ -12,7 +12,7 @@
 
 """PyBurgers: 1D Stochastic Burgers Equation Solver.
 
-A tool for studying turbulence using DNS and LES.
+A tool for studying Burgers turbulence using DNS and LES.
 """
 
 # Core data structures from the namelist file

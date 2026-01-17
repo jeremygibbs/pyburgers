@@ -68,6 +68,14 @@ def main() -> None:
     outfile: Optional[str] = args.outfile
 
     output_obj: Optional[Output] = None
+    # Welcome message
+    print("##############################################################")
+    print("#                                                            #")
+    print("#                   Welcome to PyBurgers                     #")
+    print("#     A toy to study Burgers turbulence with DNS and LES     #")
+    print("#                                                            #")
+    print("##############################################################")
+    
     try:
         # Create Input instance from namelist (configures logging)
         namelist = 'namelist.json'
@@ -133,14 +141,6 @@ def main() -> None:
             else:
                 logger.warning("FFTW warmup: %s", warmup_msg)
                 logger.warning("Continuing without pre-warmed plans (will plan on-demand)")
-
-        # Welcome message
-        logger.info("##############################################################")
-        logger.info("#                                                            #")
-        logger.info("#                   Welcome to PyBurgers                     #")
-        logger.info("#      A fun tool to study turbulence using DNS and LES      #")
-        logger.info("#                                                            #")
-        logger.info("##############################################################")
 
         # Create Output instance
         if not outfile:

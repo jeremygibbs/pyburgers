@@ -96,6 +96,11 @@ class FBM:
 
         Returns:
             Real-valued noise array with FBM spectral characteristics.
+
+        Note:
+            The returned array is an internal buffer that will be overwritten
+            on the next call to compute_noise(). If you need to preserve the
+            values, make a copy: ``noise.copy()``.
         """
         # Generate white noise input (faster than inverse CDF)
         self.x[:] = np.sqrt(self.n_pts) * np.random.standard_normal(self.n_pts)

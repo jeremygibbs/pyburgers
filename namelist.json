@@ -1,6 +1,6 @@
 {
     "time" : {
-        "nt" : 2E6,
+        "nt" : 2E5,
         "dt" : 1E-4
     },
     "physics" : {
@@ -9,7 +9,7 @@
             "amplitude" : 1E-6
         },
         "viscosity" : 1E-5,
-        "sgs_model" : 4
+        "sgs_model" : 1
     },
     "grid" : {
         "domain_length" : 6.283185307179586,
