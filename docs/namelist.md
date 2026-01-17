@@ -52,44 +52,59 @@ Required top-level sections: `time`, `physics`, `grid`, `output`, `logging`, `ff
 
 ### time
 
-| Key | Description | Type | Required |
+| Key | Description | Options | Required |
 | --- | --- | --- | --- |
-| time.nt | none | integer | yes |
-| time.dt | none | number | yes |
+| nt | none | none | yes |
+| dt | none | none | yes |
 
 ### physics
 
-| Key | Description | Type | Required |
+| Key | Description | Options | Required |
 | --- | --- | --- | --- |
-| physics.noise.alpha | none | number | yes |
-| physics.noise.amplitude | none | number | yes |
-| physics.viscosity | none | number | yes |
-| physics.sgs_model<br>options:<br>0: No SGS model<br>1: Constant Smagorinsky<br>2: Dynamic Smagorinsky<br>3: Dynamic Wong-Lilly<br>4: Deardorff 1.5-order TKE | Subgrid-scale model selector. | integer | no |
+| viscosity | none | none | yes |
+| sgs_model | Subgrid-scale model selector. | 0: No SGS model<br>1: Constant Smagorinsky<br>2: Dynamic Smagorinsky<br>3: Dynamic Wong-Lilly<br>4: Deardorff 1.5-order TKE | no |
+
+#### physics.noise
+
+| Key | Description | Options | Required |
+| --- | --- | --- | --- |
+| alpha | none | none | yes |
+| amplitude | none | none | yes |
 
 ### grid
 
-| Key | Description | Type | Required |
+| Key | Description | Options | Required |
 | --- | --- | --- | --- |
-| grid.domain_length | none | number | no |
-| grid.dns.nx | none | integer | yes |
-| grid.les.nx | none | integer | yes |
+| domain_length | none | none | no |
+
+#### grid.dns
+
+| Key | Description | Options | Required |
+| --- | --- | --- | --- |
+| nx | none | none | yes |
+
+#### grid.les
+
+| Key | Description | Options | Required |
+| --- | --- | --- | --- |
+| nx | none | none | yes |
 
 ### output
 
-| Key | Description | Type | Required |
+| Key | Description | Options | Required |
 | --- | --- | --- | --- |
-| output.t_save | Output interval in seconds. | number | yes |
+| t_save | Output interval in seconds. | none | yes |
 
 ### logging
 
-| Key | Description | Type | Required |
+| Key | Description | Options | Required |
 | --- | --- | --- | --- |
-| logging.level<br>options:<br>DEBUG: Verbose diagnostics.<br>INFO: Normal runtime info.<br>WARNING: Potential issues.<br>ERROR: Errors that stop work.<br>CRITICAL: Serious failures. | Logging severity. | string | yes |
-| logging.file | none | string | no |
+| level | Logging severity. | DEBUG: Verbose diagnostics.<br>INFO: Normal runtime info.<br>WARNING: Potential issues.<br>ERROR: Errors that stop work.<br>CRITICAL: Serious failures. | yes |
+| file | none | none | no |
 
 ### fftw
 
-| Key | Description | Type | Required |
+| Key | Description | Options | Required |
 | --- | --- | --- | --- |
-| fftw.planning<br>options:<br>FFTW_ESTIMATE<br>FFTW_MEASURE<br>FFTW_PATIENT<br>FFTW_EXHAUSTIVE | none | string | yes |
-| fftw.threads | none | integer | yes |
+| planning | none | FFTW_ESTIMATE<br>FFTW_MEASURE<br>FFTW_PATIENT<br>FFTW_EXHAUSTIVE | yes |
+| threads | none | none | yes |

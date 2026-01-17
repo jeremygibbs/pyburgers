@@ -73,40 +73,51 @@ def walk_schema(schema: dict, prefix: str = "", parent_required: bool = True):
             }
 
 
-def group_entries(entries: list[dict]) -> dict[str, list[dict]]:
-    grouped: dict[str, list[dict]] = {}
-    for entry in entries:
-        section = entry["path"].split(".", 1)[0]
-        grouped.setdefault(section, []).append(entry)
-    return grouped
-
-
 def format_table(entries: list[dict]) -> str:
     lines = [
-        "| Key | Description | Type | Required |",
+        "| Key | Description | Options | Required |",
         "| --- | --- | --- | --- |",
     ]
     for entry in entries:
         required = "yes" if entry["required"] else "no"
-        key_cell = entry["path"]
-        if entry["options"] != "none":
-            key_cell = f"{key_cell}<br>options:<br>{entry['options']}"
+        key_cell = entry.get("key", entry["path"])
         lines.append(
-            "| {path} | {description} | {type} | {required} |".format(
+            "| {path} | {description} | {options} | {required} |".format(
                 path=key_cell,
                 description=entry["description"],
-                type=entry["type"],
+                options=entry["options"],
                 required=required,
             )
         )
     return "\n".join(lines)
 
 
+def group_entries_by_subsection(entries: list[dict], section: str) -> dict[str, list[dict]]:
+    grouped: dict[str, list[dict]] = {}
+    order: list[str] = []
+    for entry in entries:
+        parts = entry["path"].split(".")
+        if len(parts) >= 3:
+            subgroup = f"{section}.{parts[1]}"
+            entry_key = ".".join(parts[2:])
+        else:
+            subgroup = section
+            entry_key = parts[1] if len(parts) > 1 else entry["path"]
+
+        if subgroup not in grouped:
+            grouped[subgroup] = []
+            order.append(subgroup)
+
+        entry_with_key = dict(entry)
+        entry_with_key["key"] = entry_key
+        grouped[subgroup].append(entry_with_key)
+
+    return {name: grouped[name] for name in order}
+
+
 def build_markdown(schema: dict, example_text: str) -> str:
     required_sections = schema.get("required", [])
     entries = list(walk_schema(schema))
-    grouped = group_entries(entries)
-
     lines = [
         "# Namelist",
         "",
@@ -132,10 +143,20 @@ def build_markdown(schema: dict, example_text: str) -> str:
     ]
 
     for section in required_sections:
-        section_entries = grouped.get(section, [])
+        section_entries = [entry for entry in entries if entry["path"].startswith(f"{section}.")]
         if not section_entries:
             continue
-        lines.extend([f"### {section}", "", format_table(section_entries), ""])
+        lines.append(f"### {section}")
+        lines.append("")
+
+        grouped_sections = group_entries_by_subsection(section_entries, section)
+        if section in grouped_sections:
+            lines.extend([format_table(grouped_sections[section]), ""])
+
+        for subgroup, subgroup_entries in grouped_sections.items():
+            if subgroup == section:
+                continue
+            lines.extend([f"#### {subgroup}", "", format_table(subgroup_entries), ""])
 
     return "\n".join(lines).rstrip() + "\n"
 
