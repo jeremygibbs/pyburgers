@@ -1,18 +1,333 @@
 # Getting Started
 
-## Install for local runs
+This guide will walk you through installing PyBurgers and running your first simulation.
+
+## Prerequisites
+
+PyBurgers requires:
+
+- Python 3.10 or newer
+- A C compiler (for building NumPy/FFTW dependencies if needed)
+- Basic familiarity with command-line interfaces
+
+## Installation
+
+### Option 1: Local Development Install (Recommended)
+
+Clone the repository and install in editable mode:
 
 ```bash
-python -m pip install -e .
+# Clone the repository
+git clone https://github.com/jeremygibbs/pyburgers.git
+cd pyburgers
+
+# Install the package
+pip install -e .
 ```
 
-## Run a simulation
+This installs PyBurgers and its runtime dependencies (NumPy, pyFFTW, netCDF4).
+
+### Option 2: Install with Development Tools
+
+If you plan to contribute or run tests:
+
+```bash
+pip install -e ".[dev]"
+```
+
+This adds pytest, pytest-cov, and ruff for testing and linting.
+
+### Option 3: Install with Documentation Tools
+
+To build documentation locally:
+
+```bash
+pip install -e ".[docs]"
+```
+
+This adds MkDocs, Material theme, and mkdocstrings.
+
+### Verify Installation
+
+Check that PyBurgers is installed correctly:
+
+```bash
+python -c "import pyburgers; print(pyburgers.__version__)"
+```
+
+You should see version information printed (or it won't error if `__version__` isn't defined yet).
+
+## Configuration
+
+PyBurgers is configured using a JSON namelist file. The repository includes a default `namelist.json`:
+
+```json
+{
+    "time" : {
+        "nt" : 2E5,
+        "dt" : 1E-4
+    },
+    "physics" : {
+        "noise" : {
+            "alpha" : 0.75,
+            "amplitude" : 1E-6
+        },
+        "viscosity" : 1E-5,
+        "sgs_model" : 1
+    },
+    "grid" : {
+        "domain_length" : 6.283185307179586,
+        "dns" : {
+            "nx" : 8192
+        },
+        "les" : {
+            "nx" : 512
+        }
+    },
+    "output"  : {
+        "t_save" : 0.1
+    },
+    "logging" : {
+        "level" : "INFO",
+        "file" : "pyburgers.log"
+    },
+    "fftw" : {
+        "planning" : "FFTW_PATIENT",
+        "threads" : 8
+    }
+}
+```
+
+For a quick test run, you might want to reduce the grid size and time steps:
+
+```json
+{
+    "time" : {
+        "nt" : 1000,
+        "dt" : 1E-3
+    },
+    "grid" : {
+        "dns" : { "nx" : 512 },
+        "les" : { "nx" : 128 }
+    },
+    "fftw" : {
+        "planning" : "FFTW_ESTIMATE",
+        "threads" : 4
+    }
+}
+```
+
+See the [Namelist Configuration](namelist.md) documentation for detailed parameter descriptions.
+
+## Running Your First Simulation
+
+### DNS Mode
+
+Run a Direct Numerical Simulation:
 
 ```bash
 python burgers.py -m dns
-python burgers.py -m les -o output.nc
 ```
 
-## Documentation
+This will:
+1. Load and validate `namelist.json`
+2. Initialize the DNS solver with the specified grid resolution
+3. Generate FFTW plans (takes 30-60 seconds on first run with FFTW_PATIENT)
+4. Run the time-stepping loop
+5. Save results to `pyburgers_dns.nc`
 
-See [Contributing](contributing.md) for documentation tooling and commands.
+**First-run note**: The first time you run PyBurgers with a given grid size and FFTW planning level, it will spend time optimizing FFT plans. These plans are cached in `~/.pyburgers_fftw_wisdom`. Subsequent runs will load the cached plans and start immediately.
+
+### LES Mode
+
+Run a Large-Eddy Simulation:
+
+```bash
+python burgers.py -m les
+```
+
+This uses the LES grid resolution (`grid.les.nx`) and applies the specified subgrid-scale model (`physics.sgs_model`).
+
+### Custom Output File
+
+Specify a custom output filename:
+
+```bash
+python burgers.py -m dns -o my_simulation.nc
+```
+
+## Understanding the Output
+
+### Console Output
+
+During the simulation, you'll see log messages:
+
+```
+##############################################################
+#                                                            #
+#                   Welcome to PyBurgers                     #
+#     A toy to study Burgers turbulence with DNS and LES     #
+#                                                            #
+##############################################################
+INFO - You are running in DNS mode
+INFO - Initializing simulation and planning FFTs...
+INFO - Initialization complete. Starting simulation run...
+INFO - Done! Completed in 42.15 seconds
+##############################################################
+```
+
+With `logging.level: "DEBUG"`, you'll see detailed information about FFTW planning, array shapes, and intermediate steps.
+
+### NetCDF Output
+
+Results are saved in NetCDF format. The output file contains:
+
+- **Variables**:
+  - `u`: Velocity field (time, x)
+  - `t`: Time values
+  - `x`: Spatial coordinates
+  - Diagnostic quantities (energy, dissipation, etc.)
+
+- **Metadata**:
+  - Simulation parameters
+  - Timestamps
+  - Version information
+
+You can inspect the output using standard NetCDF tools:
+
+```bash
+# Using ncdump (if available)
+ncdump -h pyburgers_dns.nc
+
+# Using Python
+python -c "from netCDF4 import Dataset; ds = Dataset('pyburgers_dns.nc'); print(ds)"
+```
+
+### Analyzing Results
+
+Here's a simple Python script to plot the final velocity field:
+
+```python
+import matplotlib.pyplot as plt
+from netCDF4 import Dataset
+
+# Load the data
+ds = Dataset('pyburgers_dns.nc', 'r')
+x = ds.variables['x'][:]
+u = ds.variables['u'][-1, :]  # Final time step
+t = ds.variables['t'][-1]
+
+# Plot
+plt.figure(figsize=(10, 6))
+plt.plot(x, u, 'b-', linewidth=1.5)
+plt.xlabel('x (m)')
+plt.ylabel('u (m/s)')
+plt.title(f'Velocity field at t = {t:.2f} s')
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig('velocity_field.png', dpi=150)
+plt.show()
+```
+
+## Next Steps
+
+### Customize Your Simulation
+
+1. **Adjust grid resolution**: Modify `grid.dns.nx` and `grid.les.nx` in `namelist.json`
+2. **Change time stepping**: Adjust `time.nt` and `time.dt` for longer/shorter runs
+3. **Try different SGS models**: Set `physics.sgs_model` to 0-4 for LES runs
+4. **Tune FFTW**: Experiment with planning levels (ESTIMATE, MEASURE, PATIENT, EXHAUSTIVE)
+5. **Control output**: Adjust `output.t_save` to save more or fewer snapshots
+
+### Learn More
+
+- [Namelist Configuration](namelist.md) - Detailed parameter reference
+- [API Reference](reference.md) - Code documentation
+- [Contributing](contributing.md) - Development setup and guidelines
+
+### Performance Tips
+
+1. **Grid size**: Start small (nx=512) for testing, scale up for production
+2. **FFTW planning**: Use ESTIMATE for quick tests, PATIENT for production
+3. **Threading**: Set `fftw.threads` to match your CPU core count
+4. **Output frequency**: Higher `t_save` values reduce I/O overhead
+5. **Wisdom caching**: After the first run, subsequent runs are much faster
+
+### Troubleshooting
+
+**Problem**: Simulation is very slow
+
+- Check that `fftw.planning` isn't EXHAUSTIVE (unless intentional)
+- Reduce `nt` or increase `dt` for testing
+- Ensure FFTW wisdom is being cached (check for `~/.pyburgers_fftw_wisdom`)
+
+**Problem**: "NamelistError" on startup
+
+- Validate your JSON syntax (use a JSON linter)
+- Ensure all required fields are present
+- Check that numeric values aren't quoted as strings
+
+**Problem**: Out of memory
+
+- Reduce `grid.dns.nx` and/or `grid.les.nx`
+- The default 8192 grid points requires several GB of RAM
+
+**Problem**: FFTW planning takes forever
+
+- Use `FFTW_ESTIMATE` or `FFTW_MEASURE` instead of `FFTW_PATIENT`/`FFTW_EXHAUSTIVE`
+- This is normal on first run with PATIENT/EXHAUSTIVE; subsequent runs are instant
+
+## Example Workflows
+
+### Quick Test Run (1-2 minutes)
+
+Create a test namelist (`test_namelist.json`):
+
+```json
+{
+    "time": { "nt": 1000, "dt": 1E-3 },
+    "physics": {
+        "noise": { "alpha": 0.75, "amplitude": 1E-6 },
+        "viscosity": 1E-5,
+        "sgs_model": 1
+    },
+    "grid": {
+        "dns": { "nx": 512 },
+        "les": { "nx": 128 }
+    },
+    "output": { "t_save": 0.1 },
+    "logging": { "level": "INFO" },
+    "fftw": { "planning": "FFTW_ESTIMATE", "threads": 4 }
+}
+```
+
+Then modify `burgers.py` to use it, or copy it over `namelist.json`.
+
+### Production DNS Run (1-2 hours)
+
+Use the default `namelist.json` with:
+- `grid.dns.nx`: 8192 or 16384
+- `fftw.planning`: FFTW_PATIENT
+- `time.nt`: 2E5 to 5E5
+
+### Production LES Comparison
+
+Run both modes to compare:
+
+```bash
+# DNS reference
+python burgers.py -m dns -o reference_dns.nc
+
+# LES with different SGS models
+sed -i 's/"sgs_model": 1/"sgs_model": 1/' namelist.json
+python burgers.py -m les -o les_smagorinsky.nc
+
+sed -i 's/"sgs_model": 1/"sgs_model": 2/' namelist.json
+python burgers.py -m les -o les_dynamic.nc
+```
+
+Then compare the results to evaluate SGS model performance.
+
+---
+
+Happy simulating! If you encounter issues, please [open an issue](https://github.com/jeremygibbs/pyburgers/issues) on GitHub.

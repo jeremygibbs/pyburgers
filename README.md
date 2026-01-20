@@ -1,69 +1,107 @@
-![Image of pyburgers logo](https://gibbs.science/img/pyburgers_v2.png)
-
-# Burgers Turbulence (Burgulence)
-* Originally conceived by Dutch scientist, J.M. Burgers in the 1930s
-* One of the first attempts to arrive at the statistical theory of turbulent fluid motion
-* The original equation shares a lot in common with the Navier-Stokes (N-S) equations:
-  * Advective non-linearity, diffusion, invariance, and conservation laws
-* This equation is not an ideal model for the chaotic nature of turbulence
-  * Can be integrated explicitly, meaning it is not sensitive to small changes in initial conditions
-  * Shock waves form in the limit of vanishing viscosity
-* A popular modification is the addition of a forcing term that accounts for the neglected effects
-  * An example is perturbing the system with a stochastic process that is stationary in time/space
-* A popular version is called the 1D Stochastic Burgers Equation (1D SBE)
-  * Allows insight into turbulence without having to generalize to 3D
-* 1D SBE shares characteristics of 3D turbulence
-  * nonlinearity, energy spectrum, intermittent energy dissipation
-* 1D SBE is computationally cheap
+![PyBurgers Logo](https://gibbs.science/img/pyburgers_v2.png)
 
 # PyBurgers
-* Many solutions exist for the 1D SBE
-* PyBurgers follows the procedures in [Basu (2009)](https://doi.org/10.1080/14685240902852719)
-* Fourier methods are used in space, and time is advanced in real space
-  * Fourier collocation for spatial derivatives, 2nd-order Adams-Bashforth in time
-* Offers a direct numerical simulation (DNS) mode
-* Offers a large-eddy simulation (LES) mode, with 4 subgrid-scale (SGS) models
-  * Constant-coefficient Smagorinsky
-  * Dyanmic Smagorinsky
-  * Dynamic Wong-Lilly
-  * Deardorff 1.5-order TKE
-* Stochastic term is fractional Brownian motion (FBM) noise
-* Users can set how agressively they want to optimize FFT computations
-* Output in NetCDF
-* DNS took 70 minutes on a 2019 iMac
-* LES took 62 minutes on a 2019 iMac
 
-# Namelist Settings
-* grid.domain_length: domain length (default 2π)
-* grid.dns.nx: DNS grid points in x
-* grid.les.nx: LES grid points in x
-* time.nt: number of time steps
-* time.dt: time step (s)
-* physics.viscosity: kinematic viscosity (m^2 s^-1)
-* physics.noise.alpha: FBM spectral exponent
-* physics.noise.amplitude: noise amplitude
-* physics.sgs_model: subgrid-scale model
-  * 0 = no model
-  * 1 = constant-coefficient Smagorinsky
-  * 2 = dynamic Smagorinsky
-  * 3 = dynamic Wong-Lilly
-  * 4 = Deardorff 1.5-order TKE
-* output.t_save: output interval in seconds
+A high-performance solver for the 1D Stochastic Burgers Equation with DNS and LES capabilities.
 
-# Requirements
-* PyBurgers requires Python 3, NumPy, json, and netCDF4
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://gibbs.science/pyburgers)
+[![License: WTFPL](https://img.shields.io/badge/License-WTFPL-brightgreen.svg)](http://www.wtfpl.net/about/)
 
-# How to run
-```
-python burgers.py -m [dns, les] -o [optional output name]
+## Overview
+
+PyBurgers implements direct numerical simulation (DNS) and large-eddy simulation (LES) for studying Burgers turbulence, following the procedures described in [Basu (2009)](https://doi.org/10.1080/14685240902852719). The solver uses Fourier collocation methods for spatial derivatives and second-order Adams-Bashforth time integration.
+
+## Features
+
+- **Dual Simulation Modes**: DNS for full resolution and LES for coarse-grained modeling
+- **Four SGS Models**: Constant Smagorinsky, Dynamic Smagorinsky, Dynamic Wong-Lilly, and Deardorff 1.5-order TKE
+- **Optimized FFTs**: FFTW with intelligent wisdom caching for fast repeated runs
+- **Fractional Brownian Motion**: Configurable stochastic forcing with spectral control
+- **NetCDF Output**: Standard format for analysis and visualization
+- **Schema-Validated Configuration**: JSON namelist with comprehensive validation
+
+## Quick Start
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/jeremygibbs/pyburgers.git
+cd pyburgers
+
+# Install the package
+pip install -e .
 ```
 
-# Disclaimer
-I may have made errors! If you find one, [let me know][2]!
+### Run a Simulation
 
-# License 
-This template is free source code. It comes without any warranty, to the extent permitted by applicable law. You can redistribute it and/or modify it under the terms of the Do What The Fuck You Want To Public License, Version 2, as published by Sam Hocevar. See [http://www.wtfpl.net][1] for more details.
+```bash
+# Run DNS simulation (default: 8192 grid points)
+python burgers.py -m dns
 
+# Run LES simulation with custom output file
+python burgers.py -m les -o my_simulation.nc
+```
 
-[1]: http://www.wtfpl.net
-[2]: mailto:jeremy.gibbs@noaa.gov
+Configuration is controlled via `namelist.json`. See the [documentation](https://gibbs.science/pyburgers) for details.
+
+## Documentation
+
+Full documentation is available at: **https://gibbs.science/pyburgers**
+
+- [Getting Started](https://gibbs.science/pyburgers/getting-started/)
+- [Namelist Configuration](https://gibbs.science/pyburgers/namelist/)
+- [API Reference](https://gibbs.science/pyburgers/reference/)
+- [Contributing](https://gibbs.science/pyburgers/contributing/)
+
+## Performance
+
+Typical performance on a 2019 iMac:
+- DNS (8192 grid points): ~70 minutes
+- LES (512 grid points): ~62 minutes
+
+## Requirements
+
+- Python ≥ 3.10
+- NumPy ≥ 2.1
+- pyFFTW ≥ 0.15
+- netCDF4 ≥ 1.7
+
+## Citation
+
+If you use PyBurgers in your research, please cite:
+
+```bibtex
+@software{pyburgers,
+  author = {Gibbs, Jeremy A.},
+  title = {PyBurgers: 1D Stochastic Burgers Equation Solver},
+  year = {2026},
+  url = {https://github.com/jeremygibbs/pyburgers},
+  version = {2.0.0}
+}
+```
+
+And reference the underlying methodology:
+
+```bibtex
+@article{basu2009,
+  author = {Basu, Sukanta},
+  title = {High-resolution large-eddy simulations of stably stratified flows:
+           application to the Cooperative Atmosphere–Surface Exchange Study 1999 (CASES-99)},
+  journal = {Journal of Turbulence},
+  volume = {10},
+  pages = {N12},
+  year = {2009},
+  doi = {10.1080/14685240902852719}
+}
+```
+
+## License
+
+This software is free and is distributed under the **WTFPL** (Do What The Fuck You Want To Public License). It comes without any warranty, to the extent permitted by applicable law. You can redistribute it and/or modify it under the terms of the WTFPL, Version 2, as published by Sam Hocevar. See http://www.wtfpl.net for more details.
+
+## Contact
+
+Jeremy A. Gibbs - jeremy.gibbs@noaa.gov
+
+For bug reports and feature requests, please [open an issue](https://github.com/jeremygibbs/pyburgers/issues).

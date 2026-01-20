@@ -16,12 +16,13 @@ Install the docs toolchain (no package install required):
 python -m pip install mkdocs mkdocs-material mkdocstrings[python]
 ```
 
-Regenerate the namelist reference, then preview the site:
+Preview the documentation site locally:
 
 ```bash
-python scripts/build_namelist_docs.py
 mkdocs serve
 ```
+
+Then visit http://127.0.0.1:8000 in your browser.
 
 ## Tests and lint
 

@@ -7,15 +7,15 @@
         "time": {
             "type": "object",
             "properties": {
-                "nt": { 
-                    "type": "integer", 
+                "nt": {
+                    "type": "integer",
                     "minimum": 1,
-                    "description": "Simulation length [s]."
+                    "description": "Total number of time steps to simulate."
                 },
-                "dt": { 
-                    "type": "number", 
+                "dt": {
+                    "type": "number",
                     "exclusiveMinimum": 0,
-                    "description": "Time step [s]."
+                    "description": "Time step size in seconds."
                 }
             },
             "required": ["nt", "dt"]
@@ -62,18 +62,18 @@
         "grid": {
             "type": "object",
             "properties": {
-                "domain_length": { 
-                    "type": "number", 
+                "domain_length": {
+                    "type": "number",
                     "exclusiveMinimum": 0,
-                    "description": "Domain length [m]."
+                    "description": "Length of the periodic domain in meters (default: 2π)."
                 },
                 "dns": {
                     "type": "object",
                     "properties": {
-                        "nx": { 
-                            "type": "integer", 
+                        "nx": {
+                            "type": "integer",
                             "minimum": 1,
-                            "description": "Number of grid poiints."
+                            "description": "Number of grid points for DNS resolution (must be even)."
                         }
                     },
                     "required": ["nx"]
@@ -81,10 +81,10 @@
                 "les": {
                     "type": "object",
                     "properties": {
-                        "nx": { 
+                        "nx": {
                             "type": "integer",
                             "minimum": 1,
-                            "description": "Number of grid poiints."
+                            "description": "Number of grid points for LES resolution (must be even)."
                         }
                     },
                     "required": ["nx"]
@@ -95,10 +95,10 @@
         "output": {
             "type": "object",
             "properties": {
-                "t_save": { 
-                    "type": "number", 
+                "t_save": {
+                    "type": "number",
                     "exclusiveMinimum": 0,
-                    "description": "Output interval [s]."
+                    "description": "Output interval in simulation seconds (not wall-clock time)."
                 }
             },
             "required": ["t_save"]
@@ -118,7 +118,10 @@
                       { "const": "CRITICAL", "description": "Serious failures." }
                     ]
                 },
-                "file": { "type": "string" }
+                "file": {
+                    "type": "string",
+                    "description": "Path to log file (optional, logs to console if omitted)."
+                }
             },
             "required": ["level"]
         },
@@ -136,10 +139,10 @@
                       { "const": "FFTW_EXHAUSTIVE", "description": "Slowest plan; Fastest FFTs."}
                     ]
                 },
-                "threads": { 
-                    "type": "integer", 
+                "threads": {
+                    "type": "integer",
                     "minimum": 1,
-                    "description": "FFTW thread count"
+                    "description": "Number of threads for FFT operations."
                 }
             },
             "required": ["planning", "threads"]

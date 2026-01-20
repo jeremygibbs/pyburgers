@@ -35,9 +35,6 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install mkdocs mkdocs-material mkdocstrings[python]
 
-      - name: Build namelist docs
-        run: python scripts/build_namelist_docs.py
-
       - name: Build site
         run: mkdocs build --clean --site-dir site
 
