@@ -1,4 +1,4 @@
-"""Subgrid-scale (SGS) model base class for pyBurgers LES.
+"""Subgrid-scale (SGS) model base class for PyBurgers LES.
 
 This module provides the base SGS class and factory method for
 creating different subgrid-scale models.

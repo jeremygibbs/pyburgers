@@ -1,4 +1,4 @@
-"""Spectral methods for pyBurgers.
+"""Spectral methods for PyBurgers.
 
 This module provides classes for computing spectral derivatives,
 dealiasing nonlinear terms, and filtering operations using pyfftw.

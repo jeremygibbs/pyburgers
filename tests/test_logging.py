@@ -18,24 +18,24 @@ class TestLoggingHelper:
         setup_logging()
         logger = get_logger("Test")
         assert logger.level == logging.NOTSET  # Inherits from parent
-        assert logging.getLogger("pyBurgers").level == logging.INFO
+        assert logging.getLogger("PyBurgers").level == logging.INFO
 
     def test_setup_logging_custom_level(self) -> None:
         """Test logging setup with custom level."""
         setup_logging(level="DEBUG")
-        assert logging.getLogger("pyBurgers").level == logging.DEBUG
+        assert logging.getLogger("PyBurgers").level == logging.DEBUG
 
     def test_setup_logging_string_level(self) -> None:
         """Test that string log levels work."""
         for level_str in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
             setup_logging(level=level_str)
             expected_level = getattr(logging, level_str)
-            assert logging.getLogger("pyBurgers").level == expected_level
+            assert logging.getLogger("PyBurgers").level == expected_level
 
     def test_setup_logging_int_level(self) -> None:
         """Test that integer log levels work."""
         setup_logging(level=logging.WARNING)
-        assert logging.getLogger("pyBurgers").level == logging.WARNING
+        assert logging.getLogger("PyBurgers").level == logging.WARNING
 
     def test_setup_logging_file_handler(self, tmp_path: Path) -> None:
         """Test that file logging writes to the specified log file."""
@@ -44,7 +44,7 @@ class TestLoggingHelper:
         logger = get_logger("Test")
 
         logger.info("File log message")
-        for handler in logging.getLogger("pyBurgers").handlers:
+        for handler in logging.getLogger("PyBurgers").handlers:
             handler.flush()
 
         assert log_file.exists()
@@ -54,7 +54,7 @@ class TestLoggingHelper:
         """Test that get_logger returns a Logger instance."""
         logger = get_logger("Test")
         assert isinstance(logger, logging.Logger)
-        assert logger.name == "pyBurgers.Test"
+        assert logger.name == "PyBurgers.Test"
 
     def test_get_logger_caching(self) -> None:
         """Test that get_logger caches loggers."""
@@ -65,7 +65,7 @@ class TestLoggingHelper:
     def test_logger_hierarchy(self) -> None:
         """Test that loggers follow hierarchy."""
         setup_logging(level="INFO")
-        parent_logger = logging.getLogger("pyBurgers")
+        parent_logger = logging.getLogger("PyBurgers")
         child_logger = get_logger("DNS")
 
         assert child_logger.name.startswith(parent_logger.name)

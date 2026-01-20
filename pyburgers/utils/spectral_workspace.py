@@ -1,4 +1,4 @@
-"""Centralized spectral operations workspace for pyBurgers.
+"""Centralized spectral operations workspace for PyBurgers.
 
 This module provides the SpectralWorkspace class that bundles all spectral
 utilities (Derivatives, Dealias, Filter, and FBM noise) into a single,

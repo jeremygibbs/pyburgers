@@ -1,1 +1,1 @@
-"""pyBurgers test suite."""
+"""PyBurgers test suite."""

@@ -9,7 +9,7 @@
 # This software is free and is distributed under the WTFPL license.
 # See accompanying LICENSE file or visit https://www.wtfpl.net.
 #
-"""Large-Eddy Simulation (LES) for pyBurgers.
+"""Large-Eddy Simulation (LES) for PyBurgers.
 
 Implements the LES solver for the 1D stochastic Burgers equation
 with subgrid-scale modeling.

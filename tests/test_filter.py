@@ -107,3 +107,17 @@ class TestFilter:
 
         expected = 0.1 * np.sin(x_les)
         np.testing.assert_allclose(result, expected, rtol=1e-6, atol=1e-14)
+
+    def test_cutoff_preserves_energy_for_resolved_modes(self, grid_small: dict) -> None:
+        """Test that filtering preserves energy in passed frequencies."""
+        filt = Filter(grid_small["nx"])
+
+        # Low frequency signal (k=1) should have energy preserved
+        u = np.sin(grid_small["x"])
+        energy_before = np.sum(u ** 2)
+
+        result = filt.cutoff(u, ratio=4)
+        energy_after = np.sum(result ** 2)
+
+        # Energy should be preserved (within numerical tolerance)
+        np.testing.assert_allclose(energy_after, energy_before, rtol=1e-6)

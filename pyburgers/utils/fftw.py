@@ -9,7 +9,7 @@
 # This software is free and is distributed under the WTFPL license.
 # See accompanying LICENSE file or visit https://www.wtfpl.net.
 #
-"""FFTW wisdom management for pyBurgers.
+"""FFTW wisdom management for PyBurgers.
 
 This module handles loading and saving FFTW wisdom to disk, which allows
 FFT plans to be reused across runs for faster initialization.

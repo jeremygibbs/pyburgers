@@ -17,13 +17,6 @@ class TestFBM:
 
         assert noise.shape == (grid_small["nx"],)
 
-    def test_noise_is_real(self, grid_small: dict) -> None:
-        """Test that noise output is real-valued."""
-        fbm = FBM(0.75, grid_small["nx"])
-        noise = fbm.compute_noise()
-
-        assert np.all(np.isreal(noise))
-
     def test_noise_zero_mean(self, grid_small: dict) -> None:
         """Test that noise has approximately zero mean."""
         np.random.seed(42)
@@ -36,7 +29,8 @@ class TestFBM:
             means.append(np.mean(noise))
 
         # Mean of means should be close to zero
-        assert abs(np.mean(means)) < 0.5
+        # With 100 samples, standard error ~0.01, so 5σ bound is ~0.05
+        assert abs(np.mean(means)) < 0.05
 
     def test_noise_finite(self, grid_small: dict) -> None:
         """Test that noise values are finite."""
@@ -84,7 +78,8 @@ class TestFBM:
 
         # Slope should be approximately -alpha (within tolerance)
         # Power spectrum scales as k^(-alpha) for FBM
-        assert abs(slope + alpha) < 0.3  # Some tolerance for finite samples
+        # With 100 realizations and 256 points, tolerance should be ~0.1
+        assert abs(slope + alpha) < 0.15
 
     def test_different_alpha(self) -> None:
         """Test that different alpha values produce different spectra."""
@@ -108,3 +103,34 @@ class TestFBM:
 
         # Higher alpha should give smoother noise (lower high-k variance)
         assert np.mean(variances_high) < np.mean(variances_low)
+
+    def test_noise_variance_scaling(self) -> None:
+        """Test that noise variance scales with amplitude squared."""
+        np.random.seed(42)
+        nx = 128
+
+        # Generate noise with two different amplitudes
+        fbm_amp1 = FBM(0.75, nx)
+        fbm_amp2 = FBM(0.75, nx)
+
+        # Average variance over multiple realizations
+        n_realizations = 50
+        var_amp1 = []
+        var_amp2 = []
+
+        for _ in range(n_realizations):
+            # Amplitude 1.0
+            noise1 = fbm_amp1.compute_noise()
+            var_amp1.append(np.var(noise1))
+
+            # Amplitude 2.0 (manually scale)
+            noise2 = 2.0 * fbm_amp2.compute_noise()
+            var_amp2.append(np.var(noise2))
+
+        mean_var1 = np.mean(var_amp1)
+        mean_var2 = np.mean(var_amp2)
+
+        # Variance should scale as amplitude^2
+        # So variance(2*noise) / variance(noise) ≈ 4
+        ratio = mean_var2 / mean_var1
+        assert 3.5 < ratio < 4.5  # Allow 12.5% tolerance

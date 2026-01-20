@@ -116,11 +116,14 @@ class TestDNSIntegration:
         dns.run()
 
         # Velocity should remain finite and bounded
+        # With visc=0.01, noise=0.1, dt=0.001, velocity should be O(1)
         assert np.all(np.isfinite(dns.u))
-        assert np.max(np.abs(dns.u)) < 100
+        u_rms = np.sqrt(np.mean(np.abs(dns.u) ** 2))
+        assert 0.01 < u_rms < 2.0  # Physical bound for test params
+        assert np.max(np.abs(dns.u)) < 5.0  # Peak velocity ~3-5 sigma
 
     def test_dns_tke_positive(self, tmp_path: Path) -> None:
-        """Test that DNS TKE is non-negative."""
+        """Test that DNS TKE is in physical range."""
         input_obj = MockInput(nt=20, t_save=0.005)
         output_file = tmp_path / "test_dns.nc"
         output_obj = Output(str(output_file))
@@ -128,7 +131,8 @@ class TestDNSIntegration:
         dns = DNS(input_obj, output_obj)
         dns.run()
 
-        assert dns.tke[0] >= 0
+        # TKE = variance of velocity, should be in physical range for test params
+        assert 0.001 < dns.tke[0] < 1.0
 
     def test_dns_zero_mean_velocity(self, tmp_path: Path) -> None:
         """Test that DNS velocity has approximately zero mean."""
@@ -139,9 +143,24 @@ class TestDNSIntegration:
         dns = DNS(input_obj, output_obj)
         dns.run()
 
-        # Mean should be close to zero (periodic domain)
+        # Mean should be close to zero (periodic domain + spectral methods)
+        # DC mode is forced to zero, so mean should be machine precision
         mean_u = np.mean(np.real(dns.u))
-        assert abs(mean_u) < 1.0
+        assert abs(mean_u) < 1e-8
+
+    def test_dns_nyquist_mode_zero(self, tmp_path: Path) -> None:
+        """Test that Nyquist mode stays zero (dealiasing check)."""
+        input_obj = MockInput(nt=20, t_save=0.01)
+        output_file = tmp_path / "test_dns.nc"
+        output_obj = Output(str(output_file))
+
+        dns = DNS(input_obj, output_obj)
+        dns.run()
+
+        # Nyquist mode should be zero to prevent aliasing
+        u_fft = np.fft.rfft(dns.u)
+        nyquist_idx = len(u_fft) - 1
+        assert np.abs(u_fft[nyquist_idx]) < 1e-10
 
 
 class TestLESIntegration:
@@ -168,8 +187,11 @@ class TestLESIntegration:
         les = LES(input_obj, output_obj)
         les.run()
 
+        # LES velocity should be bounded similar to DNS
         assert np.all(np.isfinite(les.u))
-        assert np.max(np.abs(les.u)) < 100
+        u_rms = np.sqrt(np.mean(np.abs(les.u) ** 2))
+        assert 0.01 < u_rms < 2.0  # Physical bound for test params
+        assert np.max(np.abs(les.u)) < 5.0  # Peak velocity ~3-5 sigma
 
     def test_les_diagnostics_computed(self, tmp_path: Path) -> None:
         """Test that LES computes all diagnostic fields."""
@@ -197,6 +219,58 @@ class TestLESIntegration:
         # TKE_sgs should be an array for Deardorff model
         assert isinstance(les.tke_sgs, np.ndarray)
         assert np.all(np.isfinite(les.tke_sgs))
+
+    def test_les_sgs_dissipation_positive(self, tmp_path: Path) -> None:
+        """Test that LES SGS dissipation is non-negative."""
+        input_obj = MockInput(nt=20, t_save=0.01, sgs_model=1)
+        output_file = tmp_path / "test_les.nc"
+        output_obj = Output(str(output_file))
+
+        les = LES(input_obj, output_obj)
+        les.run()
+
+        # SGS models must be dissipative (Second Law of Thermodynamics)
+        assert np.all(les.diss_sgs >= 0)
+
+    def test_les_total_dissipation_bounds(self, tmp_path: Path) -> None:
+        """Test that total dissipation matches energy input order of magnitude."""
+        input_obj = MockInput(nt=50, t_save=0.01, sgs_model=1)
+        output_file = tmp_path / "test_les.nc"
+        output_obj = Output(str(output_file))
+
+        les = LES(input_obj, output_obj)
+        les.run()
+
+        # Total dissipation = SGS + molecular
+        total_diss = les.diss_sgs[-1] + les.diss_mol[-1]
+
+        # Should be positive and in reasonable range
+        assert total_diss > 0
+        # Order of magnitude check: dissipation should be O(0.001-1.0)
+        assert 1e-4 < total_diss < 10.0
+
+    @pytest.mark.parametrize("sgs_model", [1, 2, 3])
+    def test_les_coefficient_physical_range(self, tmp_path: Path, sgs_model: int) -> None:
+        """Test that SGS coefficients stay in physical bounds during run."""
+        input_obj = MockInput(nt=20, t_save=0.005, sgs_model=sgs_model)
+        output_file = tmp_path / f"test_les_coeff_{sgs_model}.nc"
+        output_obj = Output(str(output_file))
+
+        les = LES(input_obj, output_obj)
+        les.run()
+
+        # Check coefficient bounds based on model
+        if sgs_model == 1:
+            # Constant Smagorinsky: Cs = 0.16 (exact)
+            np.testing.assert_allclose(les.C_sgs, 0.16, rtol=1e-10)
+        elif sgs_model == 2:
+            # Dynamic Smagorinsky: 0 ≤ Cs ≤ 0.5
+            assert np.all(les.C_sgs >= 0)
+            assert np.all(les.C_sgs <= 0.7)  # Allow some margin
+        elif sgs_model == 3:
+            # Wong-Lilly: 0 ≤ Cwl ≤ 1.0
+            assert np.all(les.C_sgs >= 0)
+            assert np.all(les.C_sgs <= 1.5)  # Allow some margin
 
 
 class TestReproducibility:

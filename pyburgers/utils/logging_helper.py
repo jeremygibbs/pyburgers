@@ -1,7 +1,7 @@
-"""Logging configuration for pyBurgers.
+"""Logging configuration for PyBurgers.
 
 This module provides centralized logging setup and helper functions
-for consistent logging across all pyBurgers modules.
+for consistent logging across all PyBurgers modules.
 """
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ def setup_logging(
     log_file: str | None = None,
     file_mode: str = "w",
 ) -> None:
-    """Configure the root logger for pyBurgers.
+    """Configure the root logger for PyBurgers.
 
     This should be called once at application startup, typically in
     the main entry point (burgers.py).
@@ -116,7 +116,7 @@ def setup_logging(
 def get_logger(name: str) -> logging.Logger:
     """Get a logger for the specified module/class.
 
-    Creates a child logger under the pyBurgers namespace for consistent
+    Creates a child logger under the PyBurgers namespace for consistent
     hierarchical logging.
 
     Args:
@@ -129,7 +129,7 @@ def get_logger(name: str) -> logging.Logger:
     Example:
         >>> logger = get_logger("DNS")
         >>> logger.info("Starting simulation")
-        [pyBurgers: DNS]     Starting simulation
+        [PyBurgers: DNS]     Starting simulation
     """
     full_name = f"PyBurgers.{name}"
 

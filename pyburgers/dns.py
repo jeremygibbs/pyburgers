@@ -9,7 +9,7 @@
 # This software is free and is distributed under the WTFPL license.
 # See accompanying LICENSE file or visit https://www.wtfpl.net.
 #
-"""Direct Numerical Simulation (DNS) for pyBurgers.
+"""Direct Numerical Simulation (DNS) for PyBurgers.
 
 Implements the DNS solver for the 1D stochastic Burgers equation
 using spectral methods.
