@@ -70,20 +70,20 @@ DNS resolves all scales of motion down to the Kolmogorov scale. In PyBurgers:
 
 LES resolves large-scale motions and models the effect of small scales. PyBurgers supports four subgrid-scale (SGS) models:
 
-1. **Constant-coefficient Smagorinsky** (model ID: 1)
-   - Classic eddy-viscosity model
-   - Single tunable coefficient
+1. **Constant-coefficient Smagorinsky** (model: 1)
+    - Classic eddy-viscosity model
+    - Single tunable coefficient
 
-2. **Dynamic Smagorinsky** (model ID: 2)
+2. **Dynamic Smagorinsky** (model: 2)
    - Coefficient computed dynamically from resolved scales
    - Better adaptation to flow conditions
 
-3. **Dynamic Wong-Lilly** (model ID: 3)
+3. **Dynamic Wong-Lilly** (model: 3)
    - Alternative dynamic procedure
    - Different averaging approach
 
-4. **Deardorff 1.5-order TKE** (model ID: 4)
-   - Prognostic equation for subgrid kinetic energy
+4. **Deardorff 1.5-order TKE** (model: 4)
+   - Prognostic equation for subgrid turbulence kinetic energy
    - More sophisticated closure
 
 ## Performance Optimizations

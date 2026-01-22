@@ -107,8 +107,10 @@ class OutputConfig:
 
     Attributes:
         t_save: Save interval in physical time [s]
+        t_print: Print progress interval in physical time [s]
     """
     t_save: float
+    t_print: float
 
 @dataclass(frozen=True)
 class PhysicsConfig:

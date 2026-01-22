@@ -21,7 +21,8 @@
         }
     },
     "output"  : {
-        "t_save" : 0.1
+        "t_save" : 0.1,
+        "t_print" : 0.1
     },
     "logging" : {
         "level" : "INFO",

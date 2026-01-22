@@ -121,8 +121,10 @@ class Input:
         # Output configuration
         output_data = namelist_data.get("output", {})
         default_t_save = 1000 * self.time.dt
+        default_t_print = default_t_save  # Default print freq same as save freq
         self.output: OutputConfig = OutputConfig(
-            t_save=float(output_data.get("t_save", default_t_save))
+            t_save=float(output_data.get("t_save", default_t_save)),
+            t_print=float(output_data.get("t_print", default_t_print))
         )
         self._step_save = max(1, int(round(self.output.t_save / self.time.dt)))
         self._t_save_effective = self._step_save * self.time.dt
@@ -138,6 +140,22 @@ class Input:
                 self.time.dt,
                 self._t_save_effective,
                 self._step_save,
+            )
+
+        self._step_print = max(1, int(round(self.output.t_print / self.time.dt)))
+        self._t_print_effective = self._step_print * self.time.dt
+        if not math.isclose(
+            self._t_print_effective,
+            self.output.t_print,
+            rel_tol=0.0,
+            abs_tol=0.5 * self.time.dt,
+        ):
+            self.logger.warning(
+                "Requested t_print=%g not aligned with dt=%g; using %g (steps=%d)",
+                self.output.t_print,
+                self.time.dt,
+                self._t_print_effective,
+                self._step_print,
             )
 
         # FFTW configuration
@@ -194,6 +212,16 @@ class Input:
     def t_save(self) -> float:
         """Convenience accessor for save interval (in seconds)."""
         return self.output.t_save
+
+    @property
+    def step_print(self) -> int:
+        """Convenience accessor for print interval (in time steps)."""
+        return self._step_print
+
+    @property
+    def t_print(self) -> float:
+        """Convenience accessor for print interval (in seconds)."""
+        return self.output.t_print
 
     def _load_namelist(self, namelist_path: str) -> dict[str, Any]:
         """Load the JSON namelist file.
@@ -283,6 +311,8 @@ class Input:
             output_data = data["output"]
             if "t_save" in output_data and float(output_data["t_save"]) <= 0:
                 raise NamelistError("'t_save' must be positive")
+            if "t_print" in output_data and float(output_data["t_print"]) <= 0:
+                raise NamelistError("'t_print' must be positive")
 
         # Validate FFTW config if present
         if 'fftw' in data:
@@ -318,10 +348,13 @@ class Input:
             self.physics.sgs_model
         )
         self.logger.debug(
-            "Output: t_save=%g (steps=%d, effective=%g)",
+            "Output: t_save=%g (steps=%d, effective=%g), t_print=%g (steps=%d, effective=%g)",
             self.output.t_save,
             self._step_save,
             self._t_save_effective,
+            self.output.t_print,
+            self._step_print,
+            self._t_print_effective,
         )
         self.logger.debug(
             "Logging: level=%s, file=%s",

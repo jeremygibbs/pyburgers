@@ -85,7 +85,8 @@ class Burgers(ABC):
         self.noise_amp = input_obj.physics.noise.amplitude
         self.noise_alpha = input_obj.physics.noise.alpha
         self.step_save = input_obj.step_save
-        self.progress_stride = max(1, self.step_save)
+        self.step_print = input_obj.step_print
+        self.progress_stride = max(1, self.step_print)
         self.fftw_planning = input_obj.fftw_planning
         self.fftw_threads = input_obj.fftw_threads
         self.domain_length = input_obj.domain_length

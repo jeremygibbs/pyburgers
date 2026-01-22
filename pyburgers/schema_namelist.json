@@ -99,6 +99,11 @@
                     "type": "number",
                     "exclusiveMinimum": 0,
                     "description": "Output interval in simulation seconds (not wall-clock time)."
+                },
+                "t_print": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Progress reporting interval in simulation seconds (optional, defaults to t_save)."
                 }
             },
             "required": ["t_save"]

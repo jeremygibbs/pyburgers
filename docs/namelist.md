@@ -45,7 +45,8 @@ Here's a typical configuration for running both DNS and LES:
         }
     },
     "output"  : {
-        "t_save" : 0.1
+        "t_save" : 0.1,
+        "t_print" : 0.01
     },
     "logging" : {
         "level" : "INFO",
@@ -60,223 +61,226 @@ Here's a typical configuration for running both DNS and LES:
 
 ---
 
-## Section: `time`
+## Section: time
 
 Controls the temporal discretization and simulation duration.
 
-### `nt` (required)
+`nt`
+:   **Type:** Number (required)
+    **Default:** None
 
-**Type:** Number
+    Total number of time steps to simulate.
 
-**Description:** Total number of time steps to simulate.
+    Total simulation time = `nt × dt`. Use scientific notation for large values.
 
-**Example:** `2E5` (200,000 time steps)
+    **Example:** `2E5` (200,000 time steps)
 
-**Notes:** Total simulation time = `nt × dt`. Use scientific notation for large values.
+`dt`
+:   **Type:** Number (required)
+    **Default:** None
 
-### `dt` (required)
+    Time step size in seconds.
 
-**Type:** Number
+    Must satisfy CFL condition for numerical stability. Typical values: 1E-4 to 1E-5.
 
-**Description:** Time step size in seconds.
-
-**Example:** `1E-4` (0.0001 seconds)
-
-**Notes:** Must satisfy CFL condition for numerical stability. Typical values: 1E-4 to 1E-5.
+    **Example:** `1E-4` (0.0001 seconds)
 
 ---
 
-## Section: `physics`
+## Section: physics
 
 Defines the physical parameters of the Burgers equation.
 
-### `viscosity` (required)
+`viscosity`
+:   **Type:** Number (required)
+    **Default:** None
 
-**Type:** Number
+    Kinematic viscosity in m²/s.
 
-**Description:** Kinematic viscosity in m²/s.
+    Controls the rate of diffusion. Lower values lead to sharper gradients and require finer resolution.
 
-**Example:** `1E-5`
+    **Example:** `1E-5`
 
-**Notes:** Controls the rate of diffusion. Lower values lead to sharper gradients and require finer resolution.
+`sgs_model`
+:   **Type:** Integer (optional)
+    **Default:** `0`
 
-### `sgs_model` (optional)
+    Subgrid-scale turbulence model for LES mode.
 
-**Type:** Integer (0-4)
+    **Available models:**
 
-**Description:** Subgrid-scale turbulence model for LES mode.
+    - `0` - No SGS model (DNS or inviscid LES)
+    - `1` - Constant-coefficient Smagorinsky
+    - `2` - Dynamic Smagorinsky
+    - `3` - Dynamic Wong-Lilly
+    - `4` - Deardorff 1.5-order TKE
 
-**Options:**
-- `0` - No SGS model (DNS or inviscid LES)
-- `1` - Constant-coefficient Smagorinsky
-- `2` - Dynamic Smagorinsky
-- `3` - Dynamic Wong-Lilly
-- `4` - Deardorff 1.5-order TKE
+    **Note:** Only affects LES runs (`-m les`). DNS mode ignores this setting. Dynamic models (2-4) are more computationally expensive but generally more accurate.
 
-**Default:** `0`
+    **Example:** `1`
 
-**Example:** `1`
-
-**Notes:** Only affects LES runs (`-m les`). DNS mode ignores this setting. Dynamic models (2-4) are more computationally expensive but generally more accurate.
-
-### Subsection: `physics.noise`
+### Subsection: physics.noise
 
 Configures the stochastic forcing term (fractional Brownian motion).
 
-#### `alpha` (required)
+`alpha`
+:   **Type:** Number (required)
+    **Default:** None
 
-**Type:** Number
+    Spectral exponent for fractional Brownian motion.
 
-**Description:** Spectral exponent for fractional Brownian motion.
+    Controls the correlation structure of the noise. Values typically range from 0.5 to 1.5. A value of 0.75 produces realistic turbulent forcing.
 
-**Example:** `0.75`
+    **Example:** `0.75`
 
-**Notes:** Controls the correlation structure of the noise. Values typically range from 0.5 to 1.5. A value of 0.75 produces realistic turbulent forcing.
+`amplitude`
+:   **Type:** Number (required)
+    **Default:** None
 
-#### `amplitude` (required)
+    Amplitude of the stochastic forcing.
 
-**Type:** Number
+    Controls the energy injection rate. Adjust based on viscosity and desired turbulence intensity.
 
-**Description:** Amplitude of the stochastic forcing.
-
-**Example:** `1E-6`
-
-**Notes:** Controls the energy injection rate. Adjust based on viscosity and desired turbulence intensity.
+    **Example:** `1E-6`
 
 ---
 
-## Section: `grid`
+## Section: grid
 
 Defines the computational domain and spatial resolution.
 
-### `domain_length` (optional)
+`domain_length`
+:   **Type:** Number (optional)
+    **Default:** `6.283185307179586` (2π)
 
-**Type:** Number
+    Length of the periodic domain in meters.
 
-**Description:** Length of the periodic domain in meters.
+    The domain is periodic, so this sets the fundamental wavelength. Default value of 2π is convenient for spectral methods.
 
-**Default:** `6.283185307179586` (2π)
+    **Example:** `6.283185307179586`
 
-**Example:** `6.283185307179586`
-
-**Notes:** The domain is periodic, so this sets the fundamental wavelength. Default value of 2π is convenient for spectral methods.
-
-### Subsection: `grid.dns`
+### Subsection: grid.dns
 
 DNS grid configuration (required even if only running LES, as it's used for noise generation).
 
-#### `nx` (required)
+`nx`
+:   **Type:** Integer (required)
+    **Default:** None
 
-**Type:** Integer (must be even)
+    Number of grid points for DNS resolution.
 
-**Description:** Number of grid points for DNS resolution.
+    Must be even for FFT efficiency. Higher resolution resolves smaller scales but increases computational cost. Typical values: 4096 to 16384.
 
-**Example:** `8192`
+    **Example:** `8192`
 
-**Notes:** Must be even for FFT efficiency. Higher resolution resolves smaller scales but increases computational cost. Typical values: 4096 to 16384.
-
-### Subsection: `grid.les`
+### Subsection: grid.les
 
 LES grid configuration.
 
-#### `nx` (required)
+`nx`
+:   **Type:** Integer (required)
+    **Default:** None
 
-**Type:** Integer (must be even)
+    Number of grid points for LES resolution.
 
-**Description:** Number of grid points for LES resolution.
+    Must be even and typically much smaller than DNS resolution. The ratio `dns.nx / les.nx` determines the filter width. Typical values: 256 to 1024.
 
-**Example:** `512`
+    **Note:** The filter width is automatically computed as `dns.nx / les.nx` and displayed in the LES startup log.
 
-**Notes:** Must be even and typically much smaller than DNS resolution. The ratio `dns.nx / les.nx` determines the scale separation. Typical values: 256 to 1024.
-
----
-
-## Section: `output`
-
-Controls output file writing.
-
-### `t_save` (required)
-
-**Type:** Number
-
-**Description:** Output interval in simulation seconds (not wall-clock time).
-
-**Example:** `0.1`
-
-**Notes:** Data is saved to NetCDF every `t_save` seconds of simulated time. Smaller values produce more output but larger files. The actual number of outputs = `(nt × dt) / t_save`.
+    **Example:** `512` (with `dns.nx=8192`, this gives filter width of 16Δx)
 
 ---
 
-## Section: `logging`
+## Section: output
+
+Controls output file writing and progress reporting.
+
+`t_save`
+:   **Type:** Number (required)
+    **Default:** None
+
+    Output interval in simulation seconds (not wall-clock time).
+
+    Data is saved to NetCDF every `t_save` seconds of simulated time. Smaller values produce more output but larger files. The actual number of outputs = `(nt × dt) / t_save`.
+
+    **Example:** `0.1`
+
+`t_print`
+:   **Type:** Number (optional)
+    **Default:** Same as `t_save`
+
+    Progress reporting interval in simulation seconds (not wall-clock time).
+
+    Progress messages are printed to the console every `t_print` seconds of simulated time. This is independent of `t_save`, allowing you to monitor progress more frequently without increasing file output. Smaller values provide more frequent updates but may clutter the console.
+
+    **Example:** `0.01` (prints 10x more frequently than saving)
+
+---
+
+## Section: logging
 
 Configures runtime logging behavior.
 
-### `level` (required)
+`level`
+:   **Type:** String (required)
+    **Default:** None
 
-**Type:** String
+    Logging verbosity level.
 
-**Description:** Logging verbosity level.
+    **Available levels:**
 
-**Options:**
-- `"DEBUG"` - Verbose diagnostics (FFTW planning details, array shapes, etc.)
-- `"INFO"` - Normal runtime information (recommended)
-- `"WARNING"` - Only warnings and errors
-- `"ERROR"` - Only errors
-- `"CRITICAL"` - Only critical failures
+    - `"DEBUG"` - Verbose diagnostics (FFTW planning details, array shapes, etc.)
+    - `"INFO"` - Normal runtime information (recommended)
+    - `"WARNING"` - Only warnings and errors
+    - `"ERROR"` - Only errors
+    - `"CRITICAL"` - Only critical failures
 
-**Default:** None (must specify)
+    **Tip:** Use `"DEBUG"` for troubleshooting, `"INFO"` for normal runs.
 
-**Example:** `"INFO"`
+    **Example:** `"INFO"`
 
-**Notes:** Use `"DEBUG"` for troubleshooting, `"INFO"` for normal runs.
+`file`
+:   **Type:** String (optional)
+    **Default:** None (log to console only)
 
-### `file` (optional)
+    Path to log file. If not specified, logs only to console.
 
-**Type:** String
+    The file is created in the current working directory. Logs are appended, not overwritten.
 
-**Description:** Path to log file. If not specified, logs only to console.
-
-**Example:** `"pyburgers.log"`
-
-**Notes:** The file is created in the current working directory. Logs are appended, not overwritten.
+    **Example:** `"pyburgers.log"`
 
 ---
 
-## Section: `fftw`
+## Section: fftw
 
 Configures FFTW (Fastest Fourier Transform in the West) behavior.
 
-### `planning` (required)
+`planning`
+:   **Type:** String (required)
+    **Default:** None
 
-**Type:** String
+    FFTW planning strategy. Controls the trade-off between planning time and FFT performance.
 
-**Description:** FFTW planning strategy. Controls the trade-off between planning time and FFT performance.
+    **Available strategies:**
 
-**Options:**
-- `"FFTW_ESTIMATE"` - Fastest planning (~instant), decent performance. Good for quick tests.
-- `"FFTW_MEASURE"` - Moderate planning (~seconds), good performance. Balanced choice.
-- `"FFTW_PATIENT"` - Thorough planning (~30-60 seconds), better performance. Recommended for production.
-- `"FFTW_EXHAUSTIVE"` - Extreme planning (~minutes), best performance. Only for repeated runs with fixed parameters.
+    - `"FFTW_ESTIMATE"` - Fastest planning (~instant), decent performance. Good for quick tests.
+    - `"FFTW_MEASURE"` - Moderate planning (~seconds), good performance. Balanced choice.
+    - `"FFTW_PATIENT"` - Thorough planning (~30-60 seconds), better performance. Recommended for production.
+    - `"FFTW_EXHAUSTIVE"` - Extreme planning (~minutes), best performance. Only for repeated runs with fixed parameters.
 
-**Example:** `"FFTW_PATIENT"`
+    **Note:** Planning is only done on first run. Subsequent runs load cached "wisdom" and start instantly. Wisdom is stored in `~/.pyburgers_fftw_wisdom`. If you change grid sizes, wisdom is regenerated automatically.
 
-**Notes:**
-- Planning is only done on first run. Subsequent runs load cached "wisdom" and start instantly.
-- Wisdom is stored in `~/.pyburgers_fftw_wisdom`.
-- If you change grid sizes, wisdom is regenerated automatically.
+    **Example:** `"FFTW_PATIENT"`
 
-### `threads` (required)
+`threads`
+:   **Type:** Integer (required)
+    **Default:** None
 
-**Type:** Integer (≥1)
+    Number of threads for FFT operations.
 
-**Description:** Number of threads for FFT operations.
+    Set to the number of physical CPU cores for best performance. Diminishing returns beyond ~8 threads for typical grid sizes. FFT threading overhead can dominate for very small grids (nx < 512).
 
-**Example:** `8`
-
-**Notes:**
-- Set to the number of physical CPU cores for best performance.
-- Diminishing returns beyond ~8 threads for typical grid sizes.
-- FFT threading overhead can dominate for very small grids (nx < 512).
+    **Example:** `8`
 
 ---
 
@@ -296,6 +300,7 @@ Error messages will indicate the specific problem and location in the namelist.
 ## Performance Tuning
 
 ### For Quick Tests
+
 ```json
 {
     "time": { "nt": 1000, "dt": 1E-3 },
@@ -305,6 +310,7 @@ Error messages will indicate the specific problem and location in the namelist.
 ```
 
 ### For Production DNS
+
 ```json
 {
     "time": { "nt": 5E5, "dt": 5E-5 },
@@ -314,6 +320,7 @@ Error messages will indicate the specific problem and location in the namelist.
 ```
 
 ### For Production LES
+
 ```json
 {
     "time": { "nt": 1E6, "dt": 1E-4 },
@@ -327,8 +334,10 @@ Error messages will indicate the specific problem and location in the namelist.
 
 ## Tips
 
-1. **Start small**: Test with small `nx` and `nt` values before running full-scale simulations
-2. **Monitor first**: Use `logging.level: "DEBUG"` for your first run to ensure everything is configured correctly
-3. **Save wisely**: Balance `t_save` between temporal resolution and disk space
-4. **Thread carefully**: More threads isn't always better; benchmark your specific hardware
-5. **Be patient**: Let FFTW take time to plan on the first run; subsequent runs will be much faster
+!!! tip "Best Practices"
+    1. **Start small**: Test with small `nx` and `nt` values before running full-scale simulations
+    2. **Monitor first**: Use `logging.level: "DEBUG"` for your first run to ensure everything is configured correctly
+    3. **Save wisely**: Balance `t_save` between temporal resolution and disk space
+    4. **Print smartly**: Set `t_print` smaller than `t_save` to monitor progress without bloating output files
+    5. **Thread carefully**: More threads isn't always better; benchmark your specific hardware
+    6. **Be patient**: Let FFTW take time to plan on the first run; subsequent runs will be much faster
