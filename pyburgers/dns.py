@@ -83,7 +83,8 @@ class DNS(Burgers):
         DNS mode has no additional setup beyond the spectral workspace.
         FBM noise is initialized as part of the workspace.
         """
-        pass
+        self.logger.info("DNS configuration:")
+        self.logger.info("  Resolution: %d points", self.nx)
 
     def _setup_output_fields(self) -> dict[str, Any]:
         """Configure DNS output fields.

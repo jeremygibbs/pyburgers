@@ -16,8 +16,8 @@ theme:
         name: Switch to dark mode
     # Dark mode
     - scheme: slate
-      primary: indigo
-      accent: indigo
+      primary: pink
+      accent: pink
       toggle:
         icon: material/brightness-4
         name: Switch to light mode

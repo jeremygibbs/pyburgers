@@ -98,8 +98,25 @@ class LES(Burgers):
         self.nx_dns = self._nx_dns
         self.sgs_model_id = self._sgs_model_id
 
+        # Calculate and log filter width
+        filter_width = self.nx_dns // self.nx
+        self.logger.info("LES configuration:")
+        self.logger.info("  Resolution: %d points", self.nx)
+        self.logger.info("  Filter width: %dΔx (ratio to DNS: %d)", filter_width, filter_width)
+        self.logger.info("  Testing against DNS with %d points", self.nx_dns)
+
         # SGS model (pass spectral workspace for shared utilities)
         self.subgrid = get_sgs_model(self.sgs_model_id, self.input, self.spectral)
+
+        # Log SGS model info
+        sgs_names = {
+            0: "None (inviscid)",
+            1: "Constant-coefficient Smagorinsky",
+            2: "Dynamic Smagorinsky",
+            3: "Dynamic Wong-Lilly",
+            4: "Deardorff 1.5-order TKE"
+        }
+        self.logger.info("  SGS model: %s", sgs_names.get(self.sgs_model_id, "Unknown"))
 
         # Initialize subgrid TKE for Deardorff model
         if self.sgs_model_id == 4:

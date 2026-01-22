@@ -73,6 +73,7 @@ def main() -> None:
     print("#                                                            #")
     print("#                   Welcome to PyBurgers                     #")
     print("#     A toy to study Burgers turbulence with DNS and LES     #")
+    print("#                      by: Jeremy Gibbs                      #")
     print("#                                                            #")
     print("##############################################################")
     
@@ -169,7 +170,6 @@ def main() -> None:
         t2: float = time.time()
         elapsed: float = t2 - t1
         logger.info("Done! Completed in %.2f seconds", elapsed)
-        logger.info("##############################################################")
 
     except InvalidMode as e:
         print(f'\nInvalid mode error: {e}')
@@ -189,6 +189,7 @@ def main() -> None:
         # Ensure the output file is properly closed, even if an error occurred
         if output_obj is not None:
             output_obj.close()
+    print("##############################################################")
 
 
 if __name__ == "__main__":
