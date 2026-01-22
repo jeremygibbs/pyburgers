@@ -1,7 +1,7 @@
 site_name: PyBurgers Documentation
 site_description: 1D Stochastic Burgers Equation Solver using DNS and LES
 site_author: Jeremy Gibbs
-repo_url: https://github.com/jeremy.gibbs/pyburgers
+repo_url: https://github.com/jeremygibbs/pyburgers
 repo_name: pyburgers
 
 theme:
@@ -9,8 +9,8 @@ theme:
   palette:
     # Light mode
     - scheme: default
-      primary: indigo
-      accent: indigo
+      primary: pink
+      accent: pink
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
@@ -22,8 +22,8 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   features:
-    - navigation.tabs
     - navigation.sections
+    - navigation.expand
     - navigation.top
     - navigation.tracking
     - search.suggest
@@ -72,7 +72,6 @@ extra_javascript:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-  - Configuration:
-    - Namelist Reference: namelist.md
-  - API Reference: reference.md
   - Contributing: contributing.md
+  - Namelist Reference: namelist.md
+  - API Reference: reference.md

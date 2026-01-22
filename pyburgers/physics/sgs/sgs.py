@@ -55,16 +55,16 @@ class SGS:
         if model == 0:
             return SGS(input_obj, spectral)
         if model == 1:
-            from .smagcon import SmagConstant
+            from .sgs_smagcon import SmagConstant
             return SmagConstant(input_obj, spectral)
         if model == 2:
-            from .smagdyn import SmagDynamic
+            from .sgs_smagdyn import SmagDynamic
             return SmagDynamic(input_obj, spectral)
         if model == 3:
-            from .wonglilly import WongLilly
+            from .sgs_wonglilly import WongLilly
             return WongLilly(input_obj, spectral)
         if model == 4:
-            from .deardorff import Deardorff
+            from .sgs_deardorff import Deardorff
             return Deardorff(input_obj, spectral)
         raise ValueError(f"Unknown SGS model ID: {model}. Valid options: 0-4.")
 
