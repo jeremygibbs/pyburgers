@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://docs.gibbs.science/pyburgers/
+    about: Check the documentation for guides and API reference
+  - name: Discussions
+    url: https://github.com/jeremygibbs/pyburgers/discussions
+    about: Ask questions and discuss ideas with the community

@@ -1,8 +1,20 @@
+# Python cache
 __pycache__
+
+# VS Code editor
 .vscode/
+
+# Model output
 *nc
-AGENTS.md
-CLAUDE.md
+
+# macOS 
 .DS_Store
+
+# Model log files
 *.log
+
+# Generated API docs output
 site/
+
+# Building project locally
+pyburgers.egg-info/

@@ -45,7 +45,7 @@ To build documentation locally:
 pip install -e ".[docs]"
 ```
 
-This adds MkDocs, Material theme, and mkdocstrings.
+This adds MkDocs, Material theme, and mkdocstrings for building the documentation site.
 
 ### Verify Installation
 

@@ -1,41 +1,78 @@
-site_name: PyBurgers
+site_name: PyBurgers Documentation
 site_description: 1D Stochastic Burgers Equation Solver using DNS and LES
-
-nav:
-  - Home: index.md
-  - Getting Started: getting-started.md
-  - Contributing: contributing.md
-  - Namelist: namelist.md
-  - API Reference: reference.md
+site_author: Jeremy Gibbs
+repo_url: https://github.com/jeremy.gibbs/pyburgers
+repo_name: pyburgers
 
 theme:
   name: material
   palette:
+    # Light mode
     - scheme: default
-      primary: teal
-      accent: amber
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
   features:
-    - content.code.copy
+    - navigation.tabs
+    - navigation.sections
     - navigation.top
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
 
 plugins:
   - search
   - mkdocstrings:
       handlers:
         python:
-          paths:
-            - "."
           options:
             docstring_style: google
+            show_source: true
             show_root_heading: true
-            show_source: false
-            allow_inspection: false
+            show_root_full_path: false
+            heading_level: 2
+            members_order: source
+            show_signature_annotations: true
+            separate_signature: true
 
 markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.arithmatex:
+      generic: true
   - admonition
   - pymdownx.details
-  - pymdownx.highlight
-  - pymdownx.superfences
-  - tables
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
   - toc:
       permalink: true
+
+extra_javascript:
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Configuration:
+    - Namelist Reference: namelist.md
+  - API Reference: reference.md
+  - Contributing: contributing.md

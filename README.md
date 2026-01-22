@@ -4,7 +4,7 @@
 
 A high-performance solver for the 1D Stochastic Burgers Equation with DNS and LES capabilities.
 
-[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://gibbs.science/pyburgers)
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.gibbs.science/pyburgers)
 [![License: WTFPL](https://img.shields.io/badge/License-WTFPL-brightgreen.svg)](http://www.wtfpl.net/about/)
 
 ## Overview
@@ -43,16 +43,16 @@ python burgers.py -m dns
 python burgers.py -m les -o my_simulation.nc
 ```
 
-Configuration is controlled via `namelist.json`. See the [documentation](https://gibbs.science/pyburgers) for details.
+Configuration is controlled via `namelist.json`. See the [documentation](https://docs.gibbs.science/pyburgers) for details.
 
 ## Documentation
 
-Full documentation is available at: **https://gibbs.science/pyburgers**
+Full documentation is available at: **https://docs.gibbs.science/pyburgers**
 
-- [Getting Started](https://gibbs.science/pyburgers/getting-started/)
-- [Namelist Configuration](https://gibbs.science/pyburgers/namelist/)
-- [API Reference](https://gibbs.science/pyburgers/reference/)
-- [Contributing](https://gibbs.science/pyburgers/contributing/)
+- [Getting Started](https://docs.gibbs.science/pyburgers/getting-started/)
+- [Namelist Configuration](https://docs.gibbs.science/pyburgers/namelist/)
+- [API Reference](https://docs.gibbs.science/pyburgers/reference/)
+- [Contributing Guide](https://docs.gibbs.science/pyburgers/contributing/)
 
 ## Performance
 
