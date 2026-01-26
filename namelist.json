@@ -1,35 +1,35 @@
 {
-    "time" : {
-        "nt" : 2E5,
-        "dt" : 1E-4
+    "time": {
+        "nt": 20000.0,
+        "dt": 0.0001
     },
-    "physics" : {
-        "noise" : {
-            "alpha" : 0.75,
-            "amplitude" : 1E-6
+    "physics": {
+        "noise": {
+            "alpha": 0.75,
+            "amplitude": 1e-06
         },
-        "viscosity" : 1E-5,
-        "sgs_model" : 1
+        "viscosity": 1e-05,
+        "sgs_model": 1
     },
-    "grid" : {
-        "domain_length" : 6.283185307179586,
-        "dns" : {
-            "nx" : 8192
+    "grid": {
+        "domain_length": 6.283185307179586,
+        "dns": {
+            "nx": 8192
         },
-        "les" : {
-            "nx" : 512
+        "les": {
+            "nx": 512
         }
     },
-    "output"  : {
-        "t_save" : 0.1,
-        "t_print" : 0.1
+    "output": {
+        "t_save": 0.1,
+        "t_print": 0.1
     },
-    "logging" : {
-        "level" : "INFO",
-        "file" : "pyburgers.log"
+    "logging": {
+        "level": "INFO",
+        "file": "pyburgers.log"
     },
-    "fftw" : {
-        "planning" : "FFTW_PATIENT",
-        "threads" : 8
+    "fftw": {
+        "planning": "FFTW_PATIENT",
+        "threads": 1
     }
 }

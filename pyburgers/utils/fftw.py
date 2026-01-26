@@ -29,11 +29,6 @@ from pathlib import Path
 from typing import Iterator
 
 import pyfftw
-import pyfftw.interfaces.cache as fftw_cache
-
-# Enable interface cache for automatic FFT function reuse
-fftw_cache.enable()
-fftw_cache.set_keepalive_time(30)
 
 # Wisdom cache file location
 WISDOM_FILE = Path.home() / '.pyburgers_fftw_wisdom'
