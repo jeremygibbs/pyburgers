@@ -57,12 +57,24 @@ class Derivatives:
         self.k = np.fft.rfftfreq(self.nx, d=1 / self.nx)
         self.k[self.nk - 1] = 0  # Zero Nyquist mode (last element)
 
+        # Precompute powers for efficiency
+        self.fac2 = self.fac ** 2
+        self.fac3 = self.fac ** 3
+        self.k2 = self.k * self.k
+        self.k3 = self.k ** 3
+
         # pyfftw arrays for real FFT
         # Physical space: float64, Frequency space: complex128
         self.u = pyfftw.empty_aligned(nx, np.float64)
         self.fu = pyfftw.empty_aligned(self.nk, np.complex128)
         self.fun = pyfftw.empty_aligned(self.nk, np.complex128)
         self.der = pyfftw.empty_aligned(nx, np.float64)
+
+        # Pre-allocated output arrays for derivatives (reused across calls)
+        self._out_1 = pyfftw.empty_aligned(nx, np.float64)
+        self._out_2 = pyfftw.empty_aligned(nx, np.float64)
+        self._out_3 = pyfftw.empty_aligned(nx, np.float64)
+        self._out_sq = pyfftw.empty_aligned(nx, np.float64)
 
         # padded pyfftw arrays for 2x dealiasing
         nx_padded = 2 * self.nx
@@ -123,7 +135,9 @@ class Derivatives:
 
         Returns:
             Dictionary mapping order keys ('1', '2', '3', 'sq') to
-            the corresponding derivative arrays.
+            the corresponding derivative arrays. Arrays are reused
+            internally, so callers should consume values before the
+            next compute() call.
         """
         derivatives = {}
 
@@ -138,15 +152,18 @@ class Derivatives:
             if key == 1:
                 self.fun[:] = 1j * self.k * self.fu
                 self.ifft()
-                derivatives['1'] = self.fac * self.der.copy()
+                np.multiply(self.fac, self.der, out=self._out_1)
+                derivatives['1'] = self._out_1
             if key == 2:
-                self.fun[:] = -self.k * self.k * self.fu
+                self.fun[:] = -self.k2 * self.fu
                 self.ifft()
-                derivatives['2'] = self.fac**2 * self.der.copy()
+                np.multiply(self.fac2, self.der, out=self._out_2)
+                derivatives['2'] = self._out_2
             if key == 3:
-                self.fun[:] = -1j * self.k**3 * self.fu
+                self.fun[:] = -1j * self.k3 * self.fu
                 self.ifft()
-                derivatives['3'] = self.fac**3 * self.der.copy()
+                np.multiply(self.fac3, self.der, out=self._out_3)
+                derivatives['3'] = self._out_3
             if key == 'sq':
                 # Dealiased computation of d(u^2)/dx using 2x zero-padding
                 # With rfft, only non-negative frequencies are stored
@@ -165,7 +182,8 @@ class Derivatives:
                 # Compute derivative
                 self.fun[:] = 1j * self.k * self.fu
                 self.ifft()
-                derivatives['sq'] = 2 * self.fac * self.der.copy()
+                np.multiply(2 * self.fac, self.der, out=self._out_sq)
+                derivatives['sq'] = self._out_sq
 
         return derivatives
 
