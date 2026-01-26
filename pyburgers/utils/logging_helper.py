@@ -1,8 +1,20 @@
+#!/usr/bin/env python
+#
+# PyBurgers
+#
+# Copyright (c) 2017–2026 Jeremy A. Gibbs
+#
+# This file is part of PyBurgers.
+#
+# This software is free and is distributed under the WTFPL license.
+# See accompanying LICENSE file or visit https://www.wtfpl.net.
+#
 """Logging configuration for PyBurgers.
 
 This module provides centralized logging setup and helper functions
 for consistent logging across all PyBurgers modules.
 """
+
 from __future__ import annotations
 
 import logging
@@ -12,6 +24,7 @@ from typing import Literal
 
 # Valid log level names
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
 
 class _ShortNameFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
@@ -25,8 +38,7 @@ class _ShortNameFormatter(logging.Formatter):
 
 # Log format
 log_format = _ShortNameFormatter(
-    '{asctime} [{levelname:^8s}] {name:.>10s}: {message}',
-    datefmt='%Y-%m-%d %H:%M:%S', style='{'
+    "{asctime} [{levelname:^8s}] {name:.>10s}: {message}", datefmt="%Y-%m-%d %H:%M:%S", style="{"
 )
 
 # Cache of created loggers
@@ -75,10 +87,6 @@ def setup_logging(
     if isinstance(level, str):
         level = getattr(logging, level.upper(), logging.INFO)
 
-    # Choose format based on level
-    #if format_string is None:
-    #    format_string = log_format
-
     # Configure root logger
     root_logger = logging.getLogger("PyBurgers")
     root_logger.setLevel(level)
@@ -113,6 +121,7 @@ def setup_logging(
     # Prevent propagation to root logger
     root_logger.propagate = False
 
+
 def get_logger(name: str) -> logging.Logger:
     """Get a logger for the specified module/class.
 
@@ -138,6 +147,7 @@ def get_logger(name: str) -> logging.Logger:
 
     return _loggers[full_name]
 
+
 def get_log_level(level_name: str) -> int:
     """Convert a log level name to its integer value.
 
@@ -156,8 +166,7 @@ def get_log_level(level_name: str) -> int:
     if level is None:
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         raise ValueError(
-            f"Invalid log level: '{level_name}'. "
-            f"Valid options: {', '.join(valid_levels)}"
+            f"Invalid log level: '{level_name}'. Valid options: {', '.join(valid_levels)}"
         )
 
     return level

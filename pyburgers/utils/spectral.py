@@ -1,8 +1,20 @@
+#!/usr/bin/env python
+#
+# PyBurgers
+#
+# Copyright (c) 2017–2026 Jeremy A. Gibbs
+#
+# This file is part of PyBurgers.
+#
+# This software is free and is distributed under the WTFPL license.
+# See accompanying LICENSE file or visit https://www.wtfpl.net.
+#
 """Spectral methods for PyBurgers.
 
 This module provides classes for computing spectral derivatives,
 dealiasing nonlinear terms, and filtering operations using pyfftw.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -31,11 +43,7 @@ class Derivatives:
     """
 
     def __init__(
-        self,
-        nx: int,
-        dx: float,
-        fftw_planning: str = 'FFTW_MEASURE',
-        fftw_threads: int = 1
+        self, nx: int, dx: float, fftw_planning: str = "FFTW_MEASURE", fftw_threads: int = 1
     ) -> None:
         """Initialize the Derivatives calculator.
 
@@ -50,7 +58,7 @@ class Derivatives:
 
         # computed values
         self.nk = self.nx // 2 + 1  # rfft output size
-        self.m = self.nx // 2       # Nyquist index
+        self.m = self.nx // 2  # Nyquist index
         self.fac = 2 * np.pi / (self.nx * self.dx)
 
         # wavenumber array for rfft (non-negative frequencies only)
@@ -58,10 +66,10 @@ class Derivatives:
         self.k[self.nk - 1] = 0  # Zero Nyquist mode (last element)
 
         # Precompute powers for efficiency
-        self.fac2 = self.fac ** 2
-        self.fac3 = self.fac ** 3
+        self.fac2 = self.fac**2
+        self.fac3 = self.fac**3
         self.k2 = self.k * self.k
-        self.k3 = self.k ** 3
+        self.k3 = self.k**3
 
         # pyfftw arrays for real FFT
         # Physical space: float64, Frequency space: complex128
@@ -84,47 +92,40 @@ class Derivatives:
 
         # pyfftw functions (auto-detects real<->complex from dtypes)
         self.fft = pyfftw.FFTW(
-            self.u, self.fu,
-            direction="FFTW_FORWARD",
-            flags=(fftw_planning,),
-            threads=fftw_threads
+            self.u, self.fu, direction="FFTW_FORWARD", flags=(fftw_planning,), threads=fftw_threads
         )
 
         self.ifft = pyfftw.FFTW(
-            self.fun, self.der,
+            self.fun,
+            self.der,
             direction="FFTW_BACKWARD",
             flags=(fftw_planning,),
-            threads=fftw_threads
+            threads=fftw_threads,
         )
 
         # Inverse FFT for Nyquist zeroing: fu -> u
         # Used by core.py to zero the Nyquist mode and transform back
         self.ifft_nyquist = pyfftw.FFTW(
-            self.fu, self.u,
-            direction="FFTW_BACKWARD",
-            flags=(fftw_planning,),
-            threads=fftw_threads
+            self.fu, self.u, direction="FFTW_BACKWARD", flags=(fftw_planning,), threads=fftw_threads
         )
 
         self.fftp = pyfftw.FFTW(
-            self.up, self.fup,
+            self.up,
+            self.fup,
             direction="FFTW_FORWARD",
             flags=(fftw_planning,),
-            threads=fftw_threads
+            threads=fftw_threads,
         )
 
         self.ifftp = pyfftw.FFTW(
-            self.fup, self.up,
+            self.fup,
+            self.up,
             direction="FFTW_BACKWARD",
             flags=(fftw_planning,),
-            threads=fftw_threads
+            threads=fftw_threads,
         )
 
-    def compute(
-        self,
-        u: np.ndarray,
-        order: list[int | str]
-    ) -> dict[str, np.ndarray]:
+    def compute(self, u: np.ndarray, order: list[int | str]) -> dict[str, np.ndarray]:
         """Compute spectral derivatives of the input field.
 
         Args:
@@ -153,37 +154,37 @@ class Derivatives:
                 self.fun[:] = 1j * self.k * self.fu
                 self.ifft()
                 np.multiply(self.fac, self.der, out=self._out_1)
-                derivatives['1'] = self._out_1
+                derivatives["1"] = self._out_1
             if key == 2:
                 self.fun[:] = -self.k2 * self.fu
                 self.ifft()
                 np.multiply(self.fac2, self.der, out=self._out_2)
-                derivatives['2'] = self._out_2
+                derivatives["2"] = self._out_2
             if key == 3:
                 self.fun[:] = -1j * self.k3 * self.fu
                 self.ifft()
                 np.multiply(self.fac3, self.der, out=self._out_3)
-                derivatives['3'] = self._out_3
-            if key == 'sq':
+                derivatives["3"] = self._out_3
+            if key == "sq":
                 # Dealiased computation of d(u^2)/dx using 2x zero-padding
                 # With rfft, only non-negative frequencies are stored
                 # Zero-pad: copy all nk values to padded array (nk_padded = nx + 1)
                 self.fup[:] = 0
-                self.fup[0:self.nk] = self.fu
+                self.fup[0 : self.nk] = self.fu
                 # Transform to padded physical space
                 self.ifftp()
                 # Square in physical space
-                self.up[:] = self.up ** 2
+                self.up[:] = self.up**2
                 # Transform back to spectral space
                 self.fftp()
                 # Extract non-aliased modes (simpler than complex FFT!)
-                self.fu[:] = self.fup[0:self.nk]
+                self.fu[:] = self.fup[0 : self.nk]
                 self.fu[self.nk - 1] = 0  # Zero Nyquist
                 # Compute derivative
                 self.fun[:] = 1j * self.k * self.fu
                 self.ifft()
                 np.multiply(2 * self.fac, self.der, out=self._out_sq)
-                derivatives['sq'] = self._out_sq
+                derivatives["sq"] = self._out_sq
 
         return derivatives
 
@@ -203,12 +204,7 @@ class Dealias:
         m: Nyquist mode index (nx/2).
     """
 
-    def __init__(
-        self,
-        nx: int,
-        fftw_planning: str = 'FFTW_MEASURE',
-        fftw_threads: int = 1
-    ) -> None:
+    def __init__(self, nx: int, fftw_planning: str = "FFTW_MEASURE", fftw_threads: int = 1) -> None:
         """Initialize the Dealias calculator.
 
         Args:
@@ -235,31 +231,27 @@ class Dealias:
 
         # pyfftw functions (auto-detects real<->complex from dtypes)
         self.fft = pyfftw.FFTW(
-            self.x, self.fx,
-            direction="FFTW_FORWARD",
-            flags=(fftw_planning,),
-            threads=fftw_threads
+            self.x, self.fx, direction="FFTW_FORWARD", flags=(fftw_planning,), threads=fftw_threads
         )
 
         self.ifft = pyfftw.FFTW(
-            self.fx, self.x,
-            direction="FFTW_BACKWARD",
-            flags=(fftw_planning,),
-            threads=fftw_threads
+            self.fx, self.x, direction="FFTW_BACKWARD", flags=(fftw_planning,), threads=fftw_threads
         )
 
         self.fftp = pyfftw.FFTW(
-            self.xp, self.fxp,
+            self.xp,
+            self.fxp,
             direction="FFTW_FORWARD",
             flags=(fftw_planning,),
-            threads=fftw_threads
+            threads=fftw_threads,
         )
 
         self.ifftp = pyfftw.FFTW(
-            self.fxp, self.xp,
+            self.fxp,
+            self.xp,
             direction="FFTW_BACKWARD",
             flags=(fftw_planning,),
-            threads=fftw_threads
+            threads=fftw_threads,
         )
 
     def compute(self, x: np.ndarray) -> np.ndarray:
@@ -273,7 +265,7 @@ class Dealias:
         """
         # constants
         scale = c.spectral.DEALIAS_SCALE
-        
+
         # copy input array
         self.x[:] = x
 
@@ -282,7 +274,7 @@ class Dealias:
 
         # zero-pad fx (simpler with rfft - just copy to beginning)
         self.fxp[:] = 0
-        self.fxp[0:self.nk] = self.fx
+        self.fxp[0 : self.nk] = self.fx
 
         # compute irfft of fxp
         self.ifftp()
@@ -298,7 +290,7 @@ class Dealias:
 
         # zero-pad fx
         self.fxp[:] = 0
-        self.fxp[0:self.nk] = self.fx
+        self.fxp[0 : self.nk] = self.fx
 
         # compute irfft of fxp
         self.ifftp()
@@ -310,7 +302,7 @@ class Dealias:
         self.fftp()
 
         # de-alias fxp (simpler with rfft - just take first nk values)
-        self.fx[:] = self.fxp[0:self.nk]
+        self.fx[:] = self.fxp[0 : self.nk]
 
         # compute irfft of fx
         self.ifft()
@@ -338,8 +330,8 @@ class Filter:
         self,
         nx: int,
         nx2: int | None = None,
-        fftw_planning: str = 'FFTW_MEASURE',
-        fftw_threads: int = 1
+        fftw_planning: str = "FFTW_MEASURE",
+        fftw_threads: int = 1,
     ) -> None:
         """Initialize the Filter.
 
@@ -360,17 +352,15 @@ class Filter:
 
         # pyfftw functions (auto-detects real<->complex from dtypes)
         self.fft = pyfftw.FFTW(
-            self.x, self.fx,
-            direction="FFTW_FORWARD",
-            flags=(fftw_planning,),
-            threads=fftw_threads
+            self.x, self.fx, direction="FFTW_FORWARD", flags=(fftw_planning,), threads=fftw_threads
         )
 
         self.ifft = pyfftw.FFTW(
-            self.fxf, self.x,
+            self.fxf,
+            self.x,
             direction="FFTW_BACKWARD",
             flags=(fftw_planning,),
-            threads=fftw_threads
+            threads=fftw_threads,
         )
 
         # check for optional larger nx (for downscaling from DNS->LES)
@@ -384,10 +374,11 @@ class Filter:
 
             # pyfftw function for larger grid
             self.fft2 = pyfftw.FFTW(
-                self.x2, self.fx2,
+                self.x2,
+                self.fx2,
                 direction="FFTW_FORWARD",
                 flags=(fftw_planning,),
-                threads=fftw_threads
+                threads=fftw_threads,
             )
 
     def cutoff(self, x: np.ndarray, ratio: int) -> np.ndarray:

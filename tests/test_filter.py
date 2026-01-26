@@ -1,8 +1,8 @@
 """Tests for spectral filtering operations."""
+
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from pyburgers.utils import Filter
 
@@ -114,10 +114,10 @@ class TestFilter:
 
         # Low frequency signal (k=1) should have energy preserved
         u = np.sin(grid_small["x"])
-        energy_before = np.sum(u ** 2)
+        energy_before = np.sum(u**2)
 
         result = filt.cutoff(u, ratio=4)
-        energy_after = np.sum(result ** 2)
+        energy_after = np.sum(result**2)
 
         # Energy should be preserved (within numerical tolerance)
         np.testing.assert_allclose(energy_after, energy_before, rtol=1e-6)

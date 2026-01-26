@@ -18,6 +18,7 @@ Attributes:
     spectral (SpectralConstants): Spectral algorithm constants
     sgs (SGSConstants): Subgrid-scale model constants
 """
+
 from dataclasses import dataclass
 
 

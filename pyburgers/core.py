@@ -14,6 +14,7 @@
 This module provides the abstract base class for solving the 1D stochastic
 Burgers equation. Both DNS and LES solvers inherit from this class.
 """
+
 from __future__ import annotations
 
 import logging
@@ -116,7 +117,7 @@ class Burgers(ABC):
         self._setup_mode_specific()
 
         # Setup output
-        self.output_dims = {'t': 0, 'x': self.nx}
+        self.output_dims = {"t": 0, "x": self.nx}
         self.output.set_dims(self.output_dims)
 
         self.output_fields = self._setup_output_fields()
@@ -188,11 +189,7 @@ class Burgers(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _compute_rhs(
-        self,
-        derivatives: dict[str, np.ndarray],
-        noise: np.ndarray
-    ) -> np.ndarray:
+    def _compute_rhs(self, derivatives: dict[str, np.ndarray], noise: np.ndarray) -> np.ndarray:
         """Compute the right-hand side of the Burgers equation.
 
         Args:
@@ -206,10 +203,7 @@ class Burgers(ABC):
 
     @abstractmethod
     def _save_diagnostics(
-        self,
-        derivatives: dict[str, np.ndarray],
-        t_out: int,
-        t_loop: float
+        self, derivatives: dict[str, np.ndarray], t_out: int, t_loop: float
     ) -> None:
         """Compute and save mode-specific diagnostics.
 
@@ -279,9 +273,7 @@ class Burgers(ABC):
         """
         total_time = self.nt * self.dt
         if self.logger.isEnabledFor(logging.DEBUG):
-            self.logger.debug(
-                "Running for time %05.2f of %05.2f", t_loop, total_time
-            )
+            self.logger.debug("Running for time %05.2f of %05.2f", t_loop, total_time)
         elif self.logger.isEnabledFor(logging.INFO):
             if (
                 t != 1

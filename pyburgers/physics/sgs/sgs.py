@@ -1,8 +1,20 @@
+#!/usr/bin/env python
+#
+# PyBurgers
+#
+# Copyright (c) 2017–2026 Jeremy A. Gibbs
+#
+# This file is part of PyBurgers.
+#
+# This software is free and is distributed under the WTFPL license.
+# See accompanying LICENSE file or visit https://www.wtfpl.net.
+#
 """Subgrid-scale (SGS) model base class for PyBurgers LES.
 
 This module provides the base SGS class and factory method for
 creating different subgrid-scale models.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -27,15 +39,11 @@ class SGS:
         dt: Time step size.
         nx: Number of LES grid points.
         dx: Grid spacing.
-        sgs: Dictionary containing SGS stress (tau) and coefficient.
+        result: Dictionary containing SGS stress (tau) and coefficient.
     """
 
     @staticmethod
-    def get_model(
-        model: int,
-        input_obj: Input,
-        spectral: SpectralWorkspace
-    ) -> SGS:
+    def get_model(model: int, input_obj: Input, spectral: SpectralWorkspace) -> SGS:
         """Factory method to create the appropriate SGS model.
 
         Args:
@@ -56,23 +64,23 @@ class SGS:
             return SGS(input_obj, spectral)
         if model == 1:
             from .sgs_smagcon import SmagConstant
+
             return SmagConstant(input_obj, spectral)
         if model == 2:
             from .sgs_smagdyn import SmagDynamic
+
             return SmagDynamic(input_obj, spectral)
         if model == 3:
             from .sgs_wonglilly import WongLilly
+
             return WongLilly(input_obj, spectral)
         if model == 4:
             from .sgs_deardorff import Deardorff
+
             return Deardorff(input_obj, spectral)
         raise ValueError(f"Unknown SGS model ID: {model}. Valid options: 0-4.")
 
-    def __init__(
-        self,
-        input_obj: Input,
-        spectral: SpectralWorkspace
-    ) -> None:
+    def __init__(self, input_obj: Input, spectral: SpectralWorkspace) -> None:
         """Initialize the SGS model.
 
         Args:
@@ -91,16 +99,10 @@ class SGS:
         self.fftw_threads = input_obj.fftw_threads
 
         # SGS terms dictionary
-        self.sgs: dict[str, Any] = {
-            'tau': np.zeros(self.nx),
-            'coeff': 0
-        }
+        self.result: dict[str, Any] = {"tau": np.zeros(self.nx), "coeff": 0}
 
     def compute(
-        self,
-        u: np.ndarray,
-        dudx: np.ndarray,
-        tke_sgs: np.ndarray | float
+        self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float
     ) -> dict[str, Any]:
         """Compute the SGS stress tensor.
 
@@ -115,4 +117,4 @@ class SGS:
                 - 'coeff': Model coefficient
                 - 'tke_sgs': Updated subgrid TKE (Deardorff only)
         """
-        return self.sgs
+        return self.result

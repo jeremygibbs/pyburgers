@@ -3,6 +3,7 @@
 Implements the Wong-Lilly scale-similarity model with dynamic
 coefficient computation.
 """
+
 from __future__ import annotations
 
 import logging
@@ -10,13 +11,14 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from .sgs import SGS
-from ...utils import get_logger
 from ...utils import constants as c
+from ...utils import get_logger
+from .sgs import SGS
 
 if TYPE_CHECKING:
     from ...utils.io import Input
     from ...utils.spectral_workspace import SpectralWorkspace
+
 
 class WongLilly(SGS):
     """Dynamic Wong-Lilly subgrid-scale model.
@@ -28,11 +30,7 @@ class WongLilly(SGS):
     Uses the shared spectral workspace for filtering operations.
     """
 
-    def __init__(
-        self,
-        input_obj: Input,
-        spectral: SpectralWorkspace
-    ) -> None:
+    def __init__(self, input_obj: Input, spectral: SpectralWorkspace) -> None:
         """Initialize the Wong-Lilly model.
 
         Args:
@@ -44,10 +42,7 @@ class WongLilly(SGS):
         self.logger.info("Using the Wong-Lilly model")
 
     def compute(
-        self,
-        u: np.ndarray,
-        dudx: np.ndarray,
-        tke_sgs: np.ndarray | float
+        self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float
     ) -> dict[str, Any]:
         """Compute the Wong-Lilly SGS stress.
 
@@ -59,20 +54,20 @@ class WongLilly(SGS):
         Returns:
             Dictionary with 'tau' (SGS stress) and 'coeff' (C_WL).
         """
-        
+
         # Model constants
         ratio = c.sgs.TEST_FILTER_RATIO
         exponent = c.sgs.WONGLILLY_EXPONENT
-        
+
         # Leonard stress L11
         uf = self.spectral.filter.cutoff(u, ratio)
-        uuf = self.spectral.filter.cutoff(u ** 2, ratio)
+        uuf = self.spectral.filter.cutoff(u**2, ratio)
         L11 = uuf - uf * uf
 
         # Model tensor M11 (Wong-Lilly scaling)
         dudxf = self.spectral.filter.cutoff(dudx, ratio)
-        ratio_pow = ratio ** exponent
-        M11 = self.dx ** exponent * (1 - ratio_pow) * dudxf
+        ratio_pow = ratio**exponent
+        M11 = self.dx**exponent * (1 - ratio_pow) * dudxf
 
         # Wong-Lilly coefficient
         if np.mean(M11 * M11) == 0:
@@ -82,7 +77,7 @@ class WongLilly(SGS):
             if cwl < 0:
                 cwl = 0
 
-        self.sgs['tau'] = -2 * cwl * (self.dx ** exponent) * dudx
-        self.sgs['coeff'] = cwl
+        self.result["tau"] = -2 * cwl * (self.dx**exponent) * dudx
+        self.result["coeff"] = cwl
 
-        return self.sgs
+        return self.result

@@ -16,6 +16,7 @@ configuring, and writing simulation results to a NetCDF file. It manages
 file dimensions, variables, and attributes, providing a simple interface
 for saving the model's state at each time step.
 """
+
 import logging
 import time as time_module
 from typing import Any
@@ -50,9 +51,9 @@ class Output:
             sync_interval: Number of saves between disk syncs. Higher values
                 improve performance but risk data loss on crash. Defaults to 100.
         """
-        self.logger: logging.Logger = get_logger('Output')
-        self.logger.info('Saving output to %s', outfile)
-        self.outfile: nc.Dataset = nc.Dataset(outfile, 'w')
+        self.logger: logging.Logger = get_logger("Output")
+        self.logger.info("Saving output to %s", outfile)
+        self.outfile: nc.Dataset = nc.Dataset(outfile, "w")
         self._sync_interval = sync_interval
         self._save_count = 0
 
@@ -63,76 +64,56 @@ class Output:
         self.fields_time: dict[str, Any] = {}
         self.fields_static: dict[str, Any] = {}
         self.attributes: dict[str, dict[str, Any]] = {
-            'time': {
-                'dimension': ('t',),
-                'long_name': 'time',
-                'units': 's'
+            "time": {"dimension": ("t",), "long_name": "time", "units": "s"},
+            "x": {"dimension": ("x",), "long_name": "x-distance", "units": "m"},
+            "u": {"dimension": ("t", "x"), "long_name": "u-component velocity", "units": "m s-1"},
+            "tke": {
+                "dimension": ("t",),
+                "long_name": "turbulence kinetic energy",
+                "units": "m2 s-2",
             },
-            'x': {
-                'dimension': ('x',),
-                'long_name': 'x-distance',
-                'units': 'm'
+            "tke_sgs": {
+                "dimension": ("t",),
+                "long_name": "subgrid turbulence kinetic energy",
+                "units": "m2 s-2",
             },
-            'u': {
-                'dimension': ('t', 'x'),
-                'long_name': 'u-component velocity',
-                'units': 'm s-1'
+            "tke_sgs_prod": {
+                "dimension": ("t",),
+                "long_name": "subgrid TKE production",
+                "units": "m2 s-3",
             },
-            'tke': {
-                'dimension': ('t',),
-                'long_name': 'turbulence kinetic energy',
-                'units': 'm2 s-2'
+            "tke_sgs_diff": {
+                "dimension": ("t",),
+                "long_name": "subgrid TKE diffusion",
+                "units": "m2 s-3",
             },
-            'tke_sgs': {
-                'dimension': ('t',),
-                'long_name': 'subgrid turbulence kinetic energy',
-                'units': 'm2 s-2'
+            "tke_sgs_diss": {
+                "dimension": ("t",),
+                "long_name": "subgrid TKE dissipation",
+                "units": "m2 s-3",
             },
-            'tke_sgs_prod': {
-                'dimension': ('t',),
-                'long_name': 'subgrid TKE production',
-                'units': 'm2 s-3'
+            "C_sgs": {"dimension": ("t",), "long_name": "subgrid model coefficient", "units": "--"},
+            "diss_sgs": {
+                "dimension": ("t",),
+                "long_name": "subgrid dissipation",
+                "units": "m2 s-3",
             },
-            'tke_sgs_diff': {
-                'dimension': ('t',),
-                'long_name': 'subgrid TKE diffusion',
-                'units': 'm2 s-3'
+            "diss_mol": {
+                "dimension": ("t",),
+                "long_name": "molecular dissipation",
+                "units": "m2 s-3",
             },
-            'tke_sgs_diss': {
-                'dimension': ('t',),
-                'long_name': 'subgrid TKE dissipation',
-                'units': 'm2 s-3'
+            "ens_prod": {"dimension": ("t",), "long_name": "enstrophy production", "units": "s-3"},
+            "ens_diss_sgs": {
+                "dimension": ("t",),
+                "long_name": "subgrid enstrophy dissipation",
+                "units": "s-3",
             },
-            'C_sgs': {
-                'dimension': ('t',),
-                'long_name': 'subgrid model coefficient',
-                'units': '--'
+            "ens_diss_mol": {
+                "dimension": ("t",),
+                "long_name": "molecular enstrophy dissipation",
+                "units": "s-3",
             },
-            'diss_sgs': {
-                'dimension': ('t',),
-                'long_name': 'subgrid dissipation',
-                'units': 'm2 s-3'
-            },
-            'diss_mol': {
-                'dimension': ('t',),
-                'long_name': 'molecular dissipation',
-                'units': 'm2 s-3'
-            },
-            'ens_prod': {
-                'dimension': ('t',),
-                'long_name': 'enstrophy production',
-                'units': 's-3'
-            },
-            'ens_diss_sgs': {
-                'dimension': ('t',),
-                'long_name': 'subgrid enstrophy dissipation',
-                'units': 's-3'
-            },
-            'ens_diss_mol': {
-                'dimension': ('t',),
-                'long_name': 'molecular enstrophy dissipation',
-                'units': 's-3'
-            }
         }
 
     def set_dims(self, dims: dict[str, int]) -> None:
@@ -155,34 +136,31 @@ class Output:
             fields: A dictionary of fields to be created in the output file.
         """
         # Add time manually
-        dims = self.attributes['time']['dimension']
-        name = self.attributes['time']['long_name']
-        units = self.attributes['time']['units']
-        ncvar = self.outfile.createVariable('time', 'f8', dims)
+        dims = self.attributes["time"]["dimension"]
+        name = self.attributes["time"]["long_name"]
+        units = self.attributes["time"]["units"]
+        ncvar = self.outfile.createVariable("time", "f8", dims)
         ncvar.units = units
         ncvar.long_name = name
-        self.fields_time['time'] = ncvar
+        self.fields_time["time"] = ncvar
 
         # Iterate through keys in dictionary
         for field in fields:
             if field not in self.attributes:
-                self.logger.warning(
-                    'Unknown field %s, skipping', field
-                )
+                self.logger.warning("Unknown field %s, skipping", field)
                 continue
-            dims = self.attributes[field]['dimension']
-            units = self.attributes[field]['units']
-            name = self.attributes[field]['long_name']
-            ncvar = self.outfile.createVariable(field, 'f8', dims)
+            dims = self.attributes[field]["dimension"]
+            units = self.attributes[field]["units"]
+            name = self.attributes[field]["long_name"]
+            ncvar = self.outfile.createVariable(field, "f8", dims)
             ncvar.units = units
             ncvar.long_name = name
-            if 't' in dims:
+            if "t" in dims:
                 self.fields_time[field] = ncvar
             else:
                 self.fields_static[field] = ncvar
 
-    def save(self, fields: dict[str, Any], tidx: int, time: float,
-             initial: bool = False) -> None:
+    def save(self, fields: dict[str, Any], tidx: int, time: float, initial: bool = False) -> None:
         """Save a snapshot of the simulation state to the output file.
 
         Args:
@@ -200,9 +178,9 @@ class Output:
 
         # Save time-varying fields
         for field, field_var in self.fields_time.items():
-            dim = self.attributes[field]['dimension']
+            dim = self.attributes[field]["dimension"]
             if len(dim) == 1:
-                if field == 'time':
+                if field == "time":
                     field_var[tidx] = time
                 elif field in fields:
                     field_var[tidx] = fields[field]
@@ -222,4 +200,4 @@ class Output:
         """
         self.outfile.sync()
         self.outfile.close()
-        self.logger.info('Output file closed')
+        self.logger.info("Output file closed")

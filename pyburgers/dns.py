@@ -14,6 +14,7 @@
 Implements the DNS solver for the 1D stochastic Burgers equation
 using spectral methods.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -74,7 +75,7 @@ class DNS(Burgers):
             noise_alpha=self.noise_alpha,
             noise_nx=self.nx,
             fftw_planning=self.fftw_planning,
-            fftw_threads=self.fftw_threads
+            fftw_threads=self.fftw_threads,
         )
 
     def _setup_mode_specific(self) -> None:
@@ -93,9 +94,9 @@ class DNS(Burgers):
             Dictionary with grid, velocity, and TKE fields.
         """
         return {
-            'x': self.x,
-            'u': self.u,
-            'tke': self.tke,
+            "x": self.x,
+            "u": self.u,
+            "tke": self.tke,
         }
 
     def _compute_derivatives(self, t: int) -> dict[str, np.ndarray]:
@@ -109,7 +110,7 @@ class DNS(Burgers):
         Returns:
             Dictionary with '2' and 'sq' derivatives.
         """
-        return self.spectral.derivatives.compute(self.u, [2, 'sq'])
+        return self.spectral.derivatives.compute(self.u, [2, "sq"])
 
     def _compute_noise(self) -> np.ndarray:
         """Generate FBM noise at full resolution.
@@ -119,11 +120,7 @@ class DNS(Burgers):
         """
         return self.spectral.noise.compute_noise()
 
-    def _compute_rhs(
-        self,
-        derivatives: dict[str, np.ndarray],
-        noise: np.ndarray
-    ) -> np.ndarray:
+    def _compute_rhs(self, derivatives: dict[str, np.ndarray], noise: np.ndarray) -> np.ndarray:
         """Compute the DNS right-hand side.
 
         RHS = ν∂²u/∂x² - ½∂u²/∂x + √(2ε/dt) * noise
@@ -135,20 +132,13 @@ class DNS(Burgers):
         Returns:
             RHS array for time integration.
         """
-        d2udx2 = derivatives['2']
-        du2dx = derivatives['sq']
+        d2udx2 = derivatives["2"]
+        du2dx = derivatives["sq"]
 
-        return (
-            self.visc * d2udx2
-            - 0.5 * du2dx
-            + np.sqrt(2 * self.noise_amp / self.dt) * noise
-        )
+        return self.visc * d2udx2 - 0.5 * du2dx + np.sqrt(2 * self.noise_amp / self.dt) * noise
 
     def _save_diagnostics(
-        self,
-        derivatives: dict[str, np.ndarray],
-        t_out: int,
-        t_loop: float
+        self, derivatives: dict[str, np.ndarray], t_out: int, t_loop: float
     ) -> None:
         """Compute TKE and save DNS output.
 

@@ -1,4 +1,5 @@
 """Tests for subgrid-scale (SGS) models."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -13,7 +14,7 @@ class MockInput:
 
     def __init__(
         self,
-        nxLES: int = 64,
+        nx_les: int = 64,
         visc: float = 0.01,
         dt: float = 0.001,
         domain_length: float = 2 * np.pi,
@@ -29,7 +30,7 @@ class MockInput:
             def __init__(self, nx):
                 self.les = self.LES(nx)
 
-        self.grid = Grid(nxLES)
+        self.grid = Grid(nx_les)
         self.domain_length = domain_length
         self.dt = dt
         self.fftw_planning = fftw_planning
@@ -44,18 +45,11 @@ class TestSGSFactory:
         """Create spectral workspace for testing."""
         nx = 64
         dx = 2 * np.pi / nx
-        return SpectralWorkspace(
-            nx=nx,
-            dx=dx,
-            fftw_planning='FFTW_ESTIMATE',
-            fftw_threads=1
-        )
+        return SpectralWorkspace(nx=nx, dx=dx, fftw_planning="FFTW_ESTIMATE", fftw_threads=1)
 
     @pytest.mark.parametrize("model_id", [1, 2, 3, 4])
     def test_get_model_returns_sgs(
-        self,
-        model_id: int,
-        spectral_workspace: SpectralWorkspace
+        self, model_id: int, spectral_workspace: SpectralWorkspace
     ) -> None:
         """Test that factory returns valid SGS model."""
         input_obj = MockInput()
@@ -64,10 +58,7 @@ class TestSGSFactory:
         assert model is not None
         assert hasattr(model, "compute")
 
-    def test_get_model_invalid_id(
-        self,
-        spectral_workspace: SpectralWorkspace
-    ) -> None:
+    def test_get_model_invalid_id(self, spectral_workspace: SpectralWorkspace) -> None:
         """Test that invalid model ID raises error."""
         input_obj = MockInput()
 
@@ -83,12 +74,7 @@ class TestSGSModels:
         """Create spectral workspace for testing."""
         nx = 64
         dx = 2 * np.pi / nx
-        return SpectralWorkspace(
-            nx=nx,
-            dx=dx,
-            fftw_planning='FFTW_ESTIMATE',
-            fftw_threads=1
-        )
+        return SpectralWorkspace(nx=nx, dx=dx, fftw_planning="FFTW_ESTIMATE", fftw_threads=1)
 
     @pytest.fixture
     def test_field(self) -> tuple[np.ndarray, np.ndarray]:
@@ -103,10 +89,7 @@ class TestSGSModels:
 
     @pytest.mark.parametrize("model_id", [1, 2, 3])
     def test_sgs_comprehensive_output(
-        self,
-        model_id: int,
-        test_field: tuple,
-        spectral_workspace: SpectralWorkspace
+        self, model_id: int, test_field: tuple, spectral_workspace: SpectralWorkspace
     ) -> None:
         """Test that SGS models return valid tau and coefficient."""
         u, dudx = test_field
@@ -132,9 +115,7 @@ class TestSGSModels:
         assert result["coeff"] >= 0
 
     def test_deardorff_returns_tke_sgs(
-        self,
-        test_field: tuple,
-        spectral_workspace: SpectralWorkspace
+        self, test_field: tuple, spectral_workspace: SpectralWorkspace
     ) -> None:
         """Test that Deardorff model returns subgrid TKE."""
         u, dudx = test_field
@@ -149,9 +130,7 @@ class TestSGSModels:
         assert result["tke_sgs"].shape == u.shape
 
     def test_deardorff_tke_positive(
-        self,
-        test_field: tuple,
-        spectral_workspace: SpectralWorkspace
+        self, test_field: tuple, spectral_workspace: SpectralWorkspace
     ) -> None:
         """Test that Deardorff TKE remains positive."""
         u, dudx = test_field
@@ -165,9 +144,7 @@ class TestSGSModels:
         assert np.all(result["tke_sgs"] >= 0)
 
     def test_smagcon_coefficient_fixed(
-        self,
-        test_field: tuple,
-        spectral_workspace: SpectralWorkspace
+        self, test_field: tuple, spectral_workspace: SpectralWorkspace
     ) -> None:
         """Test that constant Smagorinsky has Cs = 0.16."""
         u, dudx = test_field
@@ -180,14 +157,13 @@ class TestSGSModels:
         np.testing.assert_allclose(result["coeff"], 0.16, rtol=1e-10)
 
     def test_dynamic_smagorinsky_coefficient_bounds(
-        self,
-        spectral_workspace: SpectralWorkspace
+        self, spectral_workspace: SpectralWorkspace
     ) -> None:
         """Test that dynamic Smagorinsky Cs^2 stays in [0, 0.5]."""
         nx = 64
         dx = 2 * np.pi / nx
         x = np.arange(0, 2 * np.pi, dx)
-        input_obj = MockInput(nxLES=nx)
+        input_obj = MockInput(nx_les=nx)
         model = SGS.get_model(2, input_obj, spectral_workspace)
 
         # Test with multiple wavenumbers
@@ -201,15 +177,12 @@ class TestSGSModels:
             assert result["coeff"] >= 0
             assert result["coeff"] < 0.7  # sqrt(0.5) ≈ 0.7
 
-    def test_wonglilly_coefficient_bounds(
-        self,
-        spectral_workspace: SpectralWorkspace
-    ) -> None:
+    def test_wonglilly_coefficient_bounds(self, spectral_workspace: SpectralWorkspace) -> None:
         """Test that Wong-Lilly coefficient stays in [0, 1]."""
         nx = 64
         dx = 2 * np.pi / nx
         x = np.arange(0, 2 * np.pi, dx)
-        input_obj = MockInput(nxLES=nx)
+        input_obj = MockInput(nx_les=nx)
         model = SGS.get_model(3, input_obj, spectral_workspace)
 
         # Test with multiple wavenumbers
@@ -223,9 +196,7 @@ class TestSGSModels:
             assert result["coeff"] < 1.5  # Allow some margin
 
     def test_deardorff_tke_bounded(
-        self,
-        test_field: tuple,
-        spectral_workspace: SpectralWorkspace
+        self, test_field: tuple, spectral_workspace: SpectralWorkspace
     ) -> None:
         """Test that Deardorff TKE stays in [0, 1] range."""
         u, dudx = test_field
@@ -249,17 +220,9 @@ class TestSGSPhysics:
         """Create spectral workspace for testing."""
         nx = 64
         dx = 2 * np.pi / nx
-        return SpectralWorkspace(
-            nx=nx,
-            dx=dx,
-            fftw_planning='FFTW_ESTIMATE',
-            fftw_threads=1
-        )
+        return SpectralWorkspace(nx=nx, dx=dx, fftw_planning="FFTW_ESTIMATE", fftw_threads=1)
 
-    def test_smagorinsky_dissipative(
-        self,
-        spectral_workspace: SpectralWorkspace
-    ) -> None:
+    def test_smagorinsky_dissipative(self, spectral_workspace: SpectralWorkspace) -> None:
         """Test that Smagorinsky model is dissipative."""
         nx = 64
         dx = 2 * np.pi / nx
@@ -269,7 +232,7 @@ class TestSGSPhysics:
         u = np.sin(x)
         dudx = np.cos(x)
 
-        input_obj = MockInput(nxLES=nx)
+        input_obj = MockInput(nx_les=nx)
         model = SGS.get_model(1, input_obj, spectral_workspace)
 
         result = model.compute(u, dudx, 0)
@@ -284,16 +247,13 @@ class TestSGSPhysics:
         # Upper bound sanity check
         assert np.mean(dissipation) < 1.0
 
-    def test_dynamic_model_adapts_coefficient(
-        self,
-        spectral_workspace: SpectralWorkspace
-    ) -> None:
+    def test_dynamic_model_adapts_coefficient(self, spectral_workspace: SpectralWorkspace) -> None:
         """Test that dynamic model coefficient is in physical range."""
         nx = 64
         dx = 2 * np.pi / nx
         x = np.arange(0, 2 * np.pi, dx)
 
-        input_obj = MockInput(nxLES=nx)
+        input_obj = MockInput(nx_les=nx)
         model = SGS.get_model(2, input_obj, spectral_workspace)
 
         # Test with different flow fields
@@ -310,15 +270,14 @@ class TestSGSPhysics:
         assert all(np.isfinite(c) for c in coeffs)
 
     def test_sgs_dissipation_zero_for_constant_field(
-        self,
-        spectral_workspace: SpectralWorkspace
+        self, spectral_workspace: SpectralWorkspace
     ) -> None:
         """Test that SGS models produce zero stress for u=const."""
         nx = 64
         u = np.ones(nx)
         dudx = np.zeros(nx)
 
-        input_obj = MockInput(nxLES=nx)
+        input_obj = MockInput(nx_les=nx)
 
         # Test Smagorinsky models (1, 2, 3)
         for model_id in [1, 2, 3]:

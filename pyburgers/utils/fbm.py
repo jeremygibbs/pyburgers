@@ -14,11 +14,12 @@
 This module provides the FBM class for generating stochastic forcing
 with fractional Brownian motion characteristics.
 """
+
 from __future__ import annotations
 
 import numpy as np
-from numpy.typing import NDArray
 import pyfftw
+from numpy.typing import NDArray
 
 
 class FBM:
@@ -40,7 +41,7 @@ class FBM:
         self,
         alpha: float,
         n_pts: int,
-        fftw_planning: str = 'FFTW_MEASURE',
+        fftw_planning: str = "FFTW_MEASURE",
         fftw_threads: int = 1,
     ) -> None:
         """Initialize the FBM noise generator.
@@ -75,17 +76,19 @@ class FBM:
 
         # pyfftw functions
         self.fft = pyfftw.FFTW(
-            self.x, self.fx,
+            self.x,
+            self.fx,
             direction="FFTW_FORWARD",
             flags=(self.fftw_planning,),
-            threads=self.fftw_threads
+            threads=self.fftw_threads,
         )
 
         self.ifft = pyfftw.FFTW(
-            self.fxn, self.noise,
+            self.fxn,
+            self.noise,
             direction="FFTW_BACKWARD",
             flags=(self.fftw_planning,),
-            threads=self.fftw_threads
+            threads=self.fftw_threads,
         )
 
     def compute_noise(self) -> NDArray[np.float64]:

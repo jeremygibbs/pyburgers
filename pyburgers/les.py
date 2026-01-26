@@ -14,6 +14,7 @@
 Implements the LES solver for the 1D stochastic Burgers equation
 with subgrid-scale modeling.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -86,7 +87,7 @@ class LES(Burgers):
             noise_alpha=self.noise_alpha,
             noise_nx=self._nx_dns,  # Generate noise at DNS resolution
             fftw_planning=self.fftw_planning,
-            fftw_threads=self.fftw_threads
+            fftw_threads=self.fftw_threads,
         )
 
     def _setup_mode_specific(self) -> None:
@@ -114,7 +115,7 @@ class LES(Burgers):
             1: "Constant-coefficient Smagorinsky",
             2: "Dynamic Smagorinsky",
             3: "Dynamic Wong-Lilly",
-            4: "Deardorff 1.5-order TKE"
+            4: "Deardorff 1.5-order TKE",
         }
         self.logger.info("  SGS model: %s", sgs_names.get(self.sgs_model_id, "Unknown"))
 
@@ -150,23 +151,23 @@ class LES(Burgers):
             Dictionary with grid, velocity, TKE, and SGS diagnostic fields.
         """
         fields = {
-            'x': self.x,
-            'u': self.u,
-            'tke': self.tke,
-            'C_sgs': self.C_sgs,
-            'diss_sgs': self.diss_sgs,
-            'diss_mol': self.diss_mol,
-            'ens_prod': self.ens_prod,
-            'ens_diss_sgs': self.ens_dsgs,
-            'ens_diss_mol': self.ens_dmol,
+            "x": self.x,
+            "u": self.u,
+            "tke": self.tke,
+            "C_sgs": self.C_sgs,
+            "diss_sgs": self.diss_sgs,
+            "diss_mol": self.diss_mol,
+            "ens_prod": self.ens_prod,
+            "ens_diss_sgs": self.ens_dsgs,
+            "ens_diss_mol": self.ens_dmol,
         }
 
         # Add subgrid TKE output for Deardorff model
         if self.sgs_model_id == 4:
-            fields['tke_sgs'] = self.tke_sgs_mean
-            fields['tke_sgs_prod'] = self.tke_sgs_prod
-            fields['tke_sgs_diff'] = self.tke_sgs_diff
-            fields['tke_sgs_diss'] = self.tke_sgs_diss
+            fields["tke_sgs"] = self.tke_sgs_mean
+            fields["tke_sgs_prod"] = self.tke_sgs_prod
+            fields["tke_sgs_diff"] = self.tke_sgs_diff
+            fields["tke_sgs_diss"] = self.tke_sgs_diss
 
         return fields
 
@@ -183,8 +184,8 @@ class LES(Burgers):
             Dictionary with '1', '2', 'sq' (and '3' at output times).
         """
         if t % self.step_save == 0:
-            return self.spectral.derivatives.compute(self.u, [1, 2, 3, 'sq'])
-        return self.spectral.derivatives.compute(self.u, [1, 2, 'sq'])
+            return self.spectral.derivatives.compute(self.u, [1, 2, 3, "sq"])
+        return self.spectral.derivatives.compute(self.u, [1, 2, "sq"])
 
     def _compute_noise(self) -> np.ndarray:
         """Generate and filter FBM noise from DNS to LES scales.
@@ -195,11 +196,7 @@ class LES(Burgers):
         noise = self.spectral.noise.compute_noise()
         return self.spectral.filter.downscale(noise, self.nx_dns // self.nx)
 
-    def _compute_rhs(
-        self,
-        derivatives: dict[str, np.ndarray],
-        noise: np.ndarray
-    ) -> np.ndarray:
+    def _compute_rhs(self, derivatives: dict[str, np.ndarray], noise: np.ndarray) -> np.ndarray:
         """Compute the LES right-hand side including SGS term.
 
         RHS = ν∂²u/∂x² - ½∂u²/∂x + √(2ε/dt) * noise - ½∂τ/∂x
@@ -211,9 +208,9 @@ class LES(Burgers):
         Returns:
             RHS array for time integration.
         """
-        dudx = derivatives['1']
-        d2udx2 = derivatives['2']
-        du2dx = derivatives['sq']
+        dudx = derivatives["1"]
+        d2udx2 = derivatives["2"]
+        du2dx = derivatives["sq"]
 
         # Compute SGS stress
         sgs = self.subgrid.compute(self.u, dudx, self.tke_sgs)
@@ -236,7 +233,7 @@ class LES(Burgers):
         # Save u because compute() overwrites the internal buffer
         u_saved = self.u.copy()
         sgsder = self.spectral.derivatives.compute(tau, [1])
-        dtaudx = sgsder['1']
+        dtaudx = sgsder["1"]
         # Restore u
         self.u[:] = u_saved
 
@@ -248,10 +245,7 @@ class LES(Burgers):
         )
 
     def _save_diagnostics(
-        self,
-        derivatives: dict[str, np.ndarray],
-        t_out: int,
-        t_loop: float
+        self, derivatives: dict[str, np.ndarray], t_out: int, t_loop: float
     ) -> None:
         """Compute LES diagnostics and save output.
 
@@ -263,18 +257,18 @@ class LES(Burgers):
             t_out: Output time index.
             t_loop: Current simulation time.
         """
-        dudx = derivatives['1']
-        d2udx2 = derivatives['2']
-        d3udx3 = derivatives.get('3', np.zeros_like(dudx))
+        dudx = derivatives["1"]
+        d2udx2 = derivatives["2"]
+        d3udx3 = derivatives.get("3", np.zeros_like(dudx))
         tau = self._last_tau if self._last_tau is not None else np.zeros(self.nx)
 
         # Compute diagnostics
         self.tke[:] = np.var(self.u)
         self.diss_sgs[:] = np.mean(-tau * dudx)
-        self.diss_mol[:] = np.mean(self.visc * dudx ** 2)
-        self.ens_prod[:] = np.mean(dudx ** 3)
+        self.diss_mol[:] = np.mean(self.visc * dudx**2)
+        self.ens_prod[:] = np.mean(dudx**3)
         self.ens_dsgs[:] = np.mean(-tau * d3udx3)
-        self.ens_dmol[:] = np.mean(self.visc * d2udx2 ** 2)
+        self.ens_dmol[:] = np.mean(self.visc * d2udx2**2)
         self.C_sgs[:] = self._last_coeff
         if self.sgs_model_id == 4:
             self.tke_sgs_mean[:] = np.mean(self.tke_sgs)

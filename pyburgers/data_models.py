@@ -12,8 +12,8 @@
 
 """Core Data Models for PyBurgers.
 
-This module defines the core data structures used throughout PyBurgers. These 
-structures are implemented as Python `dataclasses` to provide a clear and 
+This module defines the core data structures used throughout PyBurgers. These
+structures are implemented as Python `dataclasses` to provide a clear and
 robust way to manage the model's state and configuration.
 """
 
@@ -21,14 +21,17 @@ from dataclasses import dataclass
 
 # --- Configuration Data Models ---
 
+
 @dataclass(frozen=True)
 class DNSConfig:
     """Direct numerical simulation configuration.
-    
+
     Attributes:
         nx: Number of grid points.
     """
+
     nx: int
+
 
 @dataclass(frozen=True)
 class DomainConfig:
@@ -37,18 +40,22 @@ class DomainConfig:
     Attributes:
         length: Domain length (periodic) [m].
     """
+
     length: float
+
 
 @dataclass(frozen=True)
 class FFTWConfig:
     """FFTW parameters.
-    
+
     Attributes:
-        planning: fftw planning approach
-        threads: number of threads to use
+        planning: FFTW planning approach.
+        threads: Number of threads to use.
     """
+
     planning: str
     threads: int
+
 
 @dataclass(frozen=True)
 class LESConfig:
@@ -57,7 +64,9 @@ class LESConfig:
     Attributes:
         nx: Number of grid points.
     """
+
     nx: int
+
 
 @dataclass(frozen=True)
 class GridConfig:
@@ -67,8 +76,10 @@ class GridConfig:
         dns: Direct numerical simulation grid configuration
         les: Large-eddy simulation grid configuration
     """
+
     dns: DNSConfig
     les: LESConfig
+
 
 @dataclass(frozen=True)
 class LoggingConfig:
@@ -78,19 +89,23 @@ class LoggingConfig:
         level: Logging level for the simulation (e.g., 'info', 'debug').
         file: Optional log file path for file logging.
     """
+
     level: str
     file: str | None = None
+
 
 @dataclass(frozen=True)
 class NoiseConfig:
     """Noise method parameters.
-    
+
     Attributes:
         alpha: FBM exponent controlling the spectral slope.
         amplitude: noise amplitude
     """
+
     alpha: float
     amplitude: float
+
 
 @dataclass(frozen=True)
 class NumericsConfig:
@@ -99,7 +114,9 @@ class NumericsConfig:
     Attributes:
         fftw: FFTW parameters.
     """
+
     fftw: FFTWConfig
+
 
 @dataclass(frozen=True)
 class OutputConfig:
@@ -109,8 +126,10 @@ class OutputConfig:
         t_save: Save interval in physical time [s]
         t_print: Print progress interval in physical time [s]
     """
+
     t_save: float
     t_print: float
+
 
 @dataclass(frozen=True)
 class PhysicsConfig:
@@ -121,9 +140,11 @@ class PhysicsConfig:
         viscosity: The fluid's kinematic viscosity [m^2/s].
         sgs_model: Subgrid-scale model ID (0-4) for LES.
     """
+
     noise: NoiseConfig
     viscosity: float
     sgs_model: int
+
 
 @dataclass(frozen=True)
 class TimeConfig:
@@ -133,5 +154,6 @@ class TimeConfig:
         nt: Number of time iterations.
         dt: Change in time between iterations [s].
     """
+
     nt: int
     dt: float

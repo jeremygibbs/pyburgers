@@ -1,3 +1,14 @@
+#!/usr/bin/env python
+#
+# PyBurgers
+#
+# Copyright (c) 2017–2026 Jeremy A. Gibbs
+#
+# This file is part of PyBurgers.
+#
+# This software is free and is distributed under the WTFPL license.
+# See accompanying LICENSE file or visit https://www.wtfpl.net.
+#
 """Centralized spectral operations workspace for PyBurgers.
 
 This module provides the SpectralWorkspace class that bundles all spectral
@@ -5,12 +16,13 @@ utilities (Derivatives, Dealias, Filter, and FBM noise) into a single,
 reusable workspace. This eliminates redundant FFT plan creation and reduces
 memory usage.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pyburgers.utils.spectral import Derivatives, Dealias, Filter
 from pyburgers.utils.fbm import FBM
+from pyburgers.utils.spectral import Dealias, Derivatives, Filter
 
 if TYPE_CHECKING:
     import numpy as np
@@ -54,8 +66,8 @@ class SpectralWorkspace:
         nx2: int | None = None,
         noise_alpha: float | None = None,
         noise_nx: int | None = None,
-        fftw_planning: str = 'FFTW_MEASURE',
-        fftw_threads: int = 1
+        fftw_planning: str = "FFTW_MEASURE",
+        fftw_threads: int = 1,
     ) -> None:
         """Initialize the spectral workspace.
 
@@ -87,17 +99,10 @@ class SpectralWorkspace:
 
         # Initialize all spectral utilities with consistent settings
         self.derivatives = Derivatives(
-            nx=nx,
-            dx=dx,
-            fftw_planning=fftw_planning,
-            fftw_threads=fftw_threads
+            nx=nx, dx=dx, fftw_planning=fftw_planning, fftw_threads=fftw_threads
         )
 
-        self.dealias = Dealias(
-            nx=nx,
-            fftw_planning=fftw_planning,
-            fftw_threads=fftw_threads
-        )
+        self.dealias = Dealias(nx=nx, fftw_planning=fftw_planning, fftw_threads=fftw_threads)
 
         # Always create Filter (SGS models need it for test filtering)
         # If nx2 provided, Filter can also do downscaling from DNS to LES grid
@@ -105,7 +110,7 @@ class SpectralWorkspace:
             nx=nx,
             nx2=nx2,  # Optional: None for basic filtering, set for downscaling
             fftw_planning=fftw_planning,
-            fftw_threads=fftw_threads
+            fftw_threads=fftw_threads,
         )
 
         # Optionally create FBM noise generator
@@ -116,7 +121,7 @@ class SpectralWorkspace:
                 alpha=noise_alpha,
                 n_pts=self.noise_nx,
                 fftw_planning=fftw_planning,
-                fftw_threads=fftw_threads
+                fftw_threads=fftw_threads,
             )
         else:
             self.noise = None
@@ -129,7 +134,11 @@ class SpectralWorkspace:
     def __repr__(self) -> str:
         """String representation of the workspace."""
         filter_info = f", nx2={self.nx2}" if self.nx2 else ""
-        noise_info = f", noise_alpha={self.noise_alpha}, noise_nx={self.noise_nx}" if self.noise_alpha else ""
+        noise_info = (
+            f", noise_alpha={self.noise_alpha}, noise_nx={self.noise_nx}"
+            if self.noise_alpha
+            else ""
+        )
         return (
             f"SpectralWorkspace(nx={self.nx}, dx={self.dx}{filter_info}{noise_info}, "
             f"fftw_planning='{self.fftw_planning}', fftw_threads={self.fftw_threads})"

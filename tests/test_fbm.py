@@ -1,8 +1,8 @@
 """Tests for fractional Brownian motion noise generation."""
-##from __future__ import annotations
+
+from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from pyburgers.utils import FBM
 
@@ -63,7 +63,7 @@ class TestFBM:
 
         for _ in range(n_realizations):
             noise = fbm.compute_noise()
-            spectrum = np.abs(np.fft.fft(noise)[:nx // 2]) ** 2
+            spectrum = np.abs(np.fft.fft(noise)[: nx // 2]) ** 2
             power_sum += spectrum
 
         power_avg = power_sum / n_realizations
@@ -71,7 +71,7 @@ class TestFBM:
         # Fit spectral slope in log-log space (avoid DC and Nyquist)
         k = np.arange(2, nx // 4)
         log_k = np.log(k)
-        log_power = np.log(power_avg[2:nx // 4])
+        log_power = np.log(power_avg[2 : nx // 4])
 
         # Linear regression for slope
         slope, _ = np.polyfit(log_k, log_power, 1)

@@ -19,19 +19,20 @@ The wisdom file is stored at ~/.pyburgers_fftw_wisdom.
 File locking is used to prevent race conditions when multiple PyBurgers
 instances access the wisdom file concurrently.
 """
+
 from __future__ import annotations
 
 import fcntl
 import pickle
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
 
 import pyfftw
 
 # Wisdom cache file location
-WISDOM_FILE = Path.home() / '.pyburgers_fftw_wisdom'
+WISDOM_FILE = Path.home() / ".pyburgers_fftw_wisdom"
 
 # Lock timeout in seconds
 LOCK_TIMEOUT = 10.0
@@ -58,14 +59,14 @@ def _file_lock(file_path: Path, exclusive: bool = False) -> Iterator[None]:
         OSError: If file operations fail.
     """
     # Create lock file (append .lock to original filename)
-    lock_file_path = Path(str(file_path) + '.lock')
+    lock_file_path = Path(str(file_path) + ".lock")
     lock_file_path.touch(exist_ok=True)
 
     lock_type = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
     lock_file = None
 
     try:
-        lock_file = open(lock_file_path, 'r+')
+        lock_file = open(lock_file_path, "r+")
 
         # Try to acquire lock with timeout
         start_time = time.time()
@@ -74,14 +75,14 @@ def _file_lock(file_path: Path, exclusive: bool = False) -> Iterator[None]:
                 # Non-blocking lock attempt
                 fcntl.flock(lock_file.fileno(), lock_type | fcntl.LOCK_NB)
                 break
-            except BlockingIOError:
+            except BlockingIOError as err:
                 # Lock is held by another process
                 elapsed = time.time() - start_time
                 if elapsed > LOCK_TIMEOUT:
                     raise TimeoutError(
                         f"Could not acquire {'exclusive' if exclusive else 'shared'} "
                         f"lock on {file_path} within {LOCK_TIMEOUT}s"
-                    )
+                    ) from err
                 # Wait a bit before retrying
                 time.sleep(0.1)
 
@@ -135,7 +136,7 @@ def load_wisdom(
     try:
         # Acquire shared lock for reading (multiple readers OK)
         with _file_lock(WISDOM_FILE, exclusive=False):
-            with open(WISDOM_FILE, 'rb') as f:
+            with open(WISDOM_FILE, "rb") as f:
                 data = pickle.load(f)
 
         # Handle legacy wisdom files (raw wisdom without metadata)
@@ -143,31 +144,21 @@ def load_wisdom(
             return False, "Legacy wisdom format detected (no metadata)"
 
         # Extract wisdom and metadata
-        wisdom = data.get('wisdom')
-        metadata = data.get('metadata', {})
+        wisdom = data.get("wisdom")
+        metadata = data.get("metadata", {})
 
         # Check each parameter and build a detailed message
         mismatches = []
-        if metadata.get('nx_dns') != nx_dns:
-            mismatches.append(
-                f"nx_dns ({metadata.get('nx_dns')} → {nx_dns})"
-            )
-        if metadata.get('nx_les') != nx_les:
-            mismatches.append(
-                f"nx_les ({metadata.get('nx_les')} → {nx_les})"
-            )
-        if metadata.get('noise_alpha') != noise_alpha:
-            mismatches.append(
-                f"noise_alpha ({metadata.get('noise_alpha')} → {noise_alpha})"
-            )
-        if metadata.get('fftw_planning') != fftw_planning:
-            mismatches.append(
-                f"fftw_planning ({metadata.get('fftw_planning')} → {fftw_planning})"
-            )
-        if metadata.get('fftw_threads') != fftw_threads:
-            mismatches.append(
-                f"fftw_threads ({metadata.get('fftw_threads')} → {fftw_threads})"
-            )
+        if metadata.get("nx_dns") != nx_dns:
+            mismatches.append(f"nx_dns ({metadata.get('nx_dns')} → {nx_dns})")
+        if metadata.get("nx_les") != nx_les:
+            mismatches.append(f"nx_les ({metadata.get('nx_les')} → {nx_les})")
+        if metadata.get("noise_alpha") != noise_alpha:
+            mismatches.append(f"noise_alpha ({metadata.get('noise_alpha')} → {noise_alpha})")
+        if metadata.get("fftw_planning") != fftw_planning:
+            mismatches.append(f"fftw_planning ({metadata.get('fftw_planning')} → {fftw_planning})")
+        if metadata.get("fftw_threads") != fftw_threads:
+            mismatches.append(f"fftw_threads ({metadata.get('fftw_threads')} → {fftw_threads})")
 
         if mismatches:
             msg = "Parameter mismatch: " + ", ".join(mismatches)
@@ -212,19 +203,19 @@ def save_wisdom(
     try:
         # Package wisdom with metadata
         data = {
-            'wisdom': pyfftw.export_wisdom(),
-            'metadata': {
-                'nx_dns': nx_dns,
-                'nx_les': nx_les,
-                'noise_alpha': noise_alpha,
-                'fftw_planning': fftw_planning,
-                'fftw_threads': fftw_threads,
-            }
+            "wisdom": pyfftw.export_wisdom(),
+            "metadata": {
+                "nx_dns": nx_dns,
+                "nx_les": nx_les,
+                "noise_alpha": noise_alpha,
+                "fftw_planning": fftw_planning,
+                "fftw_threads": fftw_threads,
+            },
         }
 
         # Acquire exclusive lock for writing (blocks all other access)
         with _file_lock(WISDOM_FILE, exclusive=True):
-            with open(WISDOM_FILE, 'wb') as f:
+            with open(WISDOM_FILE, "wb") as f:
                 pickle.dump(data, f)
         return True
     except TimeoutError:
@@ -278,9 +269,7 @@ def warmup_fftw_plans(
                     fftw_threads=fftw_threads,
                 )
             except Exception as e:
-                raise RuntimeError(
-                    f"Failed to create DNS workspace (nx={nx_dns}): {e}"
-                ) from e
+                raise RuntimeError(f"Failed to create DNS workspace (nx={nx_dns}): {e}") from e
 
         # Warm LES components using SpectralWorkspace
         if nx_les > 0:

@@ -22,4 +22,4 @@ the `pyburgers.physics` namespace.
 
 from .sgs import SGS
 
-__all__ = ['SGS']
+__all__ = ["SGS"]

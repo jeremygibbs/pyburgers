@@ -2,6 +2,7 @@
 
 Implements the classic Smagorinsky model with a fixed coefficient.
 """
+
 from __future__ import annotations
 
 import logging
@@ -9,13 +10,14 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from .sgs import SGS
-from ...utils import get_logger
 from ...utils import constants as c
+from ...utils import get_logger
+from .sgs import SGS
 
 if TYPE_CHECKING:
     from ...utils.io import Input
     from ...utils.spectral_workspace import SpectralWorkspace
+
 
 class SmagConstant(SGS):
     """Constant-coefficient Smagorinsky subgrid-scale model.
@@ -28,11 +30,7 @@ class SmagConstant(SGS):
     Uses the shared spectral workspace for dealiasing operations.
     """
 
-    def __init__(
-        self,
-        input_obj: Input,
-        spectral: SpectralWorkspace
-    ) -> None:
+    def __init__(self, input_obj: Input, spectral: SpectralWorkspace) -> None:
         """Initialize the constant Smagorinsky model.
 
         Args:
@@ -44,10 +42,7 @@ class SmagConstant(SGS):
         self.logger.info("Using the Smagorinsky model")
 
     def compute(
-        self,
-        u: np.ndarray,
-        dudx: np.ndarray,
-        tke_sgs: np.ndarray | float
+        self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float
     ) -> dict[str, Any]:
         """Compute the Smagorinsky SGS stress.
 
@@ -61,11 +56,11 @@ class SmagConstant(SGS):
         """
         # Model constants
         cs = c.sgs.SMAG_CONSTANT_CS
-        cs2 = cs ** 2
-        
+        cs2 = cs**2
+
         dudx2 = self.spectral.dealias.compute(dudx)
 
-        self.sgs['tau'] = -2 * cs2 * (self.dx ** 2) * dudx2
-        self.sgs['coeff'] = np.sqrt(cs2)
+        self.result["tau"] = -2 * cs2 * (self.dx**2) * dudx2
+        self.result["coeff"] = np.sqrt(cs2)
 
-        return self.sgs
+        return self.result

@@ -1,10 +1,7 @@
 """Tests for logging functionality."""
 
 import logging
-import tempfile
 from pathlib import Path
-
-import pytest
 
 from pyburgers.utils import get_logger, setup_logging
 from pyburgers.utils.io import Input

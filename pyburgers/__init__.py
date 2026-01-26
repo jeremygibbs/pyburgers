@@ -16,6 +16,8 @@ A tool for studying Burgers turbulence using DNS and LES.
 """
 
 # Core data structures from the namelist file
+# Core and simulation classes
+from .core import Burgers
 from .data_models import (
     DNSConfig,
     DomainConfig,
@@ -29,40 +31,37 @@ from .data_models import (
     PhysicsConfig,
     TimeConfig,
 )
+from .dns import DNS
+
+# Exceptions
+from .exceptions import InvalidMode, NamelistError, PyBurgersError
+from .les import LES
 
 # Core I/O classes for handling model input and output
 from .utils.io import Input, Output
 
-# Exceptions
-from .exceptions import InvalidMode, NamelistError, PyBurgersError
-
-# Core and simulation classes
-from .core import Burgers
-from .dns import DNS
-from .les import LES
-
 __all__ = [
     # Data models
-    'DNSConfig',
-    'DomainConfig',
-    'FFTWConfig',
-    'GridConfig',
-    'LESConfig',
-    'LoggingConfig',
-    'NoiseConfig',
-    'NumericsConfig',
-    'OutputConfig',
-    'PhysicsConfig',
-    'TimeConfig',
+    "DNSConfig",
+    "DomainConfig",
+    "FFTWConfig",
+    "GridConfig",
+    "LESConfig",
+    "LoggingConfig",
+    "NoiseConfig",
+    "NumericsConfig",
+    "OutputConfig",
+    "PhysicsConfig",
+    "TimeConfig",
     # I/O
-    'Input',
-    'Output',
+    "Input",
+    "Output",
     # Exceptions
-    'InvalidMode',
-    'NamelistError',
-    'PyBurgersError',
+    "InvalidMode",
+    "NamelistError",
+    "PyBurgersError",
     # Core and simulation classes
-    'Burgers',
-    'DNS',
-    'LES',
+    "Burgers",
+    "DNS",
+    "LES",
 ]

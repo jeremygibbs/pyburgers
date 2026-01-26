@@ -21,11 +21,10 @@ To run a simulation, use:
     $ python burgers.py -m les
     $ python burgers.py -m dns -o output.nc
 """
+
 import argparse
 import atexit
-import sys
 import time
-from typing import Optional
 
 from pyburgers import DNS, LES, Input, Output
 from pyburgers.exceptions import InvalidMode, NamelistError, PyBurgersError
@@ -33,9 +32,9 @@ from pyburgers.utils import (
     get_logger,
     load_wisdom,
     save_wisdom,
-    setup_logging,
     warmup_fftw_plans,
 )
+
 
 def main() -> None:
     """Parse arguments, run the simulation, and print timing information.
@@ -51,23 +50,25 @@ def main() -> None:
         description="Run a simulation with PyBurgers"
     )
     parser.add_argument(
-        "-m", "--mode",
-        dest='mode',
+        "-m",
+        "--mode",
+        dest="mode",
         type=str,
         default="dns",
-        help="Simulation mode: 'dns' or 'les' (default: dns)"
+        help="Simulation mode: 'dns' or 'les' (default: dns)",
     )
     parser.add_argument(
-        "-o", "--output",
-        dest='outfile',
+        "-o",
+        "--output",
+        dest="outfile",
         type=str,
-        help="Output file name (default: pyburgers_<mode>.nc)"
+        help="Output file name (default: pyburgers_<mode>.nc)",
     )
     args: argparse.Namespace = parser.parse_args()
     mode: str = args.mode.lower()
-    outfile: Optional[str] = args.outfile
+    outfile: str | None = args.outfile
 
-    output_obj: Optional[Output] = None
+    output_obj: Output | None = None
     # Welcome message
     print("##############################################################")
     print("#                                                            #")
@@ -76,10 +77,10 @@ def main() -> None:
     print("#                      by: Jeremy Gibbs                      #")
     print("#                                                            #")
     print("##############################################################")
-    
+
     try:
         # Create Input instance from namelist (configures logging)
-        namelist = 'namelist.json'
+        namelist = "namelist.json"
         input_obj: Input = Input(namelist)
 
         # Get logger after Input sets up logging
@@ -87,9 +88,7 @@ def main() -> None:
 
         # Log FFTW configuration
         logger.debug(
-            "FFTW Planning: %s, Threads: %d",
-            input_obj.fftw_planning,
-            input_obj.fftw_threads
+            "FFTW Planning: %s, Threads: %d", input_obj.fftw_planning, input_obj.fftw_threads
         )
 
         # Load FFTW wisdom at startup for optimized FFT plans
@@ -145,7 +144,7 @@ def main() -> None:
 
         # Create Output instance
         if not outfile:
-            outfile = f'pyburgers_{mode}.nc'
+            outfile = f"pyburgers_{mode}.nc"
         output_obj = Output(outfile)
 
         # Create simulation instance (includes FFTW planning)
@@ -155,9 +154,7 @@ def main() -> None:
         elif mode == "les":
             burgers = LES(input_obj, output_obj)
         else:
-            raise InvalidMode(
-                f'Invalid mode "{mode}". Must be "dns" or "les".'
-            )
+            raise InvalidMode(f'Invalid mode "{mode}". Must be "dns" or "les".')
 
         # Initialization complete - now start timing the actual simulation
         logger.info("Initialization complete. Starting simulation run...")
@@ -172,18 +169,18 @@ def main() -> None:
         logger.info("Done! Completed in %.2f seconds", elapsed)
 
     except InvalidMode as e:
-        print(f'\nInvalid mode error: {e}')
-        print('Use -m dns or -m les')
+        print(f"\nInvalid mode error: {e}")
+        print("Use -m dns or -m les")
         raise SystemExit(1) from e
     except NamelistError as e:
-        print(f'\nNamelist configuration error: {e}')
-        print('Check namelist.json settings.')
+        print(f"\nNamelist configuration error: {e}")
+        print("Check namelist.json settings.")
         raise SystemExit(1) from e
     except PyBurgersError as e:
-        print(f'\nAn error occurred: {e}')
+        print(f"\nAn error occurred: {e}")
         raise SystemExit(1) from e
     except FileNotFoundError as e:
-        print(f'\nFile not found: {e}')
+        print(f"\nFile not found: {e}")
         raise SystemExit(1) from e
     finally:
         # Ensure the output file is properly closed, even if an error occurred

@@ -3,6 +3,7 @@
 Implements the Germano dynamic procedure for computing the
 Smagorinsky coefficient from the resolved field.
 """
+
 from __future__ import annotations
 
 import logging
@@ -10,13 +11,14 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from .sgs import SGS
-from ...utils import get_logger
 from ...utils import constants as c
+from ...utils import get_logger
+from .sgs import SGS
 
 if TYPE_CHECKING:
     from ...utils.io import Input
     from ...utils.spectral_workspace import SpectralWorkspace
+
 
 class SmagDynamic(SGS):
     """Dynamic Smagorinsky subgrid-scale model.
@@ -28,11 +30,7 @@ class SmagDynamic(SGS):
     Uses the shared spectral workspace for filtering and dealiasing operations.
     """
 
-    def __init__(
-        self,
-        input_obj: Input,
-        spectral: SpectralWorkspace
-    ) -> None:
+    def __init__(self, input_obj: Input, spectral: SpectralWorkspace) -> None:
         """Initialize the dynamic Smagorinsky model.
 
         Args:
@@ -44,10 +42,7 @@ class SmagDynamic(SGS):
         self.logger.info("Using the Dynamic Smagorinsky model")
 
     def compute(
-        self,
-        u: np.ndarray,
-        dudx: np.ndarray,
-        tke_sgs: np.ndarray | float
+        self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float
     ) -> dict[str, Any]:
         """Compute the dynamic Smagorinsky SGS stress.
 
@@ -64,17 +59,17 @@ class SmagDynamic(SGS):
         """
         # Model constants
         ratio = c.sgs.TEST_FILTER_RATIO
-        
+
         # Leonard stress L11 = <uu> - <u><u>
         uf = self.spectral.filter.cutoff(u, ratio)
-        uuf = self.spectral.filter.cutoff(u ** 2, ratio)
+        uuf = self.spectral.filter.cutoff(u**2, ratio)
         L11 = uuf - uf * uf
 
         # Model tensor M11
         dudxf = self.spectral.filter.cutoff(dudx, ratio)
         T = np.abs(dudx) * dudx
         Tf = self.spectral.filter.cutoff(T, ratio)
-        M11 = (self.dx ** 2) * ((ratio ** 2) * np.abs(dudxf) * dudxf - Tf)
+        M11 = (self.dx**2) * ((ratio**2) * np.abs(dudxf) * dudxf - Tf)
 
         # Dealiased strain rate
         dudx2 = self.spectral.dealias.compute(dudx)
@@ -87,7 +82,7 @@ class SmagDynamic(SGS):
             if cs2 < 0:
                 cs2 = 0
 
-        self.sgs['tau'] = -2 * cs2 * (self.dx ** 2) * dudx2
-        self.sgs['coeff'] = np.sqrt(cs2)
+        self.result["tau"] = -2 * cs2 * (self.dx**2) * dudx2
+        self.result["coeff"] = np.sqrt(cs2)
 
-        return self.sgs
+        return self.result

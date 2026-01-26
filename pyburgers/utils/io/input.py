@@ -16,12 +16,12 @@ JSON namelist and populating the configuration dataclasses. It validates
 the inputs and provides a single, clean interface for the simulation to
 access all setup information.
 """
+
 import json
 import logging
 import math
 from typing import Any
 
-from ..logging_helper import get_logger, setup_logging
 from ...data_models import (
     DNSConfig,
     DomainConfig,
@@ -35,6 +35,7 @@ from ...data_models import (
     TimeConfig,
 )
 from ...exceptions import NamelistError
+from ..logging_helper import get_logger, setup_logging
 
 
 class Input:
@@ -69,8 +70,8 @@ class Input:
         """
         # Set up basic logging before we can read the log level
         setup_logging(level="INFO")
-        self.logger: logging.Logger = get_logger('Input')
-        self.logger.info('Reading %s', namelist_path)
+        self.logger: logging.Logger = get_logger("Input")
+        self.logger.info("Reading %s", namelist_path)
 
         namelist_data = self._load_namelist(namelist_path)
         self._validate_namelist(namelist_data)
@@ -86,10 +87,7 @@ class Input:
 
         # Time configuration
         time_data = namelist_data["time"]
-        self.time: TimeConfig = TimeConfig(
-            nt=int(time_data["nt"]),
-            dt=float(time_data["dt"])
-        )
+        self.time: TimeConfig = TimeConfig(nt=int(time_data["nt"]), dt=float(time_data["dt"]))
 
         # Grid configuration (DNS and LES)
         grid_data = namelist_data["grid"]
@@ -103,7 +101,7 @@ class Input:
         self.physics: PhysicsConfig = PhysicsConfig(
             noise=NoiseConfig(
                 alpha=float(noise_data.get("alpha", 0.75)),
-                amplitude=float(noise_data.get("amplitude", 1e-6))
+                amplitude=float(noise_data.get("amplitude", 1e-6)),
             ),
             viscosity=float(physics_data["viscosity"]),
             sgs_model=int(physics_data.get("sgs_model", 1)),
@@ -124,7 +122,7 @@ class Input:
         default_t_print = default_t_save  # Default print freq same as save freq
         self.output: OutputConfig = OutputConfig(
             t_save=float(output_data.get("t_save", default_t_save)),
-            t_print=float(output_data.get("t_print", default_t_print))
+            t_print=float(output_data.get("t_print", default_t_print)),
         )
         self._step_save = max(1, int(round(self.output.t_save / self.time.dt)))
         self._t_save_effective = self._step_save * self.time.dt
@@ -159,14 +157,14 @@ class Input:
             )
 
         # FFTW configuration
-        fftw_data = namelist_data.get('fftw', {})
+        fftw_data = namelist_data.get("fftw", {})
         self.fftw: FFTWConfig = FFTWConfig(
-            planning=str(fftw_data.get('planning', 'FFTW_MEASURE')),
-            threads=int(fftw_data.get('threads', 4))
+            planning=str(fftw_data.get("planning", "FFTW_MEASURE")),
+            threads=int(fftw_data.get("threads", 4)),
         )
 
         self._log_configuration()
-        self.logger.info('--- namelist loaded successfully')
+        self.logger.info("--- namelist loaded successfully")
 
     @property
     def log_level(self) -> str:
@@ -237,13 +235,13 @@ class Input:
             json.JSONDecodeError: If the namelist is not valid JSON.
         """
         try:
-            with open(namelist_path, encoding='utf-8') as f:
+            with open(namelist_path, encoding="utf-8") as f:
                 return json.load(f)
-        except FileNotFoundError as e:
-            self.logger.error('Namelist file not found: %s', namelist_path)
+        except FileNotFoundError:
+            self.logger.error("Namelist file not found: %s", namelist_path)
             raise
         except json.JSONDecodeError as e:
-            self.logger.error('Invalid JSON in namelist: %s', e)
+            self.logger.error("Invalid JSON in namelist: %s", e)
             raise
 
     def _validate_namelist(self, data: dict[str, Any]) -> None:
@@ -261,32 +259,30 @@ class Input:
                 raise NamelistError(f"Missing required section: '{section}'")
 
         # Validate time section
-        time_data = data['time']
-        if 'nt' not in time_data:
+        time_data = data["time"]
+        if "nt" not in time_data:
             raise NamelistError("Missing 'nt' in time section")
-        if 'dt' not in time_data:
+        if "dt" not in time_data:
             raise NamelistError("Missing 'dt' in time section")
-        if float(time_data['dt']) <= 0:
+        if float(time_data["dt"]) <= 0:
             raise NamelistError("'dt' must be positive")
-        if int(time_data['nt']) <= 0:
+        if int(time_data["nt"]) <= 0:
             raise NamelistError("'nt' must be positive")
 
         if "domain_length" in data["grid"] and float(data["grid"]["domain_length"]) <= 0:
             raise NamelistError("'domain_length' must be positive")
 
         # Validate physics section
-        physics_data = data['physics']
-        if 'viscosity' not in physics_data:
+        physics_data = data["physics"]
+        if "viscosity" not in physics_data:
             raise NamelistError("Missing 'viscosity' in physics section")
-        if float(physics_data['viscosity']) <= 0:
+        if float(physics_data["viscosity"]) <= 0:
             raise NamelistError("'viscosity' must be positive")
 
         # Validate grid section
         grid_data = data["grid"]
         if "dns" not in grid_data and "les" not in grid_data:
-            raise NamelistError(
-                "At least one of 'dns' or 'les' must be in grid section"
-            )
+            raise NamelistError("At least one of 'dns' or 'les' must be in grid section")
 
         # Validate DNS config if present
         if "dns" in grid_data:
@@ -302,9 +298,7 @@ class Input:
         if "sgs_model" in data["physics"]:
             sgs = int(data["physics"]["sgs_model"])
             if sgs < 0 or sgs > 4:
-                raise NamelistError(
-                    f"physics 'sgs_model' must be 0-4, got {sgs}"
-                )
+                raise NamelistError(f"physics 'sgs_model' must be 0-4, got {sgs}")
 
         # Validate output config if present
         if "output" in data:
@@ -315,38 +309,30 @@ class Input:
                 raise NamelistError("'t_print' must be positive")
 
         # Validate FFTW config if present
-        if 'fftw' in data:
-            fftw_data = data['fftw']
-            valid_planning = [
-                'FFTW_ESTIMATE', 'FFTW_MEASURE',
-                'FFTW_PATIENT', 'FFTW_EXHAUSTIVE'
-            ]
-            planning = fftw_data.get('planning', 'FFTW_MEASURE')
+        if "fftw" in data:
+            fftw_data = data["fftw"]
+            valid_planning = ["FFTW_ESTIMATE", "FFTW_MEASURE", "FFTW_PATIENT", "FFTW_EXHAUSTIVE"]
+            planning = fftw_data.get("planning", "FFTW_MEASURE")
             if planning not in valid_planning:
                 raise NamelistError(
-                    f"Invalid FFTW planning: '{planning}'. "
-                    f"Valid options: {valid_planning}"
+                    f"Invalid FFTW planning: '{planning}'. Valid options: {valid_planning}"
                 )
-            threads = fftw_data.get('threads', 4)
+            threads = fftw_data.get("threads", 4)
             if int(threads) < 1:
                 raise NamelistError("FFTW 'threads' must be at least 1")
 
     def _log_configuration(self) -> None:
         """Log the loaded configuration for debugging."""
-        self.logger.debug('Time: nt=%d, dt=%g', self.time.nt, self.time.dt)
+        self.logger.debug("Time: nt=%d, dt=%g", self.time.nt, self.time.dt)
         self.logger.debug(
-            'Physics: viscosity=%g, noise(alpha=%g, amp=%g)',
+            "Physics: viscosity=%g, noise(alpha=%g, amp=%g)",
             self.physics.viscosity,
             self.physics.noise.alpha,
-            self.physics.noise.amplitude
+            self.physics.noise.amplitude,
         )
         self.logger.debug("Domain: length=%g", self.domain.length)
-        self.logger.debug('DNS: nx=%d', self.grid.dns.nx)
-        self.logger.debug(
-            'LES: nx=%d, sgs=%d',
-            self.grid.les.nx,
-            self.physics.sgs_model
-        )
+        self.logger.debug("DNS: nx=%d", self.grid.dns.nx)
+        self.logger.debug("LES: nx=%d, sgs=%d", self.grid.les.nx, self.physics.sgs_model)
         self.logger.debug(
             "Output: t_save=%g (steps=%d, effective=%g), t_print=%g (steps=%d, effective=%g)",
             self.output.t_save,
@@ -361,11 +347,7 @@ class Input:
             self.logging.level,
             self.logging.file,
         )
-        self.logger.debug(
-            'FFTW: planning=%s, threads=%d',
-            self.fftw.planning,
-            self.fftw.threads
-        )
+        self.logger.debug("FFTW: planning=%s, threads=%d", self.fftw.planning, self.fftw.threads)
 
     def get_dns_config(self) -> dict[str, Any]:
         """Get DNS-specific configuration as a dictionary.
@@ -374,14 +356,14 @@ class Input:
             Dictionary with DNS configuration values.
         """
         return {
-            'nx': self.grid.dns.nx,
-            'dt': self.time.dt,
-            'nt': self.time.nt,
-            'viscosity': self.physics.viscosity,
-            'noise_alpha': self.physics.noise.alpha,
-            'noise_amplitude': self.physics.noise.amplitude,
-            't_save': self.output.t_save,
-            'domain_length': self.domain.length,
+            "nx": self.grid.dns.nx,
+            "dt": self.time.dt,
+            "nt": self.time.nt,
+            "viscosity": self.physics.viscosity,
+            "noise_alpha": self.physics.noise.alpha,
+            "noise_amplitude": self.physics.noise.amplitude,
+            "t_save": self.output.t_save,
+            "domain_length": self.domain.length,
         }
 
     def get_les_config(self) -> dict[str, Any]:
@@ -391,13 +373,13 @@ class Input:
             Dictionary with LES configuration values.
         """
         return {
-            'nx': self.grid.les.nx,
-            'sgs_model': self.physics.sgs_model,
-            'dt': self.time.dt,
-            'nt': self.time.nt,
-            'viscosity': self.physics.viscosity,
-            'noise_alpha': self.physics.noise.alpha,
-            'noise_amplitude': self.physics.noise.amplitude,
-            't_save': self.output.t_save,
-            'domain_length': self.domain.length,
+            "nx": self.grid.les.nx,
+            "sgs_model": self.physics.sgs_model,
+            "dt": self.time.dt,
+            "nt": self.time.nt,
+            "viscosity": self.physics.viscosity,
+            "noise_alpha": self.physics.noise.alpha,
+            "noise_amplitude": self.physics.noise.amplitude,
+            "t_save": self.output.t_save,
+            "domain_length": self.domain.length,
         }

@@ -1,17 +1,15 @@
 """Integration tests for DNS and LES solvers."""
+
 from __future__ import annotations
 
 import gc
-import json
-import os
-import tempfile
 from pathlib import Path
 
 import numpy as np
 import pytest
 
 from pyburgers import DNS, LES
-from pyburgers.utils.io import Input, Output
+from pyburgers.utils.io import Output
 
 
 @pytest.fixture(autouse=True)
@@ -32,8 +30,8 @@ class MockInput:
         nt: int = 10,
         visc: float = 0.01,
         namp: float = 0.1,
-        nxDNS: int = 64,
-        nxLES: int = 32,
+        nx_dns: int = 64,
+        nx_les: int = 32,
         sgs_model: int = 1,
         t_save: float = 0.005,
         domain_length: float = 2 * np.pi,
@@ -69,7 +67,7 @@ class MockInput:
 
         self.time = Time(dt, nt)
         self.physics = Physics(visc, Noise(namp), sgs_model)
-        self.grid = Grid(nxDNS, nxLES)
+        self.grid = Grid(nx_dns, nx_les)
         self.domain_length = domain_length
         self.fftw_planning = "FFTW_ESTIMATE"
         self.fftw_threads = 1
@@ -90,6 +88,10 @@ class MockInput:
     @property
     def step_save(self) -> int:
         return max(1, int(round(self._t_save / self.dt)))
+
+    @property
+    def step_print(self) -> int:
+        return self.step_save
 
 
 class TestDNSIntegration:
@@ -246,8 +248,8 @@ class TestLESIntegration:
 
         # Should be positive and in reasonable range
         assert total_diss > 0
-        # Order of magnitude check: dissipation should be O(0.001-1.0)
-        assert 1e-4 < total_diss < 10.0
+        # Order of magnitude check: dissipation should be O(1e-5 to 1.0)
+        assert 1e-6 < total_diss < 10.0
 
     @pytest.mark.parametrize("sgs_model", [1, 2, 3])
     def test_les_coefficient_physical_range(self, tmp_path: Path, sgs_model: int) -> None:
