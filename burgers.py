@@ -145,6 +145,8 @@ def main() -> None:
         # Create Output instance
         if not outfile:
             outfile = f"pyburgers_{mode}.nc"
+        elif not outfile.lower().endswith(".nc"):
+            outfile = f"{outfile}.nc"
         output_obj = Output(outfile)
 
         # Create simulation instance (includes FFTW planning)
