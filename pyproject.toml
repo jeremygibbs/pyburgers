@@ -16,6 +16,9 @@ dev = [
     "pytest-cov>=4.0",
     "ruff>=0.1",
 ]
+viz = [
+    "matplotlib>=3.8",
+]
 docs = [
     "mkdocs>=1.5",
     "mkdocs-material>=9.5",

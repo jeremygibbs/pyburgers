@@ -225,7 +225,7 @@ class Burgers(ABC):
         rhsp: np.ndarray | int = 0
 
         # Time loop
-        for t in range(1, int(self.nt)):
+        for t in range(1, int(self.nt) + 1):
             # Current simulation time
             t_loop = t * self.dt
 
@@ -277,7 +277,7 @@ class Burgers(ABC):
         elif self.logger.isEnabledFor(logging.INFO):
             if (
                 t != 1
-                and t != (self.nt - 1)
+                and t != self.nt
                 and self.progress_stride > 1
                 and t % self.progress_stride != 0
             ):

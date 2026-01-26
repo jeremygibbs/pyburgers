@@ -45,6 +45,20 @@ python burgers.py -m les -o my_simulation.nc
 
 Configuration is controlled via `namelist.json`. See the [documentation](https://docs.gibbs.science/pyburgers) for details.
 
+### Compare DNS vs LES TKE
+
+Install the optional visualization dependencies:
+
+```bash
+pip install -e ".[viz]"
+```
+
+Then compare TKE output from one DNS run and multiple LES runs:
+
+```bash
+python scripts/compare_tke.py -d pyburgers_dns.nc -l pyburgers_les.nc -l pyburgers_les_alt.nc
+```
+
 ## Documentation
 
 Full documentation is available at: **https://docs.gibbs.science/pyburgers**
