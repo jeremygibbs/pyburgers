@@ -24,11 +24,11 @@ class MockInput:
         # Create nested structure matching Input class
         class Grid:
             class LES:
-                def __init__(self, nx):
-                    self.nx = nx
+                def __init__(self, points):
+                    self.points = points
 
-            def __init__(self, nx):
-                self.les = self.LES(nx)
+            def __init__(self, points):
+                self.les = self.LES(points)
 
         self.grid = Grid(nx_les)
         self.domain_length = domain_length

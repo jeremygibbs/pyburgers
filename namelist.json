@@ -1,28 +1,28 @@
 {
     "time": {
-        "nt": 20000.0,
-        "dt": 0.0001
-    },
-    "physics": {
-        "noise": {
-            "alpha": 0.75,
-            "amplitude": 1e-06
-        },
-        "viscosity": 1e-05,
-        "sgs_model": 1
+        "duration": 20.0,
+        "step": 0.0001
     },
     "grid": {
-        "domain_length": 6.283185307179586,
+        "length": 6.283185307179586,
         "dns": {
-            "nx": 8192
+            "points": 8192
         },
         "les": {
-            "nx": 512
+            "points": 512
+        }
+    },
+    "physics": {
+        "viscosity": 1e-05,
+        "subgrid_model": 2,
+        "noise": {
+            "exponent": 0.75,
+            "amplitude": 1e-06
         }
     },
     "output": {
-        "t_save": 0.1,
-        "t_print": 0.1
+        "interval_save": 0.1,
+        "interval_print": 0.1
     },
     "logging": {
         "level": "INFO",

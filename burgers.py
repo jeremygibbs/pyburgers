@@ -94,9 +94,9 @@ def main() -> None:
         # Load FFTW wisdom at startup for optimized FFT plans
         # Validates that wisdom matches current grid sizes and parameters
         wisdom_loaded, wisdom_msg = load_wisdom(
-            input_obj.grid.dns.nx,
-            input_obj.grid.les.nx,
-            input_obj.physics.noise.alpha,
+            input_obj.grid.dns.points,
+            input_obj.grid.les.points,
+            input_obj.physics.noise.exponent,
             input_obj.fftw_planning,
             input_obj.fftw_threads,
         )
@@ -109,9 +109,9 @@ def main() -> None:
         # Register save_wisdom to run at exit
         atexit.register(
             save_wisdom,
-            input_obj.grid.dns.nx,
-            input_obj.grid.les.nx,
-            input_obj.physics.noise.alpha,
+            input_obj.grid.dns.points,
+            input_obj.grid.les.points,
+            input_obj.physics.noise.exponent,
             input_obj.fftw_planning,
             input_obj.fftw_threads,
         )
@@ -120,9 +120,9 @@ def main() -> None:
         if not wisdom_loaded:
             logger.info("Building FFTW plans to populate wisdom cache...")
             warmup_success, warmup_msg = warmup_fftw_plans(
-                input_obj.grid.dns.nx,
-                input_obj.grid.les.nx,
-                input_obj.physics.noise.alpha,
+                input_obj.grid.dns.points,
+                input_obj.grid.les.points,
+                input_obj.physics.noise.exponent,
                 input_obj.fftw_planning,
                 input_obj.fftw_threads,
             )
@@ -131,9 +131,9 @@ def main() -> None:
                 logger.debug("FFTW warmup: %s", warmup_msg)
                 # Save wisdom immediately after successful warmup
                 save_wisdom(
-                    input_obj.grid.dns.nx,
-                    input_obj.grid.les.nx,
-                    input_obj.physics.noise.alpha,
+                    input_obj.grid.dns.points,
+                    input_obj.grid.les.points,
+                    input_obj.physics.noise.exponent,
                     input_obj.fftw_planning,
                     input_obj.fftw_threads,
                 )
@@ -159,7 +159,7 @@ def main() -> None:
             raise InvalidMode(f'Invalid mode "{mode}". Must be "dns" or "les".')
 
         # Initialization complete - now start timing the actual simulation
-        logger.info("Initialization complete. Starting simulation run...")
+        logger.info("Initialization complete. Starting simulation ...")
         t1: float = time.time()
 
         # Run the simulation

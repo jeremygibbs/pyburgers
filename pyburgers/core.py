@@ -84,7 +84,7 @@ class Burgers(ABC):
         self.nt = input_obj.nt
         self.visc = input_obj.viscosity
         self.noise_amp = input_obj.physics.noise.amplitude
-        self.noise_alpha = input_obj.physics.noise.alpha
+        self.noise_alpha = input_obj.physics.noise.exponent
         self.step_save = input_obj.step_save
         self.step_print = input_obj.step_print
         self.progress_stride = max(1, self.step_print)

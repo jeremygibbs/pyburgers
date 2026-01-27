@@ -58,8 +58,9 @@ class LES(Burgers):
         """
         # Store LES-specific config before calling parent __init__
         # (needed because _setup_mode_specific is called during parent init)
-        self._nx_dns = input_obj.grid.dns.nx
-        self._sgs_model_id = input_obj.physics.sgs_model
+        self._nx_dns = input_obj.grid.dns.points
+        self._sgs_model_id = input_obj.physics.subgrid_model
+        self._domain_length = input_obj.grid.length
 
         super().__init__(input_obj, output_obj)
 
@@ -69,7 +70,7 @@ class LES(Burgers):
         Returns:
             Number of grid points from LES configuration.
         """
-        return self.input.grid.les.nx
+        return self.input.grid.les.points
 
     def _create_spectral_workspace(self) -> SpectralWorkspace:
         """Create the spectral workspace for LES mode.
@@ -102,9 +103,10 @@ class LES(Burgers):
         # Calculate and log filter width
         filter_width = self.nx_dns // self.nx
         self.logger.info("LES configuration:")
-        self.logger.info("  Resolution: %d points", self.nx)
-        self.logger.info("  Filter width: %dΔx (ratio to DNS: %d)", filter_width, filter_width)
-        self.logger.info("  Testing against DNS with %d points", self.nx_dns)
+        self.logger.info("--- Grid Length: %f m", self._domain_length)
+        self.logger.info("--- Grid Points: %d", self.nx)
+        self.logger.info("--- Filter width: %dΔx (ratio to DNS: %d)", filter_width, filter_width)
+        self.logger.info("--- Testing against DNS with %d points", self.nx_dns)
 
         # SGS model (pass spectral workspace for shared utilities)
         self.subgrid = get_sgs_model(self.sgs_model_id, self.input, self.spectral)
@@ -117,7 +119,6 @@ class LES(Burgers):
             3: "Dynamic Wong-Lilly",
             4: "Deardorff 1.5-order TKE",
         }
-        self.logger.info("  SGS model: %s", sgs_names.get(self.sgs_model_id, "Unknown"))
 
         # Initialize subgrid TKE for Deardorff model
         if self.sgs_model_id == 4:

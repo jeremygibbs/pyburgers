@@ -27,21 +27,10 @@ class DNSConfig:
     """Direct numerical simulation configuration.
 
     Attributes:
-        nx: Number of grid points.
+        points: Number of grid points.
     """
 
-    nx: int
-
-
-@dataclass(frozen=True)
-class DomainConfig:
-    """Domain configuration.
-
-    Attributes:
-        length: Domain length (periodic) [m].
-    """
-
-    length: float
+    points: int
 
 
 @dataclass(frozen=True)
@@ -62,10 +51,10 @@ class LESConfig:
     """Large-eddy simulation configuration.
 
     Attributes:
-        nx: Number of grid points.
+        points: Number of grid points.
     """
 
-    nx: int
+    points: int
 
 
 @dataclass(frozen=True)
@@ -73,10 +62,12 @@ class GridConfig:
     """Grid configurations.
 
     Attributes:
-        dns: Direct numerical simulation grid configuration
-        les: Large-eddy simulation grid configuration
+        length: Domain length (periodic) [m].
+        dns: Direct numerical simulation grid configuration.
+        les: Large-eddy simulation grid configuration.
     """
 
+    length: float
     dns: DNSConfig
     les: LESConfig
 
@@ -99,23 +90,12 @@ class NoiseConfig:
     """Noise method parameters.
 
     Attributes:
-        alpha: FBM exponent controlling the spectral slope.
-        amplitude: noise amplitude
+        exponent: FBM exponent controlling the spectral slope.
+        amplitude: Noise amplitude.
     """
 
-    alpha: float
+    exponent: float
     amplitude: float
-
-
-@dataclass(frozen=True)
-class NumericsConfig:
-    """Numerical method parameters.
-
-    Attributes:
-        fftw: FFTW parameters.
-    """
-
-    fftw: FFTWConfig
 
 
 @dataclass(frozen=True)
@@ -123,12 +103,12 @@ class OutputConfig:
     """Output file configuration.
 
     Attributes:
-        t_save: Save interval in physical time [s]
-        t_print: Print progress interval in physical time [s]
+        interval_save: Save interval in physical time [s].
+        interval_print: Print progress interval in physical time [s].
     """
 
-    t_save: float
-    t_print: float
+    interval_save: float
+    interval_print: float
 
 
 @dataclass(frozen=True)
@@ -136,14 +116,14 @@ class PhysicsConfig:
     """Physics configuration.
 
     Attributes:
-        noise: NoiseConfig configuration
+        noise: NoiseConfig configuration.
         viscosity: The fluid's kinematic viscosity [m^2/s].
-        sgs_model: Subgrid-scale model ID (0-4) for LES.
+        subgrid_model: Subgrid-scale model ID (0-4) for LES.
     """
 
     noise: NoiseConfig
     viscosity: float
-    sgs_model: int
+    subgrid_model: int
 
 
 @dataclass(frozen=True)
@@ -151,9 +131,9 @@ class TimeConfig:
     """Time-related parameters for the simulation.
 
     Attributes:
-        nt: Number of time iterations.
-        dt: Change in time between iterations [s].
+        duration: Total simulation time [s].
+        step: Time step size [s].
     """
 
-    nt: int
-    dt: float
+    duration: float
+    step: float

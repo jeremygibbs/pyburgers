@@ -78,7 +78,7 @@ class SGS:
             from .sgs_deardorff import Deardorff
 
             return Deardorff(input_obj, spectral)
-        raise ValueError(f"Unknown SGS model ID: {model}. Valid options: 0-4.")
+        raise ValueError(f"--- Unknown SGS model ID: {model}. Valid options: 0-4.")
 
     def __init__(self, input_obj: Input, spectral: SpectralWorkspace) -> None:
         """Initialize the SGS model.
@@ -93,7 +93,7 @@ class SGS:
         self.input = input_obj
         self.spectral = spectral
         self.dt = input_obj.dt
-        self.nx = input_obj.grid.les.nx
+        self.nx = input_obj.grid.les.points
         self.dx = input_obj.domain_length / self.nx
         self.fftw_planning = input_obj.fftw_planning
         self.fftw_threads = input_obj.fftw_threads

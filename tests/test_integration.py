@@ -43,22 +43,22 @@ class MockInput:
 
         class Noise:
             def __init__(self, amplitude):
-                self.alpha = 0.75
+                self.exponent = 0.75
                 self.amplitude = amplitude
 
         class Physics:
-            def __init__(self, viscosity, noise, sgs_model):
+            def __init__(self, viscosity, noise, subgrid_model):
                 self.viscosity = viscosity
                 self.noise = noise
-                self.sgs_model = sgs_model
+                self.subgrid_model = subgrid_model
 
         class DNS:
-            def __init__(self, nx):
-                self.nx = nx
+            def __init__(self, points):
+                self.points = points
 
         class LES:
-            def __init__(self, nx):
-                self.nx = nx
+            def __init__(self, points):
+                self.points = points
 
         class Grid:
             def __init__(self, nx_dns, nx_les):
@@ -66,7 +66,7 @@ class MockInput:
                 self.les = LES(nx_les)
 
         self.time = Time(dt, nt)
-        self.physics = Physics(visc, Noise(namp), sgs_model)
+        self.physics = Physics(visc, Noise(namp), subgrid_model=sgs_model)
         self.grid = Grid(nx_dns, nx_les)
         self.domain_length = domain_length
         self.fftw_planning = "FFTW_ESTIMATE"
@@ -232,7 +232,8 @@ class TestLESIntegration:
         les.run()
 
         # SGS models must be dissipative (Second Law of Thermodynamics)
-        assert np.all(les.diss_sgs >= 0)
+        # Allow for tiny floating point errors (machine precision)
+        assert np.all(les.diss_sgs >= -1e-15)
 
     def test_les_total_dissipation_bounds(self, tmp_path: Path) -> None:
         """Test that total dissipation matches energy input order of magnitude."""

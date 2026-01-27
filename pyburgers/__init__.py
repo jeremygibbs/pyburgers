@@ -20,13 +20,11 @@ A tool for studying Burgers turbulence using DNS and LES.
 from .core import Burgers
 from .data_models import (
     DNSConfig,
-    DomainConfig,
     FFTWConfig,
     GridConfig,
     LESConfig,
     LoggingConfig,
     NoiseConfig,
-    NumericsConfig,
     OutputConfig,
     PhysicsConfig,
     TimeConfig,
@@ -43,13 +41,11 @@ from .utils.io import Input, Output
 __all__ = [
     # Data models
     "DNSConfig",
-    "DomainConfig",
     "FFTWConfig",
     "GridConfig",
     "LESConfig",
     "LoggingConfig",
     "NoiseConfig",
-    "NumericsConfig",
     "OutputConfig",
     "PhysicsConfig",
     "TimeConfig",

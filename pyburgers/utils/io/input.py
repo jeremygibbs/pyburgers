@@ -24,7 +24,6 @@ from typing import Any
 
 from ...data_models import (
     DNSConfig,
-    DomainConfig,
     FFTWConfig,
     GridConfig,
     LESConfig,
@@ -45,16 +44,12 @@ class Input:
     validated and organized into the appropriate dataclasses.
 
     Attributes:
-        time: Dataclass with time-related parameters (nt, dt).
-        domain: Dataclass with domain length configuration.
+        time: Dataclass with time-related parameters (duration, step).
         physics: Dataclass with physics parameters (noise, viscosity).
-        grid: Dataclass with DNS and LES configurations.
+        grid: Dataclass with grid configuration (length, DNS, LES).
         output: Dataclass with output file configuration.
         logging: Dataclass with logging settings.
         fftw: Dataclass with FFTW configuration.
-        log_level: Convenience accessor for logging level string.
-        fftw_planning: Convenience accessor for FFTW planning strategy.
-        fftw_threads: Convenience accessor for FFTW thread count.
     """
 
     def __init__(self, namelist_path: str) -> None:
@@ -87,12 +82,23 @@ class Input:
 
         # Time configuration
         time_data = namelist_data["time"]
-        self.time: TimeConfig = TimeConfig(nt=int(time_data["nt"]), dt=float(time_data["dt"]))
+        duration = float(time_data["duration"])
+        step = float(time_data["step"])
+        self.time: TimeConfig = TimeConfig(duration=duration, step=step)
+
+        # Compute number of time steps (derived quantity)
+        self._nt = int(round(duration / step))
+        if self._nt <= 0:
+            raise NamelistError("Computed number of time steps must be positive")
 
         # Grid configuration (DNS and LES)
         grid_data = namelist_data["grid"]
-        self.domain: DomainConfig = DomainConfig(
-            length=float(grid_data.get("domain_length", math.tau))
+        dns_data = grid_data.get("dns", {})
+        les_data = grid_data.get("les", {})
+        self.grid: GridConfig = GridConfig(
+            length=float(grid_data.get("length", math.tau)),
+            dns=DNSConfig(points=int(dns_data.get("points", 8192))),
+            les=LESConfig(points=int(les_data.get("points", 512))),
         )
 
         # Physics configuration
@@ -100,59 +106,51 @@ class Input:
         noise_data = physics_data.get("noise", {})
         self.physics: PhysicsConfig = PhysicsConfig(
             noise=NoiseConfig(
-                alpha=float(noise_data.get("alpha", 0.75)),
+                exponent=float(noise_data.get("exponent", 0.75)),
                 amplitude=float(noise_data.get("amplitude", 1e-6)),
             ),
             viscosity=float(physics_data["viscosity"]),
-            sgs_model=int(physics_data.get("sgs_model", 1)),
-        )
-
-        dns_data = grid_data.get("dns", {})
-        les_data = grid_data.get("les", {})
-        self.grid: GridConfig = GridConfig(
-            dns=DNSConfig(nx=int(dns_data.get("nx", 8192))),
-            les=LESConfig(
-                nx=int(les_data.get("nx", 512)),
-            ),
+            subgrid_model=int(physics_data.get("subgrid_model", 1)),
         )
 
         # Output configuration
         output_data = namelist_data.get("output", {})
-        default_t_save = 1000 * self.time.dt
-        default_t_print = default_t_save  # Default print freq same as save freq
+        default_interval = 1000 * step
         self.output: OutputConfig = OutputConfig(
-            t_save=float(output_data.get("t_save", default_t_save)),
-            t_print=float(output_data.get("t_print", default_t_print)),
+            interval_save=float(output_data.get("interval_save", default_interval)),
+            interval_print=float(output_data.get("interval_print", default_interval)),
         )
-        self._step_save = max(1, int(round(self.output.t_save / self.time.dt)))
-        self._t_save_effective = self._step_save * self.time.dt
+
+        # Compute step intervals
+        self._step_save = max(1, int(round(self.output.interval_save / step)))
+        self._interval_save_effective = self._step_save * step
         if not math.isclose(
-            self._t_save_effective,
-            self.output.t_save,
+            self._interval_save_effective,
+            self.output.interval_save,
             rel_tol=0.0,
-            abs_tol=0.5 * self.time.dt,
+            abs_tol=0.5 * step,
         ):
             self.logger.warning(
-                "Requested t_save=%g not aligned with dt=%g; using %g (steps=%d)",
-                self.output.t_save,
-                self.time.dt,
-                self._t_save_effective,
+                "Requested interval_save=%g not aligned with step=%g; using %g (steps=%d)",
+                self.output.interval_save,
+                step,
+                self._interval_save_effective,
                 self._step_save,
             )
 
-        self._step_print = max(1, int(round(self.output.t_print / self.time.dt)))
-        self._t_print_effective = self._step_print * self.time.dt
+        self._step_print = max(1, int(round(self.output.interval_print / step)))
+        self._interval_print_effective = self._step_print * step
         if not math.isclose(
-            self._t_print_effective,
-            self.output.t_print,
+            self._interval_print_effective,
+            self.output.interval_print,
             rel_tol=0.0,
-            abs_tol=0.5 * self.time.dt,
+            abs_tol=0.5 * step,
         ):
             self.logger.warning(
-                "Requested t_print=%g not aligned with dt=%g; using %g (steps=%d)",
-                self.output.t_print,
-                self.time.dt,
-                self._t_print_effective,
+                "Requested interval_print=%g not aligned with step=%g; using %g (steps=%d)",
+                self.output.interval_print,
+                step,
+                self._interval_print_effective,
                 self._step_print,
             )
 
@@ -165,6 +163,8 @@ class Input:
 
         self._log_configuration()
         self.logger.info("--- namelist loaded successfully")
+
+    # --- Convenience accessors (maintain backward compatibility) ---
 
     @property
     def log_level(self) -> str:
@@ -184,17 +184,17 @@ class Input:
     @property
     def dt(self) -> float:
         """Convenience accessor for time step."""
-        return self.time.dt
+        return self.time.step
 
     @property
     def nt(self) -> int:
-        """Convenience accessor for number of time steps."""
-        return self.time.nt
+        """Number of time steps (derived from duration / step)."""
+        return self._nt
 
     @property
     def domain_length(self) -> float:
         """Convenience accessor for domain length."""
-        return self.domain.length
+        return self.grid.length
 
     @property
     def viscosity(self) -> float:
@@ -203,23 +203,23 @@ class Input:
 
     @property
     def step_save(self) -> int:
-        """Convenience accessor for save interval (in time steps)."""
+        """Save interval in time steps."""
         return self._step_save
 
     @property
     def t_save(self) -> float:
-        """Convenience accessor for save interval (in seconds)."""
-        return self.output.t_save
+        """Save interval in seconds."""
+        return self.output.interval_save
 
     @property
     def step_print(self) -> int:
-        """Convenience accessor for print interval (in time steps)."""
+        """Print interval in time steps."""
         return self._step_print
 
     @property
     def t_print(self) -> float:
-        """Convenience accessor for print interval (in seconds)."""
-        return self.output.t_print
+        """Print interval in seconds."""
+        return self.output.interval_print
 
     def _load_namelist(self, namelist_path: str) -> dict[str, Any]:
         """Load the JSON namelist file.
@@ -260,17 +260,19 @@ class Input:
 
         # Validate time section
         time_data = data["time"]
-        if "nt" not in time_data:
-            raise NamelistError("Missing 'nt' in time section")
-        if "dt" not in time_data:
-            raise NamelistError("Missing 'dt' in time section")
-        if float(time_data["dt"]) <= 0:
-            raise NamelistError("'dt' must be positive")
-        if int(time_data["nt"]) <= 0:
-            raise NamelistError("'nt' must be positive")
+        if "duration" not in time_data:
+            raise NamelistError("Missing 'duration' in time section")
+        if "step" not in time_data:
+            raise NamelistError("Missing 'step' in time section")
+        if float(time_data["step"]) <= 0:
+            raise NamelistError("time 'step' must be positive")
+        if float(time_data["duration"]) <= 0:
+            raise NamelistError("time 'duration' must be positive")
 
-        if "domain_length" in data["grid"] and float(data["grid"]["domain_length"]) <= 0:
-            raise NamelistError("'domain_length' must be positive")
+        # Validate grid section
+        grid_data = data["grid"]
+        if "length" in grid_data and float(grid_data["length"]) <= 0:
+            raise NamelistError("grid 'length' must be positive")
 
         # Validate physics section
         physics_data = data["physics"]
@@ -279,34 +281,33 @@ class Input:
         if float(physics_data["viscosity"]) <= 0:
             raise NamelistError("'viscosity' must be positive")
 
-        # Validate grid section
-        grid_data = data["grid"]
         if "dns" not in grid_data and "les" not in grid_data:
             raise NamelistError("At least one of 'dns' or 'les' must be in grid section")
 
         # Validate DNS config if present
         if "dns" in grid_data:
             dns_data = grid_data["dns"]
-            if "nx" in dns_data and int(dns_data["nx"]) <= 0:
-                raise NamelistError("DNS 'nx' must be positive")
+            if "points" in dns_data and int(dns_data["points"]) <= 0:
+                raise NamelistError("dns 'points' must be positive")
 
         # Validate LES config if present
         if "les" in grid_data:
             les_data = grid_data["les"]
-            if "nx" in les_data and int(les_data["nx"]) <= 0:
-                raise NamelistError("LES 'nx' must be positive")
-        if "sgs_model" in data["physics"]:
-            sgs = int(data["physics"]["sgs_model"])
+            if "points" in les_data and int(les_data["points"]) <= 0:
+                raise NamelistError("les 'points' must be positive")
+
+        if "subgrid_model" in physics_data:
+            sgs = int(physics_data["subgrid_model"])
             if sgs < 0 or sgs > 4:
-                raise NamelistError(f"physics 'sgs_model' must be 0-4, got {sgs}")
+                raise NamelistError(f"physics 'subgrid_model' must be 0-4, got {sgs}")
 
         # Validate output config if present
         if "output" in data:
             output_data = data["output"]
-            if "t_save" in output_data and float(output_data["t_save"]) <= 0:
-                raise NamelistError("'t_save' must be positive")
-            if "t_print" in output_data and float(output_data["t_print"]) <= 0:
-                raise NamelistError("'t_print' must be positive")
+            if "interval_save" in output_data and float(output_data["interval_save"]) <= 0:
+                raise NamelistError("output 'interval_save' must be positive")
+            if "interval_print" in output_data and float(output_data["interval_print"]) <= 0:
+                raise NamelistError("output 'interval_print' must be positive")
 
         # Validate FFTW config if present
         if "fftw" in data:
@@ -323,24 +324,31 @@ class Input:
 
     def _log_configuration(self) -> None:
         """Log the loaded configuration for debugging."""
-        self.logger.debug("Time: nt=%d, dt=%g", self.time.nt, self.time.dt)
         self.logger.debug(
-            "Physics: viscosity=%g, noise(alpha=%g, amp=%g)",
+            "Time: duration=%g, step=%g, nt=%d",
+            self.time.duration,
+            self.time.step,
+            self._nt,
+        )
+        self.logger.debug(
+            "Physics: viscosity=%g, noise(exponent=%g, amplitude=%g)",
             self.physics.viscosity,
-            self.physics.noise.alpha,
+            self.physics.noise.exponent,
             self.physics.noise.amplitude,
         )
-        self.logger.debug("Domain: length=%g", self.domain.length)
-        self.logger.debug("DNS: nx=%d", self.grid.dns.nx)
-        self.logger.debug("LES: nx=%d, sgs=%d", self.grid.les.nx, self.physics.sgs_model)
         self.logger.debug(
-            "Output: t_save=%g (steps=%d, effective=%g), t_print=%g (steps=%d, effective=%g)",
-            self.output.t_save,
+            "Grid: length=%g, DNS points=%d, LES points=%d",
+            self.grid.length,
+            self.grid.dns.points,
+            self.grid.les.points,
+        )
+        self.logger.debug("Subgrid model: %d", self.physics.subgrid_model)
+        self.logger.debug(
+            "Output: interval_save=%g (steps=%d), interval_print=%g (steps=%d)",
+            self.output.interval_save,
             self._step_save,
-            self._t_save_effective,
-            self.output.t_print,
+            self.output.interval_print,
             self._step_print,
-            self._t_print_effective,
         )
         self.logger.debug(
             "Logging: level=%s, file=%s",
@@ -356,14 +364,14 @@ class Input:
             Dictionary with DNS configuration values.
         """
         return {
-            "nx": self.grid.dns.nx,
-            "dt": self.time.dt,
-            "nt": self.time.nt,
+            "nx": self.grid.dns.points,
+            "dt": self.time.step,
+            "nt": self._nt,
             "viscosity": self.physics.viscosity,
-            "noise_alpha": self.physics.noise.alpha,
+            "noise_alpha": self.physics.noise.exponent,
             "noise_amplitude": self.physics.noise.amplitude,
-            "t_save": self.output.t_save,
-            "domain_length": self.domain.length,
+            "t_save": self.output.interval_save,
+            "domain_length": self.grid.length,
         }
 
     def get_les_config(self) -> dict[str, Any]:
@@ -373,13 +381,13 @@ class Input:
             Dictionary with LES configuration values.
         """
         return {
-            "nx": self.grid.les.nx,
-            "sgs_model": self.physics.sgs_model,
-            "dt": self.time.dt,
-            "nt": self.time.nt,
+            "nx": self.grid.les.points,
+            "sgs_model": self.physics.subgrid_model,
+            "dt": self.time.step,
+            "nt": self._nt,
             "viscosity": self.physics.viscosity,
-            "noise_alpha": self.physics.noise.alpha,
+            "noise_alpha": self.physics.noise.exponent,
             "noise_amplitude": self.physics.noise.amplitude,
-            "t_save": self.output.t_save,
-            "domain_length": self.domain.length,
+            "t_save": self.output.interval_save,
+            "domain_length": self.grid.length,
         }

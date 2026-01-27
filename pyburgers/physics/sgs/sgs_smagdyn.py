@@ -39,7 +39,7 @@ class SmagDynamic(SGS):
         """
         super().__init__(input_obj, spectral)
         self.logger: logging.Logger = get_logger("SGS")
-        self.logger.info("Using the Dynamic Smagorinsky model")
+        self.logger.info("--- Using the Dynamic Smagorinsky model")
 
     def compute(
         self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float
