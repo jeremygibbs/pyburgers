@@ -85,7 +85,8 @@ class DNS(Burgers):
         FBM noise is initialized as part of the workspace.
         """
         self.logger.info("DNS configuration:")
-        self.logger.info("  Resolution: %d points", self.nx)
+        self.logger.info("--- Grid length: %f", self.domain_length)
+        self.logger.info("--- Grid points: %d", self.nx)
 
     def _setup_output_fields(self) -> dict[str, Any]:
         """Configure DNS output fields.

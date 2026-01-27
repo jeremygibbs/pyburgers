@@ -9,7 +9,13 @@ For detailed contributing guidelines, please see our full [Contributing Guide](h
 ## Essential Information
 
 ### Code Style
-This project uses `ruff` for linting and formatting. Please run these before submitting a PR:
+This project uses `ruff` for linting and formatting. Key style guidelines:
+
+- **Line length**: Maximum 100 characters
+- **Docstrings**: Google-style docstrings for all functions, classes, and modules
+- **Type hints**: Use type hints for function signatures
+
+Run these commands before submitting a PR:
 
 ```bash
 python -m pip install -e ".[dev]"

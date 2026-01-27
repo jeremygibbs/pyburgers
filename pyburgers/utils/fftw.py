@@ -156,7 +156,9 @@ def load_wisdom(
         if metadata.get("noise_alpha") != noise_alpha:
             mismatches.append(f"noise_alpha ({metadata.get('noise_alpha')} → {noise_alpha})")
         if metadata.get("fftw_planning") != fftw_planning:
-            mismatches.append(f"fftw_planning ({metadata.get('fftw_planning')} → {fftw_planning})")
+            mismatches.append(
+                f"fftw_planning ({metadata.get('fftw_planning')} → {fftw_planning})"
+            )
         if metadata.get("fftw_threads") != fftw_threads:
             mismatches.append(f"fftw_threads ({metadata.get('fftw_threads')} → {fftw_threads})")
 

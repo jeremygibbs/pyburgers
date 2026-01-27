@@ -57,10 +57,9 @@ class LES(Burgers):
             output_obj: Output handler for writing results to NetCDF.
         """
         # Store LES-specific config before calling parent __init__
-        # (needed because _setup_mode_specific is called during parent init)
-        self._nx_dns = input_obj.grid.dns.points
-        self._sgs_model_id = input_obj.physics.subgrid_model
-        self._domain_length = input_obj.grid.length
+        # (needed because _create_spectral_workspace is called during parent init)
+        self.nx_dns = input_obj.grid.dns.points
+        self.sgs_model_id = input_obj.physics.subgrid_model
 
         super().__init__(input_obj, output_obj)
 
@@ -84,9 +83,9 @@ class LES(Burgers):
         return SpectralWorkspace(
             nx=self.nx,
             dx=self.dx,
-            nx2=self._nx_dns,  # DNS resolution for downscaling
+            nx2=self.nx_dns,  # DNS resolution for downscaling
             noise_alpha=self.noise_alpha,
-            noise_nx=self._nx_dns,  # Generate noise at DNS resolution
+            noise_nx=self.nx_dns,  # Generate noise at DNS resolution
             fftw_planning=self.fftw_planning,
             fftw_threads=self.fftw_threads,
         )
@@ -97,13 +96,10 @@ class LES(Burgers):
         Sets up the SGS model. FBM noise and filtering are handled
         by the spectral workspace.
         """
-        self.nx_dns = self._nx_dns
-        self.sgs_model_id = self._sgs_model_id
-
         # Calculate and log filter width
         filter_width = self.nx_dns // self.nx
         self.logger.info("LES configuration:")
-        self.logger.info("--- Grid Length: %f m", self._domain_length)
+        self.logger.info("--- Grid Length: %f m", self.domain_length)
         self.logger.info("--- Grid Points: %d", self.nx)
         self.logger.info("--- Filter width: %dΔx (ratio to DNS: %d)", filter_width, filter_width)
         self.logger.info("--- Testing against DNS with %d points", self.nx_dns)
