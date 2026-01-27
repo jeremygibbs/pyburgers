@@ -10,6 +10,9 @@ __pycache__
 # macOS 
 .DS_Store
 
+# model figures
+*.png
+
 # Model log files
 *.log
 

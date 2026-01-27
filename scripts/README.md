@@ -57,6 +57,39 @@ python scripts/plot_velocity.py pyburgers_dns.nc --vmin -2 --vmax 2
 - `--vmin/--vmax`: Colorbar range (default: auto-scaled from data)
 - `-o/--out`: Save to file (PNG, SVG, PDF, etc.)
 
+### plot_spectra.py
+
+Plot time-averaged power spectral density (PSD) of the velocity field with theoretical scaling.
+
+**Usage:**
+```bash
+# Single file
+python scripts/plot_spectra.py pyburgers_dns.nc
+
+# Compare DNS and LES spectra
+python scripts/plot_spectra.py pyburgers_dns.nc pyburgers_les.nc
+
+# Multiple files (all on one panel)
+python scripts/plot_spectra.py pyburgers_les_01.nc pyburgers_les_02.nc pyburgers_les_03.nc
+
+# Save to file
+python scripts/plot_spectra.py pyburgers_dns.nc -o spectra.png
+
+# Adjust y-axis clipping threshold to exclude high-frequency noise
+python scripts/plot_spectra.py pyburgers_dns.nc --threshold 1e-8
+
+# Check variance vs. summed PSD
+python scripts/plot_spectra.py pyburgers_dns.nc --check-variance
+```
+
+**Output:** Single log-log plot of power spectral density E(k) vs. wavenumber k, with theoretical k^(-5/3)
+inertial range scaling shown as dashed black line across all wavenumbers (uses filename as legend label)
+
+**Options:**
+- `--threshold`: Clip y-axis to exclude PSD values below this threshold (default: 1e-10)
+- `--check-variance`: Print variance vs. summed PSD check for each file
+- `-o/--out`: Save to file (PNG, SVG, PDF, etc.)
+
 ## Requirements
 
 These scripts require the visualization dependencies:
