@@ -1,6 +1,6 @@
 {
     "time": {
-        "duration": 20.0,
+        "duration": 200.0,
         "step": 0.0001
     },
     "grid": {
@@ -14,7 +14,7 @@
     },
     "physics": {
         "viscosity": 1e-05,
-        "subgrid_model": 4,
+        "subgrid_model": 1,
         "noise": {
             "exponent": 0.75,
             "amplitude": 1e-06

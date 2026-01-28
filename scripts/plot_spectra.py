@@ -21,14 +21,18 @@ import netCDF4 as nc
 import numpy as np
 
 
-def _read_velocity(path: Path) -> tuple[np.ndarray, np.ndarray]:
+def _read_velocity(
+    path: Path, t_start: float | None = None, t_end: float | None = None
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Read velocity field from NetCDF file.
 
     Args:
         path: Path to NetCDF file.
+        t_start: Optional start time for averaging window.
+        t_end: Optional end time for averaging window.
 
     Returns:
-        Tuple of (x, u) arrays where u has shape (nt, nx).
+        Tuple of (x, u, t) arrays where u has shape (nt, nx) and t has shape (nt,).
 
     Raises:
         KeyError: If required variables are missing.
@@ -38,11 +42,24 @@ def _read_velocity(path: Path) -> tuple[np.ndarray, np.ndarray]:
             raise KeyError(f"Missing 'u' in {path}")
         if "x" not in ds.variables:
             raise KeyError(f"Missing 'x' in {path}")
+        if "time" not in ds.variables:
+            raise KeyError(f"Missing 'time' in {path}")
 
         u = np.asarray(ds.variables["u"][:])
         x = np.asarray(ds.variables["x"][:])
+        t = np.asarray(ds.variables["time"][:])
 
-    return x, u
+    # Filter time window if specified
+    if t_start is not None or t_end is not None:
+        t_start = t_start if t_start is not None else t[0]
+        t_end = t_end if t_end is not None else t[-1]
+        mask = (t >= t_start) & (t <= t_end)
+        u = u[mask, :]
+        t = t[mask]
+        if len(t) == 0:
+            raise ValueError(f"No data in time window [{t_start}, {t_end}]")
+
+    return x, u, t
 
 
 def _compute_psd(u: np.ndarray, dx: float) -> tuple[np.ndarray, np.ndarray]:
@@ -112,6 +129,18 @@ def main() -> int:
         action="store_true",
         help="Print variance vs. summed PSD check for each file.",
     )
+    parser.add_argument(
+        "--t1",
+        type=float,
+        default=None,
+        help="Start time for averaging window (default: use all times).",
+    )
+    parser.add_argument(
+        "--t2",
+        type=float,
+        default=None,
+        help="End time for averaging window (default: use all times).",
+    )
     args = parser.parse_args()
     files = args.files
 
@@ -122,8 +151,14 @@ def main() -> int:
 
     # Plot each file
     for idx, file_path in enumerate(files):
-        x, u = _read_velocity(file_path)
+        x, u, t = _read_velocity(file_path, t_start=args.t1, t_end=args.t2)
         dx = x[1] - x[0]
+
+        # Print time window info
+        print(
+            f"{file_path.name}: Averaging over t=[{t[0]:.2f}, {t[-1]:.2f}] "
+            f"({len(t)} time steps)"
+        )
 
         # Compute PSD
         k, psd = _compute_psd(u, dx)
@@ -186,7 +221,12 @@ def main() -> int:
         ax.set_ylim(psd_min, psd_max)
 
     # Set labels and title
-    ax.set_title("PyBurgers: Velocity Power Spectral Density")
+    title = "PyBurgers: Velocity Power Spectral Density"
+    if args.t1 is not None or args.t2 is not None:
+        t_start_str = f"{args.t1:.1f}" if args.t1 is not None else "start"
+        t_end_str = f"{args.t2:.1f}" if args.t2 is not None else "end"
+        title += f"\n(Averaged over $t$ = [{t_start_str}, {t_end_str}])"
+    ax.set_title(title)
     ax.set_xlabel(r"Wavenumber $k$ (m$^{-1}$)")
     ax.set_ylabel(r"PSD $E(k)$ (m$^3$ s$^{-2}$)")
     ax.grid(True, alpha=0.3, which="both")
