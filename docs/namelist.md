@@ -41,7 +41,7 @@ Here's a typical configuration for running both DNS and LES:
         "viscosity": 1e-5,
         "subgrid_model": 2,
         "noise": {
-            "exponent": 0.75,
+            "exponent": -0.75,
             "amplitude": 1e-6
         }
     },
@@ -55,7 +55,7 @@ Here's a typical configuration for running both DNS and LES:
     },
     "fftw": {
         "planning": "FFTW_PATIENT",
-        "threads": 8
+        "threads": 1
     }
 }
 ```

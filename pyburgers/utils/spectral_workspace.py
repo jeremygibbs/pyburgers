@@ -43,18 +43,18 @@ class SpectralWorkspace:
         derivatives: Derivatives calculator for spatial derivatives.
         dealias: Dealias calculator for nonlinear products.
         filter: Filter for spectral cutoff and downscaling.
-        noise: FBM noise generator (only if noise_alpha provided).
+        noise: FBM noise generator (only if noise_beta provided).
         u: Primary velocity buffer (float64, size nx).
         fu: Primary Fourier space buffer (complex128, size nx//2+1 for rfft).
 
     Example:
         >>> # DNS workspace with noise
-        >>> workspace = SpectralWorkspace(nx=512, dx=0.01, noise_alpha=0.75)
+        >>> workspace = SpectralWorkspace(nx=512, dx=0.01, noise_beta=-0.75)
         >>> derivs = workspace.derivatives.compute(u, order=[1, 2])
         >>> noise = workspace.noise.compute_noise()
         >>> # LES workspace with filtering and noise at DNS resolution
         >>> workspace_les = SpectralWorkspace(
-        ...     nx=512, dx=0.01, nx2=8192, noise_alpha=0.75, noise_nx=8192
+        ...     nx=512, dx=0.01, nx2=8192, noise_beta=-0.75, noise_nx=8192
         ... )
         >>> filtered = workspace_les.filter.cutoff(x, ratio=2)
     """
@@ -64,7 +64,7 @@ class SpectralWorkspace:
         nx: int,
         dx: float,
         nx2: int | None = None,
-        noise_alpha: float | None = None,
+        noise_beta: float | None = None,
         noise_nx: int | None = None,
         fftw_planning: str = "FFTW_MEASURE",
         fftw_threads: int = 1,
@@ -77,10 +77,10 @@ class SpectralWorkspace:
             nx2: Optional number of grid points for DNS resolution
                 (used in LES mode for downscaling noise from DNS to LES grid).
                 If provided, creates Filter with downscaling capability.
-            noise_alpha: Optional FBM exponent for noise generation.
+            noise_beta: Optional FBM exponent for noise generation.
                 If provided, creates FBM noise generator. Typical value is 0.75.
             noise_nx: Optional number of grid points for noise generation.
-                If not provided and noise_alpha is given, uses nx.
+                If not provided and noise_beta is given, uses nx.
                 For LES, set this to nx_dns to generate noise at DNS resolution.
             fftw_planning: FFTW planning strategy. Options:
                 - 'FFTW_ESTIMATE': Fast planning, slower execution
@@ -92,7 +92,7 @@ class SpectralWorkspace:
         self.nx = nx
         self.dx = dx
         self.nx2 = nx2
-        self.noise_alpha = noise_alpha
+        self.noise_beta = noise_beta
         self.noise_nx = noise_nx if noise_nx is not None else nx
         self.fftw_planning = fftw_planning
         self.fftw_threads = fftw_threads
@@ -116,9 +116,9 @@ class SpectralWorkspace:
         # Optionally create FBM noise generator
         # If noise_nx differs from nx (LES case), noise is generated at noise_nx
         # resolution and must be filtered down using self.filter.downscale()
-        if noise_alpha is not None:
+        if noise_beta is not None:
             self.noise = FBM(
-                alpha=noise_alpha,
+                beta=noise_beta,
                 n_pts=self.noise_nx,
                 fftw_planning=fftw_planning,
                 fftw_threads=fftw_threads,
@@ -135,8 +135,8 @@ class SpectralWorkspace:
         """String representation of the workspace."""
         filter_info = f", nx2={self.nx2}" if self.nx2 else ""
         noise_info = (
-            f", noise_alpha={self.noise_alpha}, noise_nx={self.noise_nx}"
-            if self.noise_alpha
+            f", noise_beta={self.noise_beta}, noise_nx={self.noise_nx}"
+            if self.noise_beta
             else ""
         )
         return (

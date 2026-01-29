@@ -26,7 +26,7 @@
                 "noise": {
                     "type": "object",
                     "properties": {
-                        "alpha": { 
+                        "beta": { 
                             "type": "number",
                             "description": "Spectral exponent of FBM."
                         },
@@ -36,7 +36,7 @@
                             "description": "Amplitude of FBM."
                         }
                     },
-                    "required": ["alpha", "amplitude"]
+                    "required": ["beta", "amplitude"]
                 },
                 "viscosity": { 
                     "type": "number", 

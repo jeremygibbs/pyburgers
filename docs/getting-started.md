@@ -47,7 +47,17 @@ pip install -e ".[dev]"
 
 This adds pytest, pytest-cov, and ruff for testing and linting.
 
-### Option 3: Install with Documentation Tools
+### Option 3: Install with Visualization Tools
+
+To use the included plotting scripts for analyzing results:
+
+```bash
+pip install -e ".[viz]"
+```
+
+This adds matplotlib for creating plots and visualizations of simulation output.
+
+### Option 4: Install with Documentation Tools
 
 To build documentation locally:
 
@@ -91,7 +101,7 @@ PyBurgers is configured using a JSON namelist file. The repository includes a de
         "viscosity": 1e-5,
         "subgrid_model": 2,
         "noise": {
-            "exponent": 0.75,
+            "exponent": -0.75,
             "amplitude": 1e-6
         }
     },
@@ -173,7 +183,7 @@ python burgers.py -m dns -o my_simulation.nc
 
 ### Console Output
 
-During the simulation, you'll see log messages:
+During the simulation, you'll see log messages (exact form may change):
 
 ```
 ##############################################################
@@ -196,15 +206,15 @@ With `logging.level: "DEBUG"`, you'll see detailed information about FFTW planni
 Results are saved in NetCDF format. The output file contains:
 
 - **Variables**:
-  - `u`: Velocity field (time, x)
-  - `t`: Time values
-  - `x`: Spatial coordinates
-  - Diagnostic quantities (energy, dissipation, etc.)
+    - `u`: Velocity field (time, x)
+    - `t`: Time values
+    - `x`: Spatial coordinates
+    - Diagnostic quantities (energy, dissipation, etc.)
 
 - **Metadata**:
-  - Simulation parameters
-  - Timestamps
-  - Version information
+    - Simulation parameters
+    - Timestamps
+    - Version information
 
 You can inspect the output using standard NetCDF tools:
 
@@ -218,37 +228,46 @@ python -c "from netCDF4 import Dataset; ds = Dataset('pyburgers_dns.nc'); print(
 
 ### Analyzing Results
 
-Here's a simple Python script to plot the final velocity field:
+PyBurgers includes three example plotting scripts in the `scripts/` directory for visualizing simulation output. These require the visualization dependencies:
 
-```python
-import matplotlib.pyplot as plt
-from netCDF4 import Dataset
+```bash
+pip install -e ".[viz]"
+```
 
-# Load the data
-ds = Dataset('pyburgers_dns.nc', 'r')
-x = ds.variables['x'][:]
-u = ds.variables['u'][-1, :]  # Final time step
-t = ds.variables['t'][-1]
+#### Available Plotting Scripts
 
-# Plot
-plt.figure(figsize=(10, 6))
-plt.plot(x, u, 'b-', linewidth=1.5)
-plt.xlabel('x (m)')
-plt.ylabel('u (m/s)')
-plt.title(f'Velocity field at t = {t:.2f} s')
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.savefig('velocity_field.png', dpi=150)
-plt.show()
+1. **`plot_velocity.py`** - Visualize velocity field evolution in the x-t plane:
+   ```bash
+   python scripts/plot_velocity.py pyburgers_dns.nc
+   ```
+   Creates a space-time diagram showing the velocity field throughout the simulation.
+
+2. **`plot_spectra.py`** - Plot velocity power spectral density:
+   ```bash
+   python scripts/plot_spectra.py pyburgers_dns.nc
+   ```
+   Generates power spectra averaged over a time window, useful for analyzing turbulent energy distribution across scales.
+
+3. **`plot_tke.py`** - Compare turbulent kinetic energy (TKE) evolution:
+   ```bash
+   python scripts/plot_tke.py pyburgers_dns.nc pyburgers_les.nc
+   ```
+   Compares TKE time series from DNS and LES runs to evaluate subgrid-scale model performance.
+
+Each script accepts `--help` for additional options:
+```bash
+python scripts/plot_velocity.py --help
 ```
 
 ## Next Steps
 
 ### Customize Your Simulation
 
-1. **Adjust grid resolution**: Modify `grid.dns.points` and `grid.les.points` in `namelist.json`
+Default simulations are crafted following published results and numerical best practices. However, users are free to adjust the simulation settings in `namelist.json` for their own purposes.
+
+1. **Adjust grid resolution**: Modify `grid.dns.points` and `grid.les.points`
 2. **Change simulation duration**: Adjust `time.duration` for longer/shorter runs
-3. **Tune time stepping**: Adjust `time.cfl` (0-0.55) and `time.max_step` to control adaptive stepping
+3. **Tune time stepping**: Adjust `time.cfl` and `time.max_step` to control adaptive stepping
 4. **Try different SGS models**: Set `physics.subgrid_model` to 0-4 for LES runs
 5. **Tune FFTW**: Experiment with planning levels (ESTIMATE, MEASURE, PATIENT, EXHAUSTIVE)
 6. **Control output**: Adjust `output.interval_save` to save more or fewer snapshots
@@ -263,7 +282,7 @@ plt.show()
 
 1. **Grid size**: Start small (nx=512) for testing, scale up for production
 2. **FFTW planning**: Use ESTIMATE for quick tests, PATIENT for production
-3. **Threading**: Set `fftw.threads` to match your CPU core count
+3. **Threading**: Set `fftw.threads` to tune performance
 4. **Output frequency**: Higher `interval_save` values reduce I/O overhead
 5. **Wisdom caching**: After the first run, subsequent runs are much faster
 
@@ -293,7 +312,7 @@ plt.show()
 
 ## Example Workflows
 
-### Quick Test Run (1-2 minutes)
+### Quick Test Run
 
 Create a test namelist (`test_namelist.json`):
 
@@ -301,7 +320,7 @@ Create a test namelist (`test_namelist.json`):
 {
     "time": { "duration": 1.0, "cfl": 0.4, "max_step": 0.01 },
     "physics": {
-        "noise": { "exponent": 0.75, "amplitude": 1e-6 },
+        "noise": { "exponent": -0.75, "amplitude": 1e-6 },
         "viscosity": 1e-5,
         "subgrid_model": 1
     },
@@ -317,7 +336,7 @@ Create a test namelist (`test_namelist.json`):
 
 Then copy it over `namelist.json` to use it.
 
-### Production DNS Run (1-2 hours)
+### Production DNS Run
 
 Use the default `namelist.json` with:
 - `grid.dns.points`: 8192 or 16384

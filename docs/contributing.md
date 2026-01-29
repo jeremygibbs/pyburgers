@@ -50,7 +50,7 @@ ruff format .
 ```
 
 ### Style Guidelines
-
+- Generally follow the [Google Python style guide](https://google.github.io/styleguide/pyguide.html) 
 - Line length: 100 characters (enforced by Ruff)
 - Follow PEP 8 conventions
 - Use type hints for function signatures
@@ -60,7 +60,7 @@ ruff format .
 
 ### Docstring Style
 
-PyBurgers uses **Google-style docstrings**. All public functions, classes, and methods should have comprehensive docstrings.
+PyBurgers uses [Google-style docstrings](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings). All public functions, classes, and methods should have comprehensive docstrings.
 
 **Example:**
 
@@ -99,8 +99,6 @@ mkdocs serve
 # Build static site to site/ directory
 mkdocs build
 ```
-
-Documentation is automatically deployed to [docs.gibbs.science/pyburgers](https://docs.gibbs.science/pyburgers/) when changes are pushed to the `v2` branch.
 
 ### Documentation Structure
 
@@ -253,4 +251,4 @@ python -c "import pstats; p = pstats.Stats('profile.stats'); p.sort_stats('cumul
 
 ## Code of Conduct
 
-Be respectful, constructive, and professional in all interactions. We're all here to learn and improve PyBurgers together.
+Do not be a jerk.

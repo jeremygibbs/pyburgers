@@ -254,7 +254,7 @@ class TestValidConfigurations:
             "physics": {
                 "viscosity": 0.001,
                 "subgrid_model": 2,
-                "noise": {"exponent": 0.75, "amplitude": 1e-6},
+                "noise": {"exponent": -0.75, "amplitude": 1e-6},
             },
             "output": {"interval_save": 0.1, "interval_print": 0.01},
             "logging": {"level": "DEBUG"},
@@ -272,7 +272,7 @@ class TestValidConfigurations:
         assert input_obj.grid.les.points == 512
         assert input_obj.physics.viscosity == 0.001
         assert input_obj.physics.subgrid_model == 2
-        assert input_obj.physics.noise.exponent == 0.75
+        assert input_obj.physics.noise.exponent == -0.75
         assert input_obj.physics.noise.amplitude == 1e-6
         assert input_obj.output.interval_save == 0.1
         assert input_obj.output.interval_print == 0.01

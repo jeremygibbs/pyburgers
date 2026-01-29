@@ -12,7 +12,7 @@ class TestFBM:
 
     def test_noise_shape(self, grid_small: dict) -> None:
         """Test that noise has correct shape."""
-        fbm = FBM(0.75, grid_small["nx"])
+        fbm = FBM(-0.75, grid_small["nx"])
         noise = fbm.compute_noise()
 
         assert noise.shape == (grid_small["nx"],)
@@ -20,7 +20,7 @@ class TestFBM:
     def test_noise_zero_mean(self, grid_small: dict) -> None:
         """Test that noise has approximately zero mean."""
         np.random.seed(42)
-        fbm = FBM(0.75, grid_small["nx"])
+        fbm = FBM(-0.75, grid_small["nx"])
 
         # Average over multiple realizations
         means = []
@@ -34,7 +34,7 @@ class TestFBM:
 
     def test_noise_finite(self, grid_small: dict) -> None:
         """Test that noise values are finite."""
-        fbm = FBM(0.75, grid_small["nx"])
+        fbm = FBM(-0.75, grid_small["nx"])
         noise = fbm.compute_noise()
 
         assert np.all(np.isfinite(noise))
@@ -42,7 +42,7 @@ class TestFBM:
     def test_noise_different_realizations(self, grid_small: dict) -> None:
         """Test that consecutive calls produce different noise."""
         np.random.seed(42)
-        fbm = FBM(0.75, grid_small["nx"])
+        fbm = FBM(-0.75, grid_small["nx"])
 
         noise1 = fbm.compute_noise().copy()
         noise2 = fbm.compute_noise()
@@ -54,8 +54,8 @@ class TestFBM:
         """Test that noise has correct spectral slope."""
         np.random.seed(42)
         nx = 256
-        alpha = 0.75
-        fbm = FBM(alpha, nx)
+        beta = -0.75
+        fbm = FBM(beta, nx)
 
         # Average power spectrum over many realizations
         n_realizations = 100
@@ -76,18 +76,18 @@ class TestFBM:
         # Linear regression for slope
         slope, _ = np.polyfit(log_k, log_power, 1)
 
-        # Slope should be approximately -alpha (within tolerance)
-        # Power spectrum scales as k^(-alpha) for FBM
+        # Slope should be approximately beta (within tolerance)
+        # Power spectrum scales as k^beta for FBM
         # With 100 realizations and 256 points, tolerance should be ~0.1
-        assert abs(slope + alpha) < 0.15
+        assert abs(slope - beta) < 0.15
 
-    def test_different_alpha(self) -> None:
-        """Test that different alpha values produce different spectra."""
+    def test_different_beta(self) -> None:
+        """Test that different beta values produce different spectra."""
         nx = 128
         np.random.seed(42)
 
-        fbm_low = FBM(0.5, nx)
-        fbm_high = FBM(1.0, nx)
+        fbm_low = FBM(-0.5, nx)
+        fbm_high = FBM(-1.0, nx)
 
         # Generate multiple realizations and compare variance at high-k
         variances_low = []
@@ -101,7 +101,7 @@ class TestFBM:
             variances_low.append(np.var(np.diff(noise_low)))
             variances_high.append(np.var(np.diff(noise_high)))
 
-        # Higher alpha should give smoother noise (lower high-k variance)
+        # More negative beta should give smoother noise (lower high-k variance)
         assert np.mean(variances_high) < np.mean(variances_low)
 
     def test_noise_variance_scaling(self) -> None:
@@ -110,8 +110,8 @@ class TestFBM:
         nx = 128
 
         # Generate noise with two different amplitudes
-        fbm_amp1 = FBM(0.75, nx)
-        fbm_amp2 = FBM(0.75, nx)
+        fbm_amp1 = FBM(-0.75, nx)
+        fbm_amp2 = FBM(-0.75, nx)
 
         # Average variance over multiple realizations
         n_realizations = 50

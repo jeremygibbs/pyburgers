@@ -79,7 +79,7 @@ class TestInputLogging:
             "time": {"duration": 0.01, "cfl": 0.4, "max_step": 0.001},
             "grid": {"length": 6.283185307179586, "dns": {"points": 64}, "les": {"points": 32}},
             "physics": {
-                "noise": {"exponent": 0.75, "amplitude": 0.1},
+                "noise": {"exponent": -0.75, "amplitude": 0.1},
                 "viscosity": 0.01,
                 "subgrid_model": 1
             },
@@ -101,7 +101,7 @@ class TestInputLogging:
             "time": {"duration": 0.01, "cfl": 0.4, "max_step": 0.001},
             "grid": {"length": 6.283185307179586, "dns": {"points": 64}, "les": {"points": 32}},
             "physics": {
-                "noise": {"exponent": 0.75, "amplitude": 0.1},
+                "noise": {"exponent": -0.75, "amplitude": 0.1},
                 "viscosity": 0.01,
                 "subgrid_model": 1
             },
@@ -123,7 +123,7 @@ class TestInputLogging:
             "time": {"duration": 0.01, "cfl": 0.4, "max_step": 0.001},
             "grid": {"length": 6.283185307179586, "dns": {"points": 64}, "les": {"points": 32}},
             "physics": {
-                "noise": {"exponent": 0.75, "amplitude": 0.1},
+                "noise": {"exponent": -0.75, "amplitude": 0.1},
                 "viscosity": 0.01,
                 "subgrid_model": 1
             },

@@ -84,7 +84,7 @@ class LES(Burgers):
             nx=self.nx,
             dx=self.dx,
             nx2=self.nx_dns,  # DNS resolution for downscaling
-            noise_alpha=self.noise_alpha,
+            noise_beta=self.noise_beta,
             noise_nx=self.nx_dns,  # Generate noise at DNS resolution
             fftw_planning=self.fftw_planning,
             fftw_threads=self.fftw_threads,

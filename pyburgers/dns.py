@@ -71,7 +71,7 @@ class DNS(Burgers):
         return SpectralWorkspace(
             nx=self.nx,
             dx=self.dx,
-            noise_alpha=self.noise_alpha,
+            noise_beta=self.noise_beta,
             noise_nx=self.nx,
             fftw_planning=self.fftw_planning,
             fftw_threads=self.fftw_threads,

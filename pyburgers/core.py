@@ -85,7 +85,7 @@ class Burgers(ABC):
         # Extract common configuration
         self.visc = input_obj.viscosity
         self.noise_amp = input_obj.physics.noise.amplitude
-        self.noise_alpha = input_obj.physics.noise.exponent
+        self.noise_beta = input_obj.physics.noise.exponent
         self.fftw_planning = input_obj.fftw_planning
         self.fftw_threads = input_obj.fftw_threads
         self.domain_length = input_obj.domain_length

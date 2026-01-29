@@ -17,7 +17,7 @@
         "viscosity": 1e-05,
         "subgrid_model": 2,
         "noise": {
-            "exponent": 0.75,
+            "exponent": -0.75,
             "amplitude": 1e-06
         }
     },

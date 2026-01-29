@@ -26,10 +26,10 @@ class FBM:
     """Generates fractional Brownian motion (FBM) noise.
 
     FBM noise is used as the stochastic forcing term in the Burgers
-    equation. The noise has a power spectrum that scales as k^(-alpha).
+    equation. The noise has a power spectrum that scales as k^(-beta).
 
     Attributes:
-        alpha: FBM exponent, controls spectral slope.
+        beta: FBM exponent, controls spectral slope.
         n_pts: Number of grid points.
         fftw_planning: FFTW planning strategy.
         fftw_threads: Number of FFTW threads.
@@ -39,7 +39,7 @@ class FBM:
 
     def __init__(
         self,
-        alpha: float,
+        beta: float,
         n_pts: int,
         fftw_planning: str = "FFTW_MEASURE",
         fftw_threads: int = 1,
@@ -47,13 +47,13 @@ class FBM:
         """Initialize the FBM noise generator.
 
         Args:
-            alpha: FBM exponent controlling the spectral slope. Typical value
-                is 0.75 for Burgers turbulence.
+            beta: FBM exponent controlling the spectral slope. Typical value
+                is -0.75 for Burgers turbulence.
             n_pts: Number of grid points.
             fftw_planning: FFTW planning strategy (default: 'FFTW_MEASURE').
             fftw_threads: Number of FFTW threads (default: 1).
         """
-        self.alpha = alpha
+        self.beta = beta
         self.n_pts = n_pts
         self.fftw_planning = fftw_planning
         self.fftw_threads = fftw_threads
@@ -64,9 +64,9 @@ class FBM:
         wavenumber = np.fft.rfftfreq(n_pts, d=1 / n_pts)
         wavenumber[0] = 1  # Avoid /0; DC component is 0 in compute_noise()
 
-        # Precompute spectral coloring coefficients (k^(-alpha/2))
+        # Precompute spectral coloring coefficients (k^(beta/2))
         # This avoids redundant power computation in compute_noise()
-        self._coloring = wavenumber ** (-0.5 * alpha)
+        self._coloring = wavenumber ** (0.5 * beta)
 
         # pyfftw arrays (real <-> complex rfft/irfft)
         self.x = pyfftw.empty_aligned(n_pts, np.float64)
@@ -95,7 +95,7 @@ class FBM:
         """Generate a realization of FBM noise.
 
         Creates white noise, transforms to spectral space, applies
-        the FBM spectral coloring (k^(-alpha/2)), and transforms back.
+        the FBM spectral coloring (k^(beta/2)), and transforms back.
 
         Returns:
             Real-valued noise array with FBM spectral characteristics.

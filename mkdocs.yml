@@ -33,6 +33,9 @@ theme:
 
 plugins:
   - search
+  - mermaid2:
+      arguments:
+        theme: 'default'
   - mkdocstrings:
       handlers:
         python:
@@ -50,15 +53,14 @@ plugins:
             show_symbol_type_toc: true
 
 markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
-  - pymdownx.superfences
-  - pymdownx.arithmatex:
-      generic: true
   - admonition
   - pymdownx.details
   - pymdownx.tabbed:
@@ -76,6 +78,8 @@ extra_javascript:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-  - Contributing: contributing.md
+  - Architecture: architecture.md
   - Namelist Reference: namelist.md
   - API Reference: reference.md
+  - Changelog: changelog.md
+  - Contributing: contributing.md

@@ -103,7 +103,7 @@ def _file_lock(file_path: Path, exclusive: bool = False) -> Iterator[None]:
 def load_wisdom(
     nx_dns: int,
     nx_les: int,
-    noise_alpha: float,
+    noise_beta: float,
     fftw_planning: str,
     fftw_threads: int,
 ) -> tuple[bool, str]:
@@ -122,7 +122,7 @@ def load_wisdom(
     Args:
         nx_dns: DNS grid resolution.
         nx_les: LES grid resolution.
-        noise_alpha: FBM noise exponent.
+        noise_beta: FBM noise exponent.
         fftw_planning: FFTW planning strategy.
         fftw_threads: Number of FFTW threads.
 
@@ -153,8 +153,8 @@ def load_wisdom(
             mismatches.append(f"nx_dns ({metadata.get('nx_dns')} → {nx_dns})")
         if metadata.get("nx_les") != nx_les:
             mismatches.append(f"nx_les ({metadata.get('nx_les')} → {nx_les})")
-        if metadata.get("noise_alpha") != noise_alpha:
-            mismatches.append(f"noise_alpha ({metadata.get('noise_alpha')} → {noise_alpha})")
+        if metadata.get("noise_beta") != noise_beta:
+            mismatches.append(f"noise_beta ({metadata.get('noise_beta')} → {noise_beta})")
         if metadata.get("fftw_planning") != fftw_planning:
             mismatches.append(
                 f"fftw_planning ({metadata.get('fftw_planning')} → {fftw_planning})"
@@ -179,7 +179,7 @@ def load_wisdom(
 def save_wisdom(
     nx_dns: int,
     nx_les: int,
-    noise_alpha: float,
+    noise_beta: float,
     fftw_planning: str,
     fftw_threads: int,
 ) -> bool:
@@ -195,7 +195,7 @@ def save_wisdom(
     Args:
         nx_dns: DNS grid resolution.
         nx_les: LES grid resolution.
-        noise_alpha: FBM noise exponent.
+        noise_beta: FBM noise exponent.
         fftw_planning: FFTW planning strategy.
         fftw_threads: Number of FFTW threads.
 
@@ -209,7 +209,7 @@ def save_wisdom(
             "metadata": {
                 "nx_dns": nx_dns,
                 "nx_les": nx_les,
-                "noise_alpha": noise_alpha,
+                "noise_beta": noise_beta,
                 "fftw_planning": fftw_planning,
                 "fftw_threads": fftw_threads,
             },
@@ -230,7 +230,7 @@ def save_wisdom(
 def warmup_fftw_plans(
     nx_dns: int,
     nx_les: int,
-    noise_alpha: float,
+    noise_beta: float,
     fftw_planning: str,
     fftw_threads: int,
     domain_length: float = 2 * 3.141592653589793,
@@ -247,7 +247,7 @@ def warmup_fftw_plans(
     Args:
         nx_dns: DNS grid resolution.
         nx_les: LES grid resolution.
-        noise_alpha: FBM noise exponent.
+        noise_beta: FBM noise exponent.
         fftw_planning: FFTW planning strategy.
         fftw_threads: Number of FFTW threads.
         domain_length: Length of the periodic domain (default: 2π).
@@ -265,7 +265,7 @@ def warmup_fftw_plans(
                 SpectralWorkspace(
                     nx=nx_dns,
                     dx=domain_length / nx_dns,
-                    noise_alpha=noise_alpha,
+                    noise_beta=noise_beta,
                     noise_nx=nx_dns,
                     fftw_planning=fftw_planning,
                     fftw_threads=fftw_threads,
@@ -280,7 +280,7 @@ def warmup_fftw_plans(
                     nx=nx_les,
                     dx=domain_length / nx_les,
                     nx2=nx_dns,
-                    noise_alpha=noise_alpha,
+                    noise_beta=noise_beta,
                     noise_nx=nx_dns,
                     fftw_planning=fftw_planning,
                     fftw_threads=fftw_threads,
