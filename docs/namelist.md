@@ -93,7 +93,9 @@ Controls the simulation duration and adaptive time stepping.
 
     Maximum allowed time step in seconds.
 
-    Caps the adaptive time step. Also sets the interval for refreshing stochastic noise to ensure DNS and LES consume the same random sequence. Typical values: 0.001 to 0.01.
+    Caps the adaptive time step. Typical values: 0.001 to 0.01.
+
+    **Note:** Stochastic noise is refreshed at `max_step` intervals in both DNS and LES modes. This ensures both simulations consume the same random sequence, making their results directly comparable even though adaptive time stepping may produce different sub-step sizes.
 
     **Example:** `0.01`
 
