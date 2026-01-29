@@ -10,6 +10,16 @@ PyBurgers requires:
 - A C compiler (for building NumPy/FFTW dependencies if needed)
 - Basic familiarity with command-line interfaces
 
+### Dependencies
+
+The following packages are installed automatically:
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| NumPy | ≥2.1 | Array operations and numerical computing |
+| pyFFTW | ≥0.15 | Fast Fourier transforms via FFTW |
+| netCDF4 | ≥1.7 | Output file format for simulation data |
+
 ## Installation
 
 ### Option 1: Local Development Install (Recommended)
@@ -135,7 +145,7 @@ python burgers.py -m dns
 This will:
 1. Load and validate `namelist.json`
 2. Initialize the DNS solver with the specified grid resolution
-3. Generate FFTW plans (takes 30-60 seconds on first run with FFTW_PATIENT)
+3. Generate FFTW plans (planning time is hardware-dependent)
 4. Run the time-stepping loop
 5. Save results to `pyburgers_dns.nc`
 
