@@ -173,17 +173,19 @@ class Derivatives:
                 self.fup[0 : self.nk] = self.fu
                 # Transform to padded physical space
                 self.ifftp()
+                # Correct for 2x padding normalization: irfft divides by 2n instead of n
+                self.up[:] *= 2
                 # Square in physical space
                 self.up[:] = self.up**2
                 # Transform back to spectral space
                 self.fftp()
-                # Extract non-aliased modes (simpler than complex FFT!)
-                self.fu[:] = self.fup[0 : self.nk]
+                # Extract non-aliased modes and correct for 2x array size
+                self.fu[:] = self.fup[0 : self.nk] / 2
                 self.fu[self.nk - 1] = 0  # Zero Nyquist
                 # Compute derivative
                 self.fun[:] = 1j * self.k * self.fu
                 self.ifft()
-                np.multiply(2 * self.fac, self.der, out=self._out_sq)
+                np.multiply(self.fac, self.der, out=self._out_sq)
                 derivatives["sq"] = self._out_sq
 
         return derivatives

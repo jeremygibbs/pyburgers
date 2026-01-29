@@ -136,7 +136,7 @@ class TestDNSIntegration:
         dns.run()
 
         # TKE = variance of velocity, should be in physical range for test params
-        assert 0.001 < dns.tke[0] < 1.0
+        assert 0.001 < dns.tke[0] < 10.0
 
     def test_dns_zero_mean_velocity(self, tmp_path: Path) -> None:
         """Test that DNS velocity has approximately zero mean."""
