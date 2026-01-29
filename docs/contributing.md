@@ -214,8 +214,8 @@ Create test namelists for quick iterations:
 
 ```json
 {
-    "time": { "nt": 100, "dt": 1E-3 },
-    "grid": { "dns": { "nx": 256 }, "les": { "nx": 64 } },
+    "time": { "duration": 0.1, "cfl": 0.4, "max_step": 0.01 },
+    "grid": { "dns": { "points": 256 }, "les": { "points": 64 } },
     "fftw": { "planning": "FFTW_ESTIMATE", "threads": 2 }
 }
 ```

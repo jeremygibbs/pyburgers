@@ -86,6 +86,8 @@ python scripts/plot_spectra.py pyburgers_dns.nc --check-variance
 inertial range scaling shown as dashed black line across all wavenumbers (uses filename as legend label)
 
 **Options:**
+- `--t1`: Start time for averaging window (default: use all times)
+- `--t2`: End time for averaging window (default: use all times)
 - `--threshold`: Clip y-axis to exclude PSD values below this threshold (default: 1e-10)
 - `--check-variance`: Print variance vs. summed PSD check for each file
 - `-o/--out`: Save to file (PNG, SVG, PDF, etc.)

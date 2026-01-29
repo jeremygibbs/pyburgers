@@ -63,56 +63,59 @@ PyBurgers is configured using a JSON namelist file. The repository includes a de
 
 ```json
 {
-    "time" : {
-        "nt" : 2E5,
-        "dt" : 1E-4
+    "time": {
+        "duration": 200.0,
+        "cfl": 0.4,
+        "max_step": 0.01
     },
-    "physics" : {
-        "noise" : {
-            "alpha" : 0.75,
-            "amplitude" : 1E-6
+    "grid": {
+        "length": 6.283185307179586,
+        "dns": {
+            "points": 8192
         },
-        "viscosity" : 1E-5,
-        "sgs_model" : 1
-    },
-    "grid" : {
-        "domain_length" : 6.283185307179586,
-        "dns" : {
-            "nx" : 8192
-        },
-        "les" : {
-            "nx" : 512
+        "les": {
+            "points": 512
         }
     },
-    "output"  : {
-        "t_save" : 0.1
+    "physics": {
+        "viscosity": 1e-5,
+        "subgrid_model": 2,
+        "noise": {
+            "exponent": 0.75,
+            "amplitude": 1e-6
+        }
     },
-    "logging" : {
-        "level" : "INFO",
-        "file" : "pyburgers.log"
+    "output": {
+        "interval_save": 0.1,
+        "interval_print": 0.1
     },
-    "fftw" : {
-        "planning" : "FFTW_PATIENT",
-        "threads" : 8
+    "logging": {
+        "level": "INFO",
+        "file": "pyburgers.log"
+    },
+    "fftw": {
+        "planning": "FFTW_PATIENT",
+        "threads": 8
     }
 }
 ```
 
-For a quick test run, you might want to reduce the grid size and time steps:
+For a quick test run, you might want to reduce the grid size and simulation duration:
 
 ```json
 {
-    "time" : {
-        "nt" : 1000,
-        "dt" : 1E-3
+    "time": {
+        "duration": 1.0,
+        "cfl": 0.4,
+        "max_step": 0.01
     },
-    "grid" : {
-        "dns" : { "nx" : 512 },
-        "les" : { "nx" : 128 }
+    "grid": {
+        "dns": { "points": 512 },
+        "les": { "points": 128 }
     },
-    "fftw" : {
-        "planning" : "FFTW_ESTIMATE",
-        "threads" : 4
+    "fftw": {
+        "planning": "FFTW_ESTIMATE",
+        "threads": 4
     }
 }
 ```
@@ -146,7 +149,7 @@ Run a Large-Eddy Simulation:
 python burgers.py -m les
 ```
 
-This uses the LES grid resolution (`grid.les.nx`) and applies the specified subgrid-scale model (`physics.sgs_model`).
+This uses the LES grid resolution (`grid.les.points`) and applies the specified subgrid-scale model (`physics.subgrid_model`).
 
 ### Custom Output File
 
@@ -233,11 +236,12 @@ plt.show()
 
 ### Customize Your Simulation
 
-1. **Adjust grid resolution**: Modify `grid.dns.nx` and `grid.les.nx` in `namelist.json`
-2. **Change time stepping**: Adjust `time.nt` and `time.dt` for longer/shorter runs
-3. **Try different SGS models**: Set `physics.sgs_model` to 0-4 for LES runs
-4. **Tune FFTW**: Experiment with planning levels (ESTIMATE, MEASURE, PATIENT, EXHAUSTIVE)
-5. **Control output**: Adjust `output.t_save` to save more or fewer snapshots
+1. **Adjust grid resolution**: Modify `grid.dns.points` and `grid.les.points` in `namelist.json`
+2. **Change simulation duration**: Adjust `time.duration` for longer/shorter runs
+3. **Tune time stepping**: Adjust `time.cfl` (0-0.55) and `time.max_step` to control adaptive stepping
+4. **Try different SGS models**: Set `physics.subgrid_model` to 0-4 for LES runs
+5. **Tune FFTW**: Experiment with planning levels (ESTIMATE, MEASURE, PATIENT, EXHAUSTIVE)
+6. **Control output**: Adjust `output.interval_save` to save more or fewer snapshots
 
 ### Learn More
 
@@ -250,7 +254,7 @@ plt.show()
 1. **Grid size**: Start small (nx=512) for testing, scale up for production
 2. **FFTW planning**: Use ESTIMATE for quick tests, PATIENT for production
 3. **Threading**: Set `fftw.threads` to match your CPU core count
-4. **Output frequency**: Higher `t_save` values reduce I/O overhead
+4. **Output frequency**: Higher `interval_save` values reduce I/O overhead
 5. **Wisdom caching**: After the first run, subsequent runs are much faster
 
 ### Troubleshooting
@@ -258,7 +262,7 @@ plt.show()
 **Problem**: Simulation is very slow
 
 - Check that `fftw.planning` isn't EXHAUSTIVE (unless intentional)
-- Reduce `nt` or increase `dt` for testing
+- Reduce `time.duration` for testing
 - Ensure FFTW wisdom is being cached (check for `~/.pyburgers_fftw_wisdom`)
 
 **Problem**: "NamelistError" on startup
@@ -269,7 +273,7 @@ plt.show()
 
 **Problem**: Out of memory
 
-- Reduce `grid.dns.nx` and/or `grid.les.nx`
+- Reduce `grid.dns.points` and/or `grid.les.points`
 - The default 8192 grid points requires several GB of RAM
 
 **Problem**: FFTW planning takes forever
@@ -285,30 +289,30 @@ Create a test namelist (`test_namelist.json`):
 
 ```json
 {
-    "time": { "nt": 1000, "dt": 1E-3 },
+    "time": { "duration": 1.0, "cfl": 0.4, "max_step": 0.01 },
     "physics": {
-        "noise": { "alpha": 0.75, "amplitude": 1E-6 },
-        "viscosity": 1E-5,
-        "sgs_model": 1
+        "noise": { "exponent": 0.75, "amplitude": 1e-6 },
+        "viscosity": 1e-5,
+        "subgrid_model": 1
     },
     "grid": {
-        "dns": { "nx": 512 },
-        "les": { "nx": 128 }
+        "dns": { "points": 512 },
+        "les": { "points": 128 }
     },
-    "output": { "t_save": 0.1 },
+    "output": { "interval_save": 0.1 },
     "logging": { "level": "INFO" },
     "fftw": { "planning": "FFTW_ESTIMATE", "threads": 4 }
 }
 ```
 
-Then modify `burgers.py` to use it, or copy it over `namelist.json`.
+Then copy it over `namelist.json` to use it.
 
 ### Production DNS Run (1-2 hours)
 
 Use the default `namelist.json` with:
-- `grid.dns.nx`: 8192 or 16384
+- `grid.dns.points`: 8192 or 16384
 - `fftw.planning`: FFTW_PATIENT
-- `time.nt`: 2E5 to 5E5
+- `time.duration`: 200 to 500
 
 ### Production LES Comparison
 
@@ -319,10 +323,10 @@ Run both modes to compare:
 python burgers.py -m dns -o reference_dns.nc
 
 # LES with different SGS models
-sed -i 's/"sgs_model": 1/"sgs_model": 1/' namelist.json
+sed -i 's/"subgrid_model": 1/"subgrid_model": 1/' namelist.json
 python burgers.py -m les -o les_smagorinsky.nc
 
-sed -i 's/"sgs_model": 1/"sgs_model": 2/' namelist.json
+sed -i 's/"subgrid_model": 1/"subgrid_model": 2/' namelist.json
 python burgers.py -m les -o les_dynamic.nc
 ```
 

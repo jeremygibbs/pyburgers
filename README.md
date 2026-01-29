@@ -9,7 +9,7 @@ A high-performance solver for the 1D Stochastic Burgers Equation with DNS and LE
 
 ## Overview
 
-PyBurgers implements direct numerical simulation (DNS) and large-eddy simulation (LES) for studying Burgers turbulence, following the procedures described in [Basu (2009)](https://doi.org/10.1080/14685240902852719). The solver uses Fourier collocation methods for spatial derivatives and second-order Adams-Bashforth time integration.
+PyBurgers implements direct numerical simulation (DNS) and large-eddy simulation (LES) for studying Burgers turbulence, following the procedures described in [Basu (2009)](https://doi.org/10.1080/14685240902852719). The solver uses Fourier collocation methods for spatial derivatives and Williamson (1980) low-storage RK3 time integration with CFL-based adaptive time stepping.
 
 ## Features
 
@@ -107,6 +107,17 @@ And reference the underlying methodology:
   pages = {N12},
   year = {2009},
   doi = {10.1080/14685240902852719}
+}
+
+@article{williamson1980,
+  author = {Williamson, J.H.},
+  title = {Low-storage Runge-Kutta schemes},
+  journal = {Journal of Computational Physics},
+  volume = {35},
+  number = {1},
+  pages = {48--56},
+  year = {1980},
+  doi = {10.1016/0021-9991(80)90033-9}
 }
 ```
 

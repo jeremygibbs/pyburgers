@@ -17,10 +17,11 @@ abstract: >-
   Burgers Equation that implements both Direct Numerical Simulation
   (DNS) and Large-Eddy Simulation (LES) capabilities. The solver
   uses Fourier collocation methods for spatial derivatives and
-  second-order Adams-Bashforth time integration, following the
-  procedures described in Basu (2009). It features four subgrid-scale
-  turbulence models, FFTW-optimized FFT operations with intelligent
-  wisdom caching, and fractional Brownian motion stochastic forcing.
+  Williamson (1980) low-storage RK3 time integration with CFL-based
+  adaptive time stepping, following the procedures described in
+  Basu (2009). It features four subgrid-scale turbulence models,
+  FFTW-optimized FFT operations with intelligent wisdom caching,
+  and fractional Brownian motion stochastic forcing.
 keywords:
   - turbulence
   - burgers equation
@@ -48,3 +49,14 @@ references:
     year: 2009
     doi: 10.1080/14685240902852719
     pages: N12
+  - type: article
+    authors:
+      - family-names: Williamson
+        given-names: J.H.
+    title: Low-storage Runge-Kutta schemes
+    journal: Journal of Computational Physics
+    volume: 35
+    issue: 1
+    year: 1980
+    doi: 10.1016/0021-9991(80)90033-9
+    pages: 48-56

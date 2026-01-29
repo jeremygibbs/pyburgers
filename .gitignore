@@ -21,3 +21,7 @@ site/
 
 # Building project locally
 pyburgers.egg-info/
+
+# Testing
+.coverage
+htmlcov/

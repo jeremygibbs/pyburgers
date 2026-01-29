@@ -37,7 +37,7 @@ Version 2.0 represents a complete rewrite of PyBurgers with modern Python practi
   - `pyburgers/physics/sgs/`: Subgrid-scale models
 - **Spectral workspace**: Unified workspace object manages all FFT operations and buffers
 - **Initialization**: Streamlined startup with warmup phase for FFTW planning
-- **Time stepping**: Refactored Adams-Bashforth implementation in base class
+- **Time stepping**: Replaced Adams-Bashforth with Williamson (1980) low-storage RK3 and CFL-based adaptive time stepping
 - **Output organization**: NetCDF output with improved structure and metadata
 - **Logging**: Moved from print statements to proper Python logging framework
 - **Constants**: Centralized physical and numerical constants in `utils/constants.py`

@@ -4,7 +4,7 @@ Welcome to the documentation for PyBurgers, a high-performance solver for the 1D
 
 ## What is PyBurgers?
 
-PyBurgers provides both Direct Numerical Simulation (DNS) and Large-Eddy Simulation (LES) capabilities for studying Burgers turbulence. The solver uses Fourier collocation methods in space and second-order Adams-Bashforth time integration, following the procedures described in [Basu (2009)](https://doi.org/10.1080/14685240902852719).
+PyBurgers provides both Direct Numerical Simulation (DNS) and Large-Eddy Simulation (LES) capabilities for studying Burgers turbulence. The solver uses Fourier collocation methods in space and Williamson (1980) low-storage RK3 time integration with CFL-based adaptive time stepping, following the procedures described in [Basu (2009)](https://doi.org/10.1080/14685240902852719).
 
 ## Scientific Background
 
@@ -45,10 +45,13 @@ Key features:
 
 ### Time Integration
 
-The solver employs **second-order Adams-Bashforth** time stepping:
-- Explicit method suitable for the problem structure
-- Good stability properties with reasonable CFL constraints
-- Efficient for spectral methods
+The solver employs **Williamson (1980) low-storage RK3** time stepping with adaptive time stepping:
+
+- Three-stage explicit Runge-Kutta method with excellent stability properties
+- CFL-based adaptive time stepping automatically adjusts dt based on maximum velocity
+- Viscous stability constraint also enforced (dt ≤ 0.2 dx²/ν)
+- Nyquist mode zeroed after each RK stage to prevent aliasing accumulation
+- Output times are hit exactly by clamping dt to reach save intervals
 
 ### Stochastic Forcing
 
@@ -125,3 +128,5 @@ For API documentation, check the [API Reference](reference.md).
 ## References
 
 Basu, S. (2009). High-resolution large-eddy simulations of stably stratified flows: application to the Cooperative Atmosphere–Surface Exchange Study 1999 (CASES-99). *Journal of Turbulence*, 10, N12. https://doi.org/10.1080/14685240902852719
+
+Williamson, J.H. (1980). Low-storage Runge-Kutta schemes. *Journal of Computational Physics*, 35(1), 48-56. https://doi.org/10.1016/0021-9991(80)90033-9

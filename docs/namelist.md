@@ -1,16 +1,16 @@
 # Namelist Configuration
 
-PyBurgers is configured using a JSON namelist file (default: `namelist.json`). The namelist is validated against a schema to ensure all required parameters are present and properly formatted.
+PyBurgers is configured using a JSON namelist file (default: `namelist.json`). The namelist is validated at startup to ensure all required parameters are present and properly formatted.
 
 ## Quick Reference
 
-A complete namelist has six required sections:
+A complete namelist has six sections:
 
 ```json
 {
     "time": { ... },
-    "physics": { ... },
     "grid": { ... },
+    "physics": { ... },
     "output": { ... },
     "logging": { ... },
     "fftw": { ... }
@@ -23,38 +23,39 @@ Here's a typical configuration for running both DNS and LES:
 
 ```json
 {
-    "time" : {
-        "nt" : 2E5,
-        "dt" : 1E-4
+    "time": {
+        "duration": 200.0,
+        "cfl": 0.4,
+        "max_step": 0.01
     },
-    "physics" : {
-        "noise" : {
-            "alpha" : 0.75,
-            "amplitude" : 1E-6
+    "grid": {
+        "length": 6.283185307179586,
+        "dns": {
+            "points": 8192
         },
-        "viscosity" : 1E-5,
-        "sgs_model" : 1
-    },
-    "grid" : {
-        "domain_length" : 6.283185307179586,
-        "dns" : {
-            "nx" : 8192
-        },
-        "les" : {
-            "nx" : 512
+        "les": {
+            "points": 512
         }
     },
-    "output"  : {
-        "t_save" : 0.1,
-        "t_print" : 0.01
+    "physics": {
+        "viscosity": 1e-5,
+        "subgrid_model": 2,
+        "noise": {
+            "exponent": 0.75,
+            "amplitude": 1e-6
+        }
     },
-    "logging" : {
-        "level" : "INFO",
-        "file" : "pyburgers.log"
+    "output": {
+        "interval_save": 0.1,
+        "interval_print": 0.1
     },
-    "fftw" : {
-        "planning" : "FFTW_PATIENT",
-        "threads" : 8
+    "logging": {
+        "level": "INFO",
+        "file": "pyburgers.log"
+    },
+    "fftw": {
+        "planning": "FFTW_PATIENT",
+        "threads": 8
     }
 }
 ```
@@ -63,27 +64,84 @@ Here's a typical configuration for running both DNS and LES:
 
 ## Section: time
 
-Controls the temporal discretization and simulation duration.
+Controls the simulation duration and adaptive time stepping.
 
-`nt`
+`duration`
 :   **Type:** Number (required)
     **Default:** None
 
-    Total number of time steps to simulate.
+    Total simulation time in seconds.
 
-    Total simulation time = `nt × dt`. Use scientific notation for large values.
+    The simulation runs until this physical time is reached.
 
-    **Example:** `2E5` (200,000 time steps)
+    **Example:** `200.0` (200 seconds of simulated time)
 
-`dt`
+`cfl`
+:   **Type:** Number (required)
+    **Default:** None
+    **Valid range:** (0, 0.55)
+
+    Target CFL number for adaptive time stepping.
+
+    The time step is automatically adjusted each iteration to satisfy dt ≤ cfl × dx / |u_max|. Lower values are more conservative but slower. Typical values: 0.3 to 0.5.
+
+    **Example:** `0.4`
+
+`max_step`
 :   **Type:** Number (required)
     **Default:** None
 
-    Time step size in seconds.
+    Maximum allowed time step in seconds.
 
-    Must satisfy CFL condition for numerical stability. Typical values: 1E-4 to 1E-5.
+    Caps the adaptive time step. Also sets the interval for refreshing stochastic noise to ensure DNS and LES consume the same random sequence. Typical values: 0.001 to 0.01.
 
-    **Example:** `1E-4` (0.0001 seconds)
+    **Example:** `0.01`
+
+---
+
+## Section: grid
+
+Defines the computational domain and spatial resolution.
+
+`length`
+:   **Type:** Number (optional)
+    **Default:** `6.283185307179586` (2π)
+
+    Length of the periodic domain in meters.
+
+    The domain is periodic, so this sets the fundamental wavelength. Default value of 2π is convenient for spectral methods.
+
+    **Example:** `6.283185307179586`
+
+### Subsection: grid.dns
+
+DNS grid configuration (required even if only running LES, as it's used for noise generation).
+
+`points`
+:   **Type:** Integer (optional)
+    **Default:** `8192`
+
+    Number of grid points for DNS resolution.
+
+    Must be even for FFT efficiency. Higher resolution resolves smaller scales but increases computational cost. Typical values: 4096 to 16384.
+
+    **Example:** `8192`
+
+### Subsection: grid.les
+
+LES grid configuration.
+
+`points`
+:   **Type:** Integer (optional)
+    **Default:** `512`
+
+    Number of grid points for LES resolution.
+
+    Must be even and typically much smaller than DNS resolution. The ratio `dns.points / les.points` determines the filter width. Typical values: 256 to 1024.
+
+    **Note:** The filter width is automatically computed as `dns.points / les.points` and displayed in the LES startup log.
+
+    **Example:** `512` (with `dns.points=8192`, this gives filter width of 16Δx)
 
 ---
 
@@ -99,11 +157,11 @@ Defines the physical parameters of the Burgers equation.
 
     Controls the rate of diffusion. Lower values lead to sharper gradients and require finer resolution.
 
-    **Example:** `1E-5`
+    **Example:** `1e-5`
 
-`sgs_model`
+`subgrid_model`
 :   **Type:** Integer (optional)
-    **Default:** `0`
+    **Default:** `1`
 
     Subgrid-scale turbulence model for LES mode.
 
@@ -117,15 +175,15 @@ Defines the physical parameters of the Burgers equation.
 
     **Note:** Only affects LES runs (`-m les`). DNS mode ignores this setting. Dynamic models (2-4) are more computationally expensive but generally more accurate.
 
-    **Example:** `1`
+    **Example:** `2`
 
 ### Subsection: physics.noise
 
 Configures the stochastic forcing term (fractional Brownian motion).
 
-`alpha`
-:   **Type:** Number (required)
-    **Default:** None
+`exponent`
+:   **Type:** Number (optional)
+    **Default:** `0.75`
 
     Spectral exponent for fractional Brownian motion.
 
@@ -134,60 +192,14 @@ Configures the stochastic forcing term (fractional Brownian motion).
     **Example:** `0.75`
 
 `amplitude`
-:   **Type:** Number (required)
-    **Default:** None
+:   **Type:** Number (optional)
+    **Default:** `1e-6`
 
     Amplitude of the stochastic forcing.
 
     Controls the energy injection rate. Adjust based on viscosity and desired turbulence intensity.
 
-    **Example:** `1E-6`
-
----
-
-## Section: grid
-
-Defines the computational domain and spatial resolution.
-
-`domain_length`
-:   **Type:** Number (optional)
-    **Default:** `6.283185307179586` (2π)
-
-    Length of the periodic domain in meters.
-
-    The domain is periodic, so this sets the fundamental wavelength. Default value of 2π is convenient for spectral methods.
-
-    **Example:** `6.283185307179586`
-
-### Subsection: grid.dns
-
-DNS grid configuration (required even if only running LES, as it's used for noise generation).
-
-`nx`
-:   **Type:** Integer (required)
-    **Default:** None
-
-    Number of grid points for DNS resolution.
-
-    Must be even for FFT efficiency. Higher resolution resolves smaller scales but increases computational cost. Typical values: 4096 to 16384.
-
-    **Example:** `8192`
-
-### Subsection: grid.les
-
-LES grid configuration.
-
-`nx`
-:   **Type:** Integer (required)
-    **Default:** None
-
-    Number of grid points for LES resolution.
-
-    Must be even and typically much smaller than DNS resolution. The ratio `dns.nx / les.nx` determines the filter width. Typical values: 256 to 1024.
-
-    **Note:** The filter width is automatically computed as `dns.nx / les.nx` and displayed in the LES startup log.
-
-    **Example:** `512` (with `dns.nx=8192`, this gives filter width of 16Δx)
+    **Example:** `1e-6`
 
 ---
 
@@ -195,25 +207,25 @@ LES grid configuration.
 
 Controls output file writing and progress reporting.
 
-`t_save`
-:   **Type:** Number (required)
-    **Default:** None
+`interval_save`
+:   **Type:** Number (optional)
+    **Default:** `100 × max_step`
 
     Output interval in simulation seconds (not wall-clock time).
 
-    Data is saved to NetCDF every `t_save` seconds of simulated time. Smaller values produce more output but larger files. The actual number of outputs = `(nt × dt) / t_save`.
+    Data is saved to NetCDF every `interval_save` seconds of simulated time. Smaller values produce more output but larger files. The adaptive time stepper clamps dt to hit output times exactly.
 
     **Example:** `0.1`
 
-`t_print`
+`interval_print`
 :   **Type:** Number (optional)
-    **Default:** Same as `t_save`
+    **Default:** Same as `interval_save`
 
     Progress reporting interval in simulation seconds (not wall-clock time).
 
-    Progress messages are printed to the console every `t_print` seconds of simulated time. This is independent of `t_save`, allowing you to monitor progress more frequently without increasing file output. Smaller values provide more frequent updates but may clutter the console.
+    Progress messages are printed to the console every `interval_print` seconds of simulated time. This is independent of `interval_save`, allowing you to monitor progress more frequently without increasing file output.
 
-    **Example:** `0.01` (prints 10x more frequently than saving)
+    **Example:** `0.1`
 
 ---
 
@@ -256,8 +268,8 @@ Configures runtime logging behavior.
 Configures FFTW (Fastest Fourier Transform in the West) behavior.
 
 `planning`
-:   **Type:** String (required)
-    **Default:** None
+:   **Type:** String (optional)
+    **Default:** `"FFTW_MEASURE"`
 
     FFTW planning strategy. Controls the trade-off between planning time and FFT performance.
 
@@ -273,12 +285,12 @@ Configures FFTW (Fastest Fourier Transform in the West) behavior.
     **Example:** `"FFTW_PATIENT"`
 
 `threads`
-:   **Type:** Integer (required)
-    **Default:** None
+:   **Type:** Integer (optional)
+    **Default:** `4`
 
     Number of threads for FFT operations.
 
-    Set to the number of physical CPU cores for best performance. Diminishing returns beyond ~8 threads for typical grid sizes. FFT threading overhead can dominate for very small grids (nx < 512).
+    Set to the number of physical CPU cores for best performance. Diminishing returns beyond ~8 threads for typical grid sizes. FFT threading overhead can dominate for very small grids (points < 512).
 
     **Example:** `8`
 
@@ -286,11 +298,12 @@ Configures FFTW (Fastest Fourier Transform in the West) behavior.
 
 ## Validation
 
-PyBurgers validates the namelist against `pyburgers/schema_namelist.json` at startup. Common errors:
+PyBurgers validates the namelist at startup. Common errors:
 
 - **Missing required field**: Add the missing key to your namelist
 - **Invalid type**: Ensure numbers aren't quoted as strings
-- **Invalid value**: Check that enums (like `sgs_model`) use allowed values
+- **Invalid value**: Check that enums (like `subgrid_model`) use allowed values
+- **Invalid CFL**: The `cfl` value must be in the range (0, 0.55)
 - **Invalid structure**: Ensure nested sections (e.g., `physics.noise`) are properly nested
 
 Error messages will indicate the specific problem and location in the namelist.
@@ -303,8 +316,8 @@ Error messages will indicate the specific problem and location in the namelist.
 
 ```json
 {
-    "time": { "nt": 1000, "dt": 1E-3 },
-    "grid": { "dns": { "nx": 512 }, "les": { "nx": 128 } },
+    "time": { "duration": 1.0, "cfl": 0.4, "max_step": 0.01 },
+    "grid": { "dns": { "points": 512 }, "les": { "points": 128 } },
     "fftw": { "planning": "FFTW_ESTIMATE", "threads": 4 }
 }
 ```
@@ -313,8 +326,8 @@ Error messages will indicate the specific problem and location in the namelist.
 
 ```json
 {
-    "time": { "nt": 5E5, "dt": 5E-5 },
-    "grid": { "dns": { "nx": 16384 }, "les": { "nx": 1024 } },
+    "time": { "duration": 500.0, "cfl": 0.4, "max_step": 0.001 },
+    "grid": { "dns": { "points": 16384 }, "les": { "points": 1024 } },
     "fftw": { "planning": "FFTW_PATIENT", "threads": 8 }
 }
 ```
@@ -323,9 +336,9 @@ Error messages will indicate the specific problem and location in the namelist.
 
 ```json
 {
-    "time": { "nt": 1E6, "dt": 1E-4 },
-    "grid": { "dns": { "nx": 8192 }, "les": { "nx": 512 } },
-    "physics": { "sgs_model": 2 },
+    "time": { "duration": 1000.0, "cfl": 0.4, "max_step": 0.01 },
+    "grid": { "dns": { "points": 8192 }, "les": { "points": 512 } },
+    "physics": { "subgrid_model": 2 },
     "fftw": { "planning": "FFTW_PATIENT", "threads": 8 }
 }
 ```
@@ -335,9 +348,9 @@ Error messages will indicate the specific problem and location in the namelist.
 ## Tips
 
 !!! tip "Best Practices"
-    1. **Start small**: Test with small `nx` and `nt` values before running full-scale simulations
+    1. **Start small**: Test with small grid sizes and short durations before running full-scale simulations
     2. **Monitor first**: Use `logging.level: "DEBUG"` for your first run to ensure everything is configured correctly
-    3. **Save wisely**: Balance `t_save` between temporal resolution and disk space
-    4. **Print smartly**: Set `t_print` smaller than `t_save` to monitor progress without bloating output files
+    3. **Save wisely**: Balance `interval_save` between temporal resolution and disk space
+    4. **Print smartly**: Set `interval_print` smaller than `interval_save` to monitor progress without bloating output files
     5. **Thread carefully**: More threads isn't always better; benchmark your specific hardware
     6. **Be patient**: Let FFTW take time to plan on the first run; subsequent runs will be much faster

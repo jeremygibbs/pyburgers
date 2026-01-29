@@ -52,6 +52,7 @@ class Deardorff(SGS):
             u: Velocity field array.
             dudx: Velocity gradient array.
             tke_sgs: Current subgrid TKE array.
+            dt: Current time step size for TKE tendency integration.
 
         Returns:
             Dictionary with 'tau' (SGS stress), 'coeff' (c1),
