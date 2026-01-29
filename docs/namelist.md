@@ -275,12 +275,12 @@ Configures FFTW (Fastest Fourier Transform in the West) behavior.
 
     FFTW planning strategy. Controls the trade-off between planning time and FFT performance.
 
-    **Available strategies:**
+    **Available strategies** (planning time is hardware-dependent):
 
-    - `"FFTW_ESTIMATE"` - Fastest planning (~instant), decent performance. Good for quick tests.
-    - `"FFTW_MEASURE"` - Moderate planning (~seconds), good performance. Balanced choice.
-    - `"FFTW_PATIENT"` - Thorough planning (~30-60 seconds), better performance. Recommended for production.
-    - `"FFTW_EXHAUSTIVE"` - Extreme planning (~minutes), best performance. Only for repeated runs with fixed parameters.
+    - `"FFTW_ESTIMATE"` - Fastest planning, decent performance. Good for quick tests.
+    - `"FFTW_MEASURE"` - Moderate planning, good performance. Balanced choice.
+    - `"FFTW_PATIENT"` - Thorough planning, better performance. Recommended for production.
+    - `"FFTW_EXHAUSTIVE"` - Extensive planning, best performance. Only for repeated runs with fixed parameters.
 
     **Note:** Planning is only done on first run. Subsequent runs load cached "wisdom" and start instantly. Wisdom is stored in `~/.pyburgers_fftw_wisdom`. If you change grid sizes, wisdom is regenerated automatically.
 
