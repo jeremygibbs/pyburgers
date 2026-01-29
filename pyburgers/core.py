@@ -35,7 +35,8 @@ class Burgers(ABC):
 
     Provides common functionality for solving the 1D stochastic Burgers
     equation using Fourier collocation for spatial derivatives and
-    Adams-Bashforth time integration.
+    Williamson (1980) low-storage RK3 time integration with CFL-based
+    adaptive time stepping.
 
     Subclasses must implement:
         - _get_nx(): Return the grid resolution for this mode
@@ -51,11 +52,13 @@ class Burgers(ABC):
         output: Output handler for NetCDF writing.
         nx: Number of grid points.
         dx: Grid spacing.
-        dt: Time step.
-        nt: Number of time steps.
         visc: Kinematic viscosity.
         noise_amp: Noise amplitude.
-        step_save: Output save interval in time steps (derived from t_save).
+        cfl_target: Target CFL number.
+        max_step: Maximum allowed time step.
+        t_duration: Total simulation time.
+        t_save: Output save interval in physical time.
+        t_print: Progress print interval in physical time.
     """
 
     # Mode name for logging (override in subclasses)
@@ -80,22 +83,27 @@ class Burgers(ABC):
         self.output = output_obj
 
         # Extract common configuration
-        self.dt = input_obj.dt
-        self.nt = input_obj.nt
         self.visc = input_obj.viscosity
         self.noise_amp = input_obj.physics.noise.amplitude
         self.noise_alpha = input_obj.physics.noise.exponent
-        self.step_save = input_obj.step_save
-        self.step_print = input_obj.step_print
-        self.progress_stride = max(1, self.step_print)
         self.fftw_planning = input_obj.fftw_planning
         self.fftw_threads = input_obj.fftw_threads
         self.domain_length = input_obj.domain_length
+
+        # Adaptive time stepping parameters
+        self.cfl_target = input_obj.cfl_target
+        self.max_step = input_obj.max_step
+        self.t_duration = input_obj.time.duration
+        self.t_save = input_obj.t_save
+        self.t_print = input_obj.t_print
 
         # Get mode-specific grid resolution
         self.nx = self._get_nx()
         self.mp = self.nx // 2
         self.dx = self.domain_length / self.nx
+
+        # Precompute viscous stability limit (constant for the run)
+        self._dt_visc = 0.2 * self.dx**2 / self.visc
 
         # Create spectral workspace (bundles Derivatives, Dealias, Filter)
         self.spectral = self._create_spectral_workspace()
@@ -168,11 +176,11 @@ class Burgers(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _compute_derivatives(self, t: int) -> dict[str, np.ndarray]:
+    def _compute_derivatives(self, is_output_step: bool) -> dict[str, np.ndarray]:
         """Compute required spatial derivatives.
 
         Args:
-            t: Current time step index.
+            is_output_step: Whether this is an output save step.
 
         Returns:
             Dictionary of derivative arrays.
@@ -189,12 +197,15 @@ class Burgers(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _compute_rhs(self, derivatives: dict[str, np.ndarray], noise: np.ndarray) -> np.ndarray:
+    def _compute_rhs(
+        self, derivatives: dict[str, np.ndarray], noise: np.ndarray, dt: float
+    ) -> np.ndarray:
         """Compute the right-hand side of the Burgers equation.
 
         Args:
             derivatives: Dictionary of spatial derivatives.
             noise: Noise array for stochastic forcing.
+            dt: Current time step size.
 
         Returns:
             RHS array for time integration.
@@ -214,77 +225,107 @@ class Burgers(ABC):
         """
         raise NotImplementedError
 
+    def _compute_dt(self) -> float:
+        """Compute the adaptive time step from CFL and viscous constraints.
+
+        Returns:
+            Time step size satisfying CFL, viscous, and max_step limits.
+        """
+        u_max = np.max(np.abs(self.u))
+        if u_max > 0:
+            dt_adv = self.cfl_target * self.dx / u_max
+        else:
+            dt_adv = self.max_step
+        return min(dt_adv, self._dt_visc, self.max_step)
+
     def run(self) -> None:
         """Execute the time integration loop.
 
-        Advances the simulation using 2nd-order Adams-Bashforth time
-        stepping, with Euler for the first step. Writes output at
-        intervals specified by t_save.
+        Advances the simulation using Williamson (1980) low-storage RK3
+        with CFL-based adaptive time stepping. Output is written at
+        exact multiples of t_save by clamping dt to hit output times.
         """
-        # Placeholder for previous RHS (Adams-Bashforth)
-        rhsp: np.ndarray | int = 0
+        # Williamson (1980) low-storage RK3 coefficients
+        A = (0.0, -5.0 / 9.0, -153.0 / 128.0)
+        B = (1.0 / 3.0, 15.0 / 16.0, 8.0 / 15.0)
 
-        # Time loop
-        for t in range(1, int(self.nt) + 1):
-            # Current simulation time
-            t_loop = t * self.dt
+        t_current = 0.0
+        t_next_save = self.t_save
+        t_next_print = self.t_print
+        save_idx = 0
+        Q = np.zeros_like(self.u)
 
-            # Progress reporting
-            self._log_progress(t, t_loop)
+        # Sample noise at fixed max_step intervals so that DNS and LES
+        # consume the same random sequence regardless of adaptive dt.
+        noise = self._compute_noise()
+        t_next_noise = self.max_step
 
-            # Compute spatial derivatives
-            derivatives = self._compute_derivatives(t)
+        while t_current < self.t_duration - 1e-14:
+            dt = self._compute_dt()
 
-            # Generate noise
-            noise = self._compute_noise()
+            # Clamp to hit next output time or end time exactly
+            if t_current + dt >= t_next_save - 1e-14:
+                dt = t_next_save - t_current
+            if t_current + dt > self.t_duration:
+                dt = self.t_duration - t_current
+            if dt < 1e-15:
+                break
 
-            # Compute RHS
-            rhs = self._compute_rhs(derivatives, noise)
+            is_output_step = abs(t_current + dt - t_next_save) < 1e-14
 
-            # Time integration (Adams-Bashforth, Euler for t=1)
-            if t == 1:
-                self.u[:] = self.u + self.dt * rhs
-            else:
-                self.u[:] = self.u + self.dt * (1.5 * rhs - 0.5 * rhsp)
+            # 3-stage RK3
+            Q[:] = 0.0
+            for stage in range(3):
+                derivatives = self._compute_derivatives(False)
+                rhs = self._compute_rhs(derivatives, noise, dt)
+                Q[:] = A[stage] * Q + rhs
+                self.u[:] = self.u + B[stage] * dt * Q
 
-            # Zero Nyquist mode to prevent aliasing
-            self.spectral.derivatives.fft()
-            self.fu[self.mp] = 0
-            self.spectral.derivatives.ifft_nyquist()
+                # Zero Nyquist after each stage
+                self.spectral.derivatives.fft()
+                self.fu[self.mp] = 0
+                self.spectral.derivatives.ifft_nyquist()
 
-            # Store RHS for next step
-            rhsp = rhs
+            t_current += dt
 
-            # Write output at save intervals
-            if t % self.step_save == 0:
-                t_out = t // self.step_save
-                self._save_diagnostics(derivatives, t_out, t_loop)
+            # Refresh noise at fixed intervals
+            if t_current >= t_next_noise - 1e-14:
+                noise = self._compute_noise()
+                t_next_noise += self.max_step
 
-        # Print newline after progress bar
+            # Progress logging
+            self._log_progress(t_current, t_next_print)
+            if t_current >= t_next_print - 1e-14:
+                t_next_print += self.t_print
+
+            # Output at exact save times
+            if is_output_step:
+                save_idx += 1
+                derivatives = self._compute_derivatives(True)
+                t_exact = save_idx * self.t_save
+                self._save_diagnostics(derivatives, save_idx, t_exact)
+                t_next_save += self.t_save
+
         if self.logger.isEnabledFor(logging.INFO):
             print()
 
-    def _log_progress(self, t: int, t_loop: float) -> None:
+    def _log_progress(self, t_current: float, t_next_print: float) -> None:
         """Log simulation progress.
 
         Args:
-            t: Current time step.
-            t_loop: Current simulation time.
+            t_current: Current simulation time.
+            t_next_print: Next scheduled print time.
         """
-        total_time = self.nt * self.dt
         if self.logger.isEnabledFor(logging.DEBUG):
-            self.logger.debug("Running for time %05.2f of %05.2f", t_loop, total_time)
+            self.logger.debug(
+                "Running for time %05.2f of %05.2f", t_current, self.t_duration
+            )
         elif self.logger.isEnabledFor(logging.INFO):
-            if (
-                t != 1
-                and t != self.nt
-                and self.progress_stride > 1
-                and t % self.progress_stride != 0
-            ):
+            if t_current < t_next_print - 1e-14 and t_current < self.t_duration - 1e-14:
                 return
             self.logger.info(
                 "Running for time %05.2f of %05.2f",
-                t_loop,
-                total_time,
+                t_current,
+                self.t_duration,
                 extra={"progress": True},
             )

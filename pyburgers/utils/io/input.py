@@ -44,7 +44,7 @@ class Input:
     validated and organized into the appropriate dataclasses.
 
     Attributes:
-        time: Dataclass with time-related parameters (duration, step).
+        time: Dataclass with time-related parameters (duration, cfl, max_step).
         physics: Dataclass with physics parameters (noise, viscosity).
         grid: Dataclass with grid configuration (length, DNS, LES).
         output: Dataclass with output file configuration.
@@ -83,13 +83,9 @@ class Input:
         # Time configuration
         time_data = namelist_data["time"]
         duration = float(time_data["duration"])
-        step = float(time_data["step"])
-        self.time: TimeConfig = TimeConfig(duration=duration, step=step)
-
-        # Compute number of time steps (derived quantity)
-        self._nt = int(round(duration / step))
-        if self._nt <= 0:
-            raise NamelistError("Computed number of time steps must be positive")
+        cfl = float(time_data["cfl"])
+        max_step = float(time_data["max_step"])
+        self.time: TimeConfig = TimeConfig(duration=duration, cfl=cfl, max_step=max_step)
 
         # Grid configuration (DNS and LES)
         grid_data = namelist_data["grid"]
@@ -115,44 +111,11 @@ class Input:
 
         # Output configuration
         output_data = namelist_data.get("output", {})
-        default_interval = 1000 * step
+        default_interval = 100 * max_step
         self.output: OutputConfig = OutputConfig(
             interval_save=float(output_data.get("interval_save", default_interval)),
             interval_print=float(output_data.get("interval_print", default_interval)),
         )
-
-        # Compute step intervals
-        self._step_save = max(1, int(round(self.output.interval_save / step)))
-        self._interval_save_effective = self._step_save * step
-        if not math.isclose(
-            self._interval_save_effective,
-            self.output.interval_save,
-            rel_tol=0.0,
-            abs_tol=0.5 * step,
-        ):
-            self.logger.warning(
-                "Requested interval_save=%g not aligned with step=%g; using %g (steps=%d)",
-                self.output.interval_save,
-                step,
-                self._interval_save_effective,
-                self._step_save,
-            )
-
-        self._step_print = max(1, int(round(self.output.interval_print / step)))
-        self._interval_print_effective = self._step_print * step
-        if not math.isclose(
-            self._interval_print_effective,
-            self.output.interval_print,
-            rel_tol=0.0,
-            abs_tol=0.5 * step,
-        ):
-            self.logger.warning(
-                "Requested interval_print=%g not aligned with step=%g; using %g (steps=%d)",
-                self.output.interval_print,
-                step,
-                self._interval_print_effective,
-                self._step_print,
-            )
 
         # FFTW configuration
         fftw_data = namelist_data.get("fftw", {})
@@ -164,7 +127,7 @@ class Input:
         self._log_configuration()
         self.logger.info("--- namelist loaded successfully")
 
-    # --- Convenience accessors (maintain backward compatibility) ---
+    # --- Convenience accessors ---
 
     @property
     def log_level(self) -> str:
@@ -182,14 +145,14 @@ class Input:
         return self.fftw.threads
 
     @property
-    def dt(self) -> float:
-        """Convenience accessor for time step."""
-        return self.time.step
+    def cfl_target(self) -> float:
+        """Target CFL number for adaptive time stepping."""
+        return self.time.cfl
 
     @property
-    def nt(self) -> int:
-        """Number of time steps (derived from duration / step)."""
-        return self._nt
+    def max_step(self) -> float:
+        """Maximum allowed time step."""
+        return self.time.max_step
 
     @property
     def domain_length(self) -> float:
@@ -202,19 +165,9 @@ class Input:
         return self.physics.viscosity
 
     @property
-    def step_save(self) -> int:
-        """Save interval in time steps."""
-        return self._step_save
-
-    @property
     def t_save(self) -> float:
         """Save interval in seconds."""
         return self.output.interval_save
-
-    @property
-    def step_print(self) -> int:
-        """Print interval in time steps."""
-        return self._step_print
 
     @property
     def t_print(self) -> float:
@@ -262,10 +215,15 @@ class Input:
         time_data = data["time"]
         if "duration" not in time_data:
             raise NamelistError("Missing 'duration' in time section")
-        if "step" not in time_data:
-            raise NamelistError("Missing 'step' in time section")
-        if float(time_data["step"]) <= 0:
-            raise NamelistError("time 'step' must be positive")
+        if "cfl" not in time_data:
+            raise NamelistError("Missing 'cfl' in time section")
+        if "max_step" not in time_data:
+            raise NamelistError("Missing 'max_step' in time section")
+        cfl_val = float(time_data["cfl"])
+        if cfl_val <= 0 or cfl_val >= 0.55:
+            raise NamelistError("time 'cfl' must be in (0, 0.55)")
+        if float(time_data["max_step"]) <= 0:
+            raise NamelistError("time 'max_step' must be positive")
         if float(time_data["duration"]) <= 0:
             raise NamelistError("time 'duration' must be positive")
 
@@ -325,10 +283,10 @@ class Input:
     def _log_configuration(self) -> None:
         """Log the loaded configuration for debugging."""
         self.logger.debug(
-            "Time: duration=%g, step=%g, nt=%d",
+            "Time: duration=%g, cfl=%g, max_step=%g",
             self.time.duration,
-            self.time.step,
-            self._nt,
+            self.time.cfl,
+            self.time.max_step,
         )
         self.logger.debug(
             "Physics: viscosity=%g, noise(exponent=%g, amplitude=%g)",
@@ -344,11 +302,9 @@ class Input:
         )
         self.logger.debug("Subgrid model: %d", self.physics.subgrid_model)
         self.logger.debug(
-            "Output: interval_save=%g (steps=%d), interval_print=%g (steps=%d)",
+            "Output: interval_save=%g, interval_print=%g",
             self.output.interval_save,
-            self._step_save,
             self.output.interval_print,
-            self._step_print,
         )
         self.logger.debug(
             "Logging: level=%s, file=%s",
@@ -365,8 +321,8 @@ class Input:
         """
         return {
             "nx": self.grid.dns.points,
-            "dt": self.time.step,
-            "nt": self._nt,
+            "cfl": self.time.cfl,
+            "max_step": self.time.max_step,
             "viscosity": self.physics.viscosity,
             "noise_alpha": self.physics.noise.exponent,
             "noise_amplitude": self.physics.noise.amplitude,
@@ -383,8 +339,8 @@ class Input:
         return {
             "nx": self.grid.les.points,
             "sgs_model": self.physics.subgrid_model,
-            "dt": self.time.step,
-            "nt": self._nt,
+            "cfl": self.time.cfl,
+            "max_step": self.time.max_step,
             "viscosity": self.physics.viscosity,
             "noise_alpha": self.physics.noise.exponent,
             "noise_amplitude": self.physics.noise.amplitude,

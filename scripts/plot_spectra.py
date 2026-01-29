@@ -62,28 +62,34 @@ def _read_velocity(
     return x, u, t
 
 
-def _compute_psd(u: np.ndarray, dx: float) -> tuple[np.ndarray, np.ndarray]:
-    """Compute time-averaged one-sided autospectral density.
+def _compute_psd(u: np.ndarray, dx: float) -> tuple[np.ndarray, np.ndarray, float]:
+    """Compute time-averaged one-sided spectral density.
+
+    Computes a proper spectral density E(k) such that ∫E(k)dk = variance.
 
     Args:
         u: Velocity field with shape (nt, nx).
         dx: Grid spacing.
 
     Returns:
-        Tuple of (wavenumbers, PSD) arrays.
+        Tuple of (wavenumbers, spectral_density, dk) arrays.
     """
     nt, nx = u.shape
     nk = nx // 2 + 1
 
+    # Domain length and wavenumber spacing
+    L = nx * dx
+    dk = 2 * np.pi / L
+
     # Compute wavenumber array (non-negative frequencies from rfft)
     k = np.fft.rfftfreq(nx, d=dx) * 2 * np.pi
 
-    # Compute one-sided autospectral density for each time step
+    # Compute one-sided spectral density for each time step
     psd_time = np.zeros((nt, nk))
     for t in range(nt):
         u_t = u[t, :] - np.mean(u[t, :])
         fu = np.fft.rfft(u_t)
-        # Autospectral density: |F(k)|^2 / N^2 (one-sided correction below)
+        # Discrete power spectrum: |F(k)|^2 / N^2
         psd = np.abs(fu) ** 2 / (nx**2)
         # One-sided correction: double positive frequencies (exclude DC and Nyquist)
         if nx % 2 == 0:
@@ -95,8 +101,12 @@ def _compute_psd(u: np.ndarray, dx: float) -> tuple[np.ndarray, np.ndarray]:
     # Time average
     psd = np.mean(psd_time, axis=0)
 
+    # Convert to spectral density: E(k) = discrete_spectrum / dk
+    # This ensures ∫E(k)dk = sum(E(k)) * dk = variance
+    E_k = psd / dk
+
     # Exclude zero wavenumber
-    return k[1:], psd[1:]
+    return k[1:-1], E_k[1:-1], dk
 
 
 def main() -> int:
@@ -160,8 +170,8 @@ def main() -> int:
             f"({len(t)} time steps)"
         )
 
-        # Compute PSD
-        k, psd = _compute_psd(u, dx)
+        # Compute spectral density
+        k, psd, dk = _compute_psd(u, dx)
 
         # Plot PSD
         ax.loglog(k, psd, label=file_path.stem, linewidth=1.5)
@@ -209,12 +219,13 @@ def main() -> int:
             u_fluct = u - np.mean(u, axis=1, keepdims=True)
             var_time = np.mean(u_fluct**2, axis=1)
             variance = np.mean(var_time)
-            psd_sum = np.sum(psd)
+            # Integrate spectral density: ∫E(k)dk ≈ sum(E(k)) * dk
+            psd_integral = np.sum(psd) * dk
             with np.errstate(divide="ignore", invalid="ignore"):
-                ratio = psd_sum / variance if variance > 0 else np.nan
+                ratio = psd_integral / variance if variance > 0 else np.nan
             print(
                 f"{file_path.name}: variance={variance:.6e}, "
-                f"sum(PSD)={psd_sum:.6e}, ratio={ratio:.6f}"
+                f"∫E(k)dk={psd_integral:.6e}, ratio={ratio:.6f}"
             )
 
     if psd_min is not None and psd_max is not None:

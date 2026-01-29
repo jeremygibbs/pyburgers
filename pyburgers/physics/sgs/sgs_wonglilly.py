@@ -42,7 +42,7 @@ class WongLilly(SGS):
         self.logger.info("--- Using the Wong-Lilly model")
 
     def compute(
-        self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float
+        self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float, dt: float
     ) -> dict[str, Any]:
         """Compute the Wong-Lilly SGS stress.
 

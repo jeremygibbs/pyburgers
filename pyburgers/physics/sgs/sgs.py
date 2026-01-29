@@ -36,7 +36,6 @@ class SGS:
     Attributes:
         input: Input configuration object.
         spectral: SpectralWorkspace with shared spectral utilities.
-        dt: Time step size.
         nx: Number of LES grid points.
         dx: Grid spacing.
         result: Dictionary containing SGS stress (tau) and coefficient.
@@ -92,7 +91,6 @@ class SGS:
         """
         self.input = input_obj
         self.spectral = spectral
-        self.dt = input_obj.dt
         self.nx = input_obj.grid.les.points
         self.dx = input_obj.domain_length / self.nx
         self.fftw_planning = input_obj.fftw_planning
@@ -102,7 +100,7 @@ class SGS:
         self.result: dict[str, Any] = {"tau": np.zeros(self.nx), "coeff": 0}
 
     def compute(
-        self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float
+        self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float, dt: float
     ) -> dict[str, Any]:
         """Compute the SGS stress tensor.
 
@@ -110,6 +108,7 @@ class SGS:
             u: Velocity field array.
             dudx: Velocity gradient (du/dx) array.
             tke_sgs: Subgrid TKE (used by Deardorff model).
+            dt: Current time step size.
 
         Returns:
             Dictionary containing:

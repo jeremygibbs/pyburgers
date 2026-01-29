@@ -32,8 +32,7 @@ class DNS(Burgers):
     """Direct numerical simulation solver for the Burgers equation.
 
     Solves the 1D stochastic Burgers equation at full resolution using
-    Fourier collocation for spatial derivatives and Adams-Bashforth
-    time integration.
+    Fourier collocation for spatial derivatives and RK3 time integration.
 
     This class inherits common functionality from Burgers and implements
     DNS-specific behavior for noise generation and diagnostics. Uses a
@@ -85,8 +84,8 @@ class DNS(Burgers):
         FBM noise is initialized as part of the workspace.
         """
         self.logger.info("DNS configuration:")
-        self.logger.info("--- Grid length: %f", self.domain_length)
-        self.logger.info("--- Grid points: %d", self.nx)
+        self.logger.info("--- grid length: %f", self.domain_length)
+        self.logger.info("--- grid points: %d", self.nx)
 
     def _setup_output_fields(self) -> dict[str, Any]:
         """Configure DNS output fields.
@@ -100,13 +99,13 @@ class DNS(Burgers):
             "tke": self.tke,
         }
 
-    def _compute_derivatives(self, t: int) -> dict[str, np.ndarray]:
+    def _compute_derivatives(self, is_output_step: bool) -> dict[str, np.ndarray]:
         """Compute spatial derivatives for DNS.
 
         DNS needs 2nd derivative for diffusion and du²/dx for advection.
 
         Args:
-            t: Current time step index (unused in DNS).
+            is_output_step: Whether this is an output save step (unused in DNS).
 
         Returns:
             Dictionary with '2' and 'sq' derivatives.
@@ -121,14 +120,21 @@ class DNS(Burgers):
         """
         return self.spectral.noise.compute_noise()
 
-    def _compute_rhs(self, derivatives: dict[str, np.ndarray], noise: np.ndarray) -> np.ndarray:
+    def _compute_rhs(
+        self, derivatives: dict[str, np.ndarray], noise: np.ndarray, dt: float
+    ) -> np.ndarray:
         """Compute the DNS right-hand side.
 
-        RHS = ν∂²u/∂x² - ½∂u²/∂x + √(2ε/dt) * noise
+        RHS = ν∂²u/∂x² - ½∂u²/∂x + √(2ε/Δt_noise) * noise
+
+        Noise is sampled at fixed max_step intervals and scaled by
+        max_step so that the total forcing per interval is independent
+        of the adaptive integration dt.
 
         Args:
             derivatives: Dictionary with '2' and 'sq' derivatives.
             noise: FBM noise array.
+            dt: Current time step size.
 
         Returns:
             RHS array for time integration.
@@ -136,7 +142,11 @@ class DNS(Burgers):
         d2udx2 = derivatives["2"]
         du2dx = derivatives["sq"]
 
-        return self.visc * d2udx2 - 0.5 * du2dx + np.sqrt(2 * self.noise_amp / self.dt) * noise
+        return (
+            self.visc * d2udx2
+            - 0.5 * du2dx
+            + np.sqrt(2 * self.noise_amp / self.max_step) * noise
+        )
 
     def _save_diagnostics(
         self, derivatives: dict[str, np.ndarray], t_out: int, t_loop: float

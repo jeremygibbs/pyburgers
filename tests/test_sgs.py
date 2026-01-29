@@ -16,7 +16,6 @@ class MockInput:
         self,
         nx_les: int = 64,
         visc: float = 0.01,
-        dt: float = 0.001,
         domain_length: float = 2 * np.pi,
         fftw_planning: str = "FFTW_ESTIMATE",
         fftw_threads: int = 1,
@@ -32,7 +31,6 @@ class MockInput:
 
         self.grid = Grid(nx_les)
         self.domain_length = domain_length
-        self.dt = dt
         self.fftw_planning = fftw_planning
         self.fftw_threads = fftw_threads
 
@@ -96,7 +94,7 @@ class TestSGSModels:
         input_obj = MockInput()
         model = SGS.get_model(model_id, input_obj, spectral_workspace)
 
-        result = model.compute(u, dudx, 0)
+        result = model.compute(u, dudx, 0, dt=0.001)
 
         # Check required keys exist
         assert "tau" in result
@@ -124,7 +122,7 @@ class TestSGSModels:
 
         # Deardorff needs tke_sgs input
         tke_sgs = np.ones_like(u)
-        result = model.compute(u, dudx, tke_sgs)
+        result = model.compute(u, dudx, tke_sgs, dt=0.001)
 
         assert "tke_sgs" in result
         assert result["tke_sgs"].shape == u.shape
@@ -138,7 +136,7 @@ class TestSGSModels:
         model = SGS.get_model(4, input_obj, spectral_workspace)
 
         tke_sgs = np.ones_like(u) * 0.1
-        result = model.compute(u, dudx, tke_sgs)
+        result = model.compute(u, dudx, tke_sgs, dt=0.001)
 
         # TKE should be clipped to positive values
         assert np.all(result["tke_sgs"] >= 0)
@@ -151,7 +149,7 @@ class TestSGSModels:
         input_obj = MockInput()
         model = SGS.get_model(1, input_obj, spectral_workspace)
 
-        result = model.compute(u, dudx, 0)
+        result = model.compute(u, dudx, 0, dt=0.001)
 
         # Constant Smagorinsky coefficient should be exactly 0.16
         np.testing.assert_allclose(result["coeff"], 0.16, rtol=1e-10)
@@ -170,7 +168,7 @@ class TestSGSModels:
         for k in [1, 2, 4, 8]:
             u = np.sin(k * x)
             dudx = k * np.cos(k * x)
-            result = model.compute(u, dudx, 0)
+            result = model.compute(u, dudx, 0, dt=0.001)
 
             # Dynamic coefficient should be non-negative and physically reasonable
             # Cs^2 typically < 0.1, but allow up to 0.5 for safety
@@ -189,7 +187,7 @@ class TestSGSModels:
         for k in [1, 2, 4]:
             u = np.sin(k * x)
             dudx = k * np.cos(k * x)
-            result = model.compute(u, dudx, 0)
+            result = model.compute(u, dudx, 0, dt=0.001)
 
             # Wong-Lilly coefficient should be in [0, 1] range
             assert result["coeff"] >= 0
@@ -205,7 +203,7 @@ class TestSGSModels:
 
         # Start with reasonable TKE value
         tke_sgs = np.ones_like(u) * 0.5
-        result = model.compute(u, dudx, tke_sgs)
+        result = model.compute(u, dudx, tke_sgs, dt=0.001)
 
         # TKE should remain in physical bounds
         assert np.all(result["tke_sgs"] >= 0)
@@ -235,7 +233,7 @@ class TestSGSPhysics:
         input_obj = MockInput(nx_les=nx)
         model = SGS.get_model(1, input_obj, spectral_workspace)
 
-        result = model.compute(u, dudx, 0)
+        result = model.compute(u, dudx, 0, dt=0.001)
         tau = result["tau"]
 
         # SGS dissipation: -tau * dudx
@@ -261,7 +259,7 @@ class TestSGSPhysics:
         for k in [1, 2, 4]:
             u = np.sin(k * x)
             dudx = k * np.cos(k * x)
-            result = model.compute(u, dudx, 0)
+            result = model.compute(u, dudx, 0, dt=0.001)
             coeffs.append(result["coeff"])
 
         # Coefficients should be in physical range (can be zero for smooth fields)
@@ -282,7 +280,7 @@ class TestSGSPhysics:
         # Test Smagorinsky models (1, 2, 3)
         for model_id in [1, 2, 3]:
             model = SGS.get_model(model_id, input_obj, spectral_workspace)
-            result = model.compute(u, dudx, 0)
+            result = model.compute(u, dudx, 0, dt=0.001)
 
             # Constant field → zero gradient → zero SGS stress
             assert np.max(np.abs(result["tau"])) < 1e-10

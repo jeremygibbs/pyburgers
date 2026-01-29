@@ -33,7 +33,7 @@ class LES(Burgers):
     """Large-eddy simulation solver for the Burgers equation.
 
     Solves the filtered 1D stochastic Burgers equation using Fourier
-    collocation for spatial derivatives, Adams-Bashforth time integration,
+    collocation for spatial derivatives, RK3 time integration,
     and subgrid-scale models for unresolved turbulence.
 
     This class inherits common functionality from Burgers and implements
@@ -99,10 +99,10 @@ class LES(Burgers):
         # Calculate and log filter width
         filter_width = self.nx_dns // self.nx
         self.logger.info("LES configuration:")
-        self.logger.info("--- Grid Length: %f m", self.domain_length)
-        self.logger.info("--- Grid Points: %d", self.nx)
-        self.logger.info("--- Filter width: %dΔx (ratio to DNS: %d)", filter_width, filter_width)
-        self.logger.info("--- Testing against DNS with %d points", self.nx_dns)
+        self.logger.info("--- grid length: %f m", self.domain_length)
+        self.logger.info("--- grid points: %d", self.nx)
+        self.logger.info("--- filter width: %dΔx (ratio to DNS: %d)", filter_width, filter_width)
+        self.logger.info("--- testing against DNS with %d points", self.nx_dns)
 
         # SGS model (pass spectral workspace for shared utilities)
         self.subgrid = get_sgs_model(self.sgs_model_id, self.input, self.spectral)
@@ -168,19 +168,19 @@ class LES(Burgers):
 
         return fields
 
-    def _compute_derivatives(self, t: int) -> dict[str, np.ndarray]:
+    def _compute_derivatives(self, is_output_step: bool) -> dict[str, np.ndarray]:
         """Compute spatial derivatives for LES.
 
         LES needs 1st, 2nd derivatives and du²/dx. At output times,
         also computes 3rd derivative for enstrophy budget.
 
         Args:
-            t: Current time step index.
+            is_output_step: Whether this is an output save step.
 
         Returns:
             Dictionary with '1', '2', 'sq' (and '3' at output times).
         """
-        if t % self.step_save == 0:
+        if is_output_step:
             return self.spectral.derivatives.compute(self.u, [1, 2, 3, "sq"])
         return self.spectral.derivatives.compute(self.u, [1, 2, "sq"])
 
@@ -193,14 +193,21 @@ class LES(Burgers):
         noise = self.spectral.noise.compute_noise()
         return self.spectral.filter.downscale(noise, self.nx_dns // self.nx)
 
-    def _compute_rhs(self, derivatives: dict[str, np.ndarray], noise: np.ndarray) -> np.ndarray:
+    def _compute_rhs(
+        self, derivatives: dict[str, np.ndarray], noise: np.ndarray, dt: float
+    ) -> np.ndarray:
         """Compute the LES right-hand side including SGS term.
 
-        RHS = ν∂²u/∂x² - ½∂u²/∂x + √(2ε/dt) * noise - ½∂τ/∂x
+        RHS = ν∂²u/∂x² - ½∂u²/∂x + √(2ε/Δt_noise) * noise - ½∂τ/∂x
+
+        Noise is sampled at fixed max_step intervals and scaled by
+        max_step so that the total forcing per interval is independent
+        of the adaptive integration dt.
 
         Args:
             derivatives: Dictionary with derivatives.
             noise: Filtered FBM noise array.
+            dt: Current time step size.
 
         Returns:
             RHS array for time integration.
@@ -210,7 +217,7 @@ class LES(Burgers):
         du2dx = derivatives["sq"]
 
         # Compute SGS stress
-        sgs = self.subgrid.compute(self.u, dudx, self.tke_sgs)
+        sgs = self.subgrid.compute(self.u, dudx, self.tke_sgs, dt)
         tau = sgs["tau"]
         self._last_tau = tau
         self._last_coeff = sgs["coeff"]
@@ -237,7 +244,7 @@ class LES(Burgers):
         return (
             self.visc * d2udx2
             - 0.5 * du2dx
-            + np.sqrt(2 * self.noise_amp / self.dt) * noise
+            + np.sqrt(2 * self.noise_amp / self.max_step) * noise
             - 0.5 * dtaudx
         )
 

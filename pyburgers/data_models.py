@@ -132,8 +132,10 @@ class TimeConfig:
 
     Attributes:
         duration: Total simulation time [s].
-        step: Time step size [s].
+        cfl: Target CFL number for adaptive time stepping.
+        max_step: Maximum allowed time step [s].
     """
 
     duration: float
-    step: float
+    cfl: float
+    max_step: float

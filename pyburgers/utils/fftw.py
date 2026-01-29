@@ -233,6 +233,7 @@ def warmup_fftw_plans(
     noise_alpha: float,
     fftw_planning: str,
     fftw_threads: int,
+    domain_length: float = 2 * 3.141592653589793,
 ) -> tuple[bool, str]:
     """Generate FFTW plans for common PyBurgers sizes.
 
@@ -249,13 +250,12 @@ def warmup_fftw_plans(
         noise_alpha: FBM noise exponent.
         fftw_planning: FFTW planning strategy.
         fftw_threads: Number of FFTW threads.
+        domain_length: Length of the periodic domain (default: 2π).
 
     Returns:
         Tuple of (success: bool, message: str) indicating whether warmup
         completed successfully and any relevant diagnostic information.
     """
-    import numpy as np
-
     from .spectral_workspace import SpectralWorkspace
 
     try:
@@ -264,7 +264,7 @@ def warmup_fftw_plans(
             try:
                 SpectralWorkspace(
                     nx=nx_dns,
-                    dx=2 * np.pi / nx_dns,
+                    dx=domain_length / nx_dns,
                     noise_alpha=noise_alpha,
                     noise_nx=nx_dns,
                     fftw_planning=fftw_planning,
@@ -278,7 +278,7 @@ def warmup_fftw_plans(
             try:
                 SpectralWorkspace(
                     nx=nx_les,
-                    dx=2 * np.pi / nx_les,
+                    dx=domain_length / nx_les,
                     nx2=nx_dns,
                     noise_alpha=noise_alpha,
                     noise_nx=nx_dns,

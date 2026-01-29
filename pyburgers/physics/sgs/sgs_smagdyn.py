@@ -42,7 +42,7 @@ class SmagDynamic(SGS):
         self.logger.info("--- Using the Dynamic Smagorinsky model")
 
     def compute(
-        self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float
+        self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float, dt: float
     ) -> dict[str, Any]:
         """Compute the dynamic Smagorinsky SGS stress.
 

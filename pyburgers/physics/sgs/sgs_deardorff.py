@@ -41,7 +41,7 @@ class Deardorff(SGS):
         self.logger.info("--- Using the Deardorff TKE model")
 
     def compute(
-        self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float
+        self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float, dt: float
     ) -> dict[str, Any]:
         """Compute the Deardorff SGS stress and update subgrid TKE.
 
@@ -89,7 +89,7 @@ class Deardorff(SGS):
         prod = 2 * Vt * dudx2
         diff = dzzdx
         diss = -ce * (tke_sgs**1.5) / self.dx
-        dtke = ((-1 * dkudx) + prod + diff + diss) * self.dt
+        dtke = ((-1 * dkudx) + prod + diff + diss) * dt
 
         # Update subgrid TKE
         tke_sgs_new = np.maximum(tke_sgs + dtke, 0.0)

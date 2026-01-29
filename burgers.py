@@ -70,13 +70,13 @@ def main() -> None:
 
     output_obj: Output | None = None
     # Welcome message
-    print("##############################################################")
-    print("#                                                            #")
-    print("#                   Welcome to PyBurgers                     #")
-    print("#     A toy to study Burgers turbulence with DNS and LES     #")
-    print("#                      by: Jeremy Gibbs                      #")
-    print("#                                                            #")
-    print("##############################################################")
+    print("#"*100)
+    print("#"+(" "*98)+"#")
+    print("#"+(" "*32)+"Welcome to PyBurgers (version 2.0)"+(" "*32)+"#")
+    print("#"+(" "*24)+"A toy to study Burgers turbulence with DNS and LES"+(" "*24)+"#")
+    print("#"+(" "*40)+"by: Jeremy A Gibbs"+(" "*40)+"#")
+    print("#"+(" "*98)+"#")
+    print("#"*100)
 
     try:
         # Create Input instance from namelist (configures logging)
@@ -125,6 +125,7 @@ def main() -> None:
                 input_obj.physics.noise.exponent,
                 input_obj.fftw_planning,
                 input_obj.fftw_threads,
+                input_obj.domain_length,
             )
 
             if warmup_success:
@@ -159,7 +160,7 @@ def main() -> None:
             raise InvalidMode(f'Invalid mode "{mode}". Must be "dns" or "les".')
 
         # Initialization complete - now start timing the actual simulation
-        logger.info("Initialization complete. Starting simulation ...")
+        logger.info("Initialization complete. Starting simulation...")
         t1: float = time.time()
 
         # Run the simulation
@@ -188,7 +189,7 @@ def main() -> None:
         # Ensure the output file is properly closed, even if an error occurred
         if output_obj is not None:
             output_obj.close()
-    print("##############################################################")
+    print("#"*100)
 
 
 if __name__ == "__main__":
