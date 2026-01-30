@@ -1,3 +1,14 @@
+#!/usr/bin/env python
+#
+# PyBurgers
+#
+# Copyright (c) 2017–2026 Jeremy A. Gibbs
+#
+# This file is part of PyBurgers.
+#
+# This software is free and is distributed under the WTFPL license.
+# See accompanying LICENSE file or visit https://www.wtfpl.net.
+#
 """pyBurgers SGS Physics Subpackage.
 
 This module serves as the entry point for the subgrid-scale (SGS) model

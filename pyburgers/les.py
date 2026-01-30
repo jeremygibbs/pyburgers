@@ -107,15 +107,6 @@ class LES(Burgers):
         # SGS model (pass spectral workspace for shared utilities)
         self.subgrid = get_sgs_model(self.sgs_model_id, self.input, self.spectral)
 
-        # Log SGS model info
-        sgs_names = {
-            0: "None (inviscid)",
-            1: "Constant-coefficient Smagorinsky",
-            2: "Dynamic Smagorinsky",
-            3: "Dynamic Wong-Lilly",
-            4: "Deardorff 1.5-order TKE",
-        }
-
         # Initialize subgrid TKE for Deardorff model
         if self.sgs_model_id == 4:
             self.tke_sgs: np.ndarray | float = np.ones(self.nx)

@@ -70,9 +70,17 @@ Full documentation is available at: **https://docs.gibbs.science/pyburgers**
 
 ## Performance
 
-Typical performance on a 2019 iMac:
-- DNS (8192 grid points): ~70 minutes
-- LES (512 grid points): ~62 minutes
+PyBurgers v2.0 delivers dramatic performance improvements through real FFTs, optimized FFTW planning, and efficient buffer management.
+
+**Benchmark: Default namelist (8192 DNS / 512 LES grid points, 200s duration)**
+
+| Version | DNS | LES |
+|---------|-----|-----|
+| Original Matlab | ~35 min | ~16 min |
+| PyBurgers v1.0 | ~43 min | ~23 min |
+| **PyBurgers v2.0** | **~40 sec** | **~7 sec** |
+
+*Tested on a late 2023 MacBook Pro (M3 Max). Performance varies by system; results illustrate relative gains.*
 
 ## Requirements
 
