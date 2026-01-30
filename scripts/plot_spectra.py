@@ -38,16 +38,20 @@ def _read_velocity(
         KeyError: If required variables are missing.
     """
     with nc.Dataset(path, "r") as ds:
+        tkey = 'time'
         if "u" not in ds.variables:
             raise KeyError(f"Missing 'u' in {path}")
         if "x" not in ds.variables:
             raise KeyError(f"Missing 'x' in {path}")
         if "time" not in ds.variables:
-            raise KeyError(f"Missing 'time' in {path}")
+            if "t" not in ds.variables:
+                raise KeyError(f"Missing 't' or 'time' in {path}")
+            else:
+                tkey = 't'
 
         u = np.asarray(ds.variables["u"][:])
         x = np.asarray(ds.variables["x"][:])
-        t = np.asarray(ds.variables["time"][:])
+        t = np.asarray(ds.variables[tkey][:])
 
     # Filter time window if specified
     if t_start is not None or t_end is not None:

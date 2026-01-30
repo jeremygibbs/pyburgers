@@ -172,17 +172,21 @@ class LES(Burgers):
         """Compute spatial derivatives for LES.
 
         LES needs 1st, 2nd derivatives and du²/dx. At output times,
-        also computes 3rd derivative for enstrophy budget.
+        also computes 3rd derivative for enstrophy budget. If hyperviscosity
+        is enabled, also computes 4th derivative.
 
         Args:
             is_output_step: Whether this is an output save step.
 
         Returns:
-            Dictionary with '1', '2', 'sq' (and '3' at output times).
+            Dictionary with '1', '2', 'sq' (and '3' at output times, '4' if hypervisc).
         """
+        orders: list[int | str] = [1, 2, "sq"]
         if is_output_step:
-            return self.spectral.derivatives.compute(self.u, [1, 2, 3, "sq"])
-        return self.spectral.derivatives.compute(self.u, [1, 2, "sq"])
+            orders.append(3)
+        if self.hypervisc > 0:
+            orders.append(4)
+        return self.spectral.derivatives.compute(self.u, orders)
 
     def _compute_noise(self) -> np.ndarray:
         """Generate and filter FBM noise from DNS to LES scales.
@@ -198,7 +202,7 @@ class LES(Burgers):
     ) -> np.ndarray:
         """Compute the LES right-hand side including SGS term.
 
-        RHS = ν∂²u/∂x² - ½∂u²/∂x + √(2ε/Δt_noise) * noise - ½∂τ/∂x
+        RHS = ν∂²u/∂x² - ν₄∂⁴u/∂x⁴ - ½∂u²/∂x + √(2ε/Δt_noise) * noise - ½∂τ/∂x
 
         Noise is sampled at fixed max_step intervals and scaled by
         max_step so that the total forcing per interval is independent
@@ -241,12 +245,19 @@ class LES(Burgers):
         # Restore u
         self.u[:] = u_saved
 
-        return (
+        rhs = (
             self.visc * d2udx2
             - 0.5 * du2dx
             + np.sqrt(2 * self.noise_amp / self.max_step) * noise
             - 0.5 * dtaudx
         )
+
+        # Add hyperviscosity term if enabled
+        if self.hypervisc > 0:
+            d4udx4 = derivatives["4"]
+            rhs -= self.hypervisc * d4udx4
+
+        return rhs
 
     def _save_diagnostics(
         self, derivatives: dict[str, np.ndarray], t_out: int, t_loop: float

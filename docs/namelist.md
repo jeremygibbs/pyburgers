@@ -43,6 +43,9 @@ Here's a typical configuration for running both DNS and LES:
         "noise": {
             "exponent": -0.75,
             "amplitude": 1e-6
+        },
+        "hyperviscosity": {
+            "enabled": true
         }
     },
     "output": {
@@ -202,6 +205,34 @@ Configures the stochastic forcing term (fractional Brownian motion).
     Controls the energy injection rate. Adjust based on viscosity and desired turbulence intensity.
 
     **Example:** `1e-6`
+
+### Subsection: physics.hyperviscosity
+
+Configures optional hyperviscosity for damping high-wavenumber energy pile-up.
+
+`enabled`
+:   **Type:** Boolean (optional)
+    **Default:** `false`
+
+    Whether to enable hyperviscosity.
+
+    When enabled, adds a $-\nu_4 \partial^4 u / \partial x^4$ term that provides $k^4$ dissipation at high wavenumbers. This prevents spectral pile-up (energy accumulation near the Nyquist frequency) that can occur in spectral methods.
+
+    The coefficient $\nu_4$ is **automatically computed** as $\Delta x^4$, which:
+
+    - Scales correctly with grid resolution
+    - Has negligible impact on the timestep
+    - Provides appropriate damping strength
+
+    The computed coefficient is logged at startup.
+
+    **Example:** `true`
+
+    ```json
+    "hyperviscosity": {
+        "enabled": true
+    }
+    ```
 
 ---
 

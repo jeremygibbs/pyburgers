@@ -68,8 +68,10 @@ class Derivatives:
         # Precompute powers for efficiency
         self.fac2 = self.fac**2
         self.fac3 = self.fac**3
+        self.fac4 = self.fac**4
         self.k2 = self.k * self.k
         self.k3 = self.k**3
+        self.k4 = self.k**4
 
         # pyfftw arrays for real FFT
         # Physical space: float64, Frequency space: complex128
@@ -82,6 +84,7 @@ class Derivatives:
         self._out_1 = pyfftw.empty_aligned(nx, np.float64)
         self._out_2 = pyfftw.empty_aligned(nx, np.float64)
         self._out_3 = pyfftw.empty_aligned(nx, np.float64)
+        self._out_4 = pyfftw.empty_aligned(nx, np.float64)
         self._out_sq = pyfftw.empty_aligned(nx, np.float64)
 
         # padded pyfftw arrays for 2x dealiasing
@@ -148,6 +151,10 @@ class Derivatives:
         # compute rfft
         self.fft()
 
+        # Only save fu if both "sq" and 4 are requested (sq overwrites fu)
+        needs_fu_copy = "sq" in order and 4 in order
+        fu_original = self.fu.copy() if needs_fu_copy else self.fu
+
         # loop through order of derivative from user
         for key in order:
             if key == 1:
@@ -165,6 +172,12 @@ class Derivatives:
                 self.ifft()
                 np.multiply(self.fac3, self.der, out=self._out_3)
                 derivatives["3"] = self._out_3
+            if key == 4:
+                # Use fu_original since "sq" overwrites self.fu
+                self.fun[:] = self.k4 * fu_original
+                self.ifft()
+                np.multiply(self.fac4, self.der, out=self._out_4)
+                derivatives["4"] = self._out_4
             if key == "sq":
                 # Dealiased computation of d(u^2)/dx using 2x zero-padding
                 # With rfft, only non-negative frequencies are stored

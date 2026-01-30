@@ -105,6 +105,20 @@ class Burgers(ABC):
         # Precompute viscous stability limit (constant for the run)
         self._dt_visc = 0.2 * self.dx**2 / self.visc
 
+        # Hyperviscosity: auto-compute coefficient as dx⁴ when enabled
+        # This scaling ensures consistent damping across resolutions
+        # and negligible impact on the timestep
+        if input_obj.hyperviscosity_enabled:
+            self.hypervisc = self.dx**4
+            self._dt_hypervisc = 0.1 * self.dx**4 / self.hypervisc
+            self.logger.info(
+                "Hyperviscosity enabled: coefficient = %.2e",
+                self.hypervisc,
+            )
+        else:
+            self.hypervisc = 0.0
+            self._dt_hypervisc = float("inf")
+
         # Create spectral workspace (bundles Derivatives, Dealias, Filter)
         self.spectral = self._create_spectral_workspace()
 
@@ -229,14 +243,14 @@ class Burgers(ABC):
         """Compute the adaptive time step from CFL and viscous constraints.
 
         Returns:
-            Time step size satisfying CFL, viscous, and max_step limits.
+            Time step size satisfying CFL, viscous, hyperviscous, and max_step limits.
         """
         u_max = np.max(np.abs(self.u))
         if u_max > 0:
             dt_adv = self.cfl_target * self.dx / u_max
         else:
             dt_adv = self.max_step
-        return min(dt_adv, self._dt_visc, self.max_step)
+        return min(dt_adv, self._dt_visc, self._dt_hypervisc, self.max_step)
 
     def run(self) -> None:
         """Execute the time integration loop.

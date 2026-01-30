@@ -15,10 +15,13 @@
     },
     "physics": {
         "viscosity": 1e-05,
-        "subgrid_model": 1,
+        "subgrid_model": 4,
         "noise": {
             "exponent": -0.75,
             "amplitude": 1e-06
+        },
+        "hyperviscosity": {
+            "enabled": true
         }
     },
     "output": {

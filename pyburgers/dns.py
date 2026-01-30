@@ -103,14 +103,18 @@ class DNS(Burgers):
         """Compute spatial derivatives for DNS.
 
         DNS needs 2nd derivative for diffusion and du²/dx for advection.
+        If hyperviscosity is enabled, also computes 4th derivative.
 
         Args:
             is_output_step: Whether this is an output save step (unused in DNS).
 
         Returns:
-            Dictionary with '2' and 'sq' derivatives.
+            Dictionary with '2', 'sq', and optionally '4' derivatives.
         """
-        return self.spectral.derivatives.compute(self.u, [2, "sq"])
+        orders: list[int | str] = [2, "sq"]
+        if self.hypervisc > 0:
+            orders.append(4)
+        return self.spectral.derivatives.compute(self.u, orders)
 
     def _compute_noise(self) -> np.ndarray:
         """Generate FBM noise at full resolution.
@@ -125,14 +129,14 @@ class DNS(Burgers):
     ) -> np.ndarray:
         """Compute the DNS right-hand side.
 
-        RHS = ν∂²u/∂x² - ½∂u²/∂x + √(2ε/Δt_noise) * noise
+        RHS = ν∂²u/∂x² - ν₄∂⁴u/∂x⁴ - ½∂u²/∂x + √(2ε/Δt_noise) * noise
 
         Noise is sampled at fixed max_step intervals and scaled by
         max_step so that the total forcing per interval is independent
         of the adaptive integration dt.
 
         Args:
-            derivatives: Dictionary with '2' and 'sq' derivatives.
+            derivatives: Dictionary with '2', 'sq', and optionally '4' derivatives.
             noise: FBM noise array.
             dt: Current time step size.
 
@@ -142,11 +146,18 @@ class DNS(Burgers):
         d2udx2 = derivatives["2"]
         du2dx = derivatives["sq"]
 
-        return (
+        rhs = (
             self.visc * d2udx2
             - 0.5 * du2dx
             + np.sqrt(2 * self.noise_amp / self.max_step) * noise
         )
+
+        # Add hyperviscosity term if enabled
+        if self.hypervisc > 0:
+            d4udx4 = derivatives["4"]
+            rhs -= self.hypervisc * d4udx4
+
+        return rhs
 
     def _save_diagnostics(
         self, derivatives: dict[str, np.ndarray], t_out: int, t_loop: float

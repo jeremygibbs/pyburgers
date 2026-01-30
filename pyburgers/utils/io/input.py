@@ -26,6 +26,7 @@ from ...data_models import (
     DNSConfig,
     FFTWConfig,
     GridConfig,
+    HyperviscosityConfig,
     LESConfig,
     LoggingConfig,
     NoiseConfig,
@@ -100,6 +101,7 @@ class Input:
         # Physics configuration
         physics_data = namelist_data["physics"]
         noise_data = physics_data.get("noise", {})
+        hypervisc_data = physics_data.get("hyperviscosity", {})
         self.physics: PhysicsConfig = PhysicsConfig(
             noise=NoiseConfig(
                 exponent=float(noise_data.get("exponent", 0.75)),
@@ -107,6 +109,9 @@ class Input:
             ),
             viscosity=float(physics_data["viscosity"]),
             subgrid_model=int(physics_data.get("subgrid_model", 1)),
+            hyperviscosity=HyperviscosityConfig(
+                enabled=bool(hypervisc_data.get("enabled", False)),
+            ),
         )
 
         # Output configuration
@@ -163,6 +168,11 @@ class Input:
     def viscosity(self) -> float:
         """Convenience accessor for viscosity."""
         return self.physics.viscosity
+
+    @property
+    def hyperviscosity_enabled(self) -> bool:
+        """Convenience accessor for hyperviscosity enabled flag."""
+        return self.physics.hyperviscosity.enabled
 
     @property
     def t_save(self) -> float:
@@ -258,6 +268,22 @@ class Input:
             sgs = int(physics_data["subgrid_model"])
             if sgs < 0 or sgs > 4:
                 raise NamelistError(f"physics 'subgrid_model' must be 0-4, got {sgs}")
+
+        # Validate hyperviscosity config if present
+        if "hyperviscosity" in physics_data:
+            hypervisc_data = physics_data["hyperviscosity"]
+            valid_keys = {"enabled"}
+            invalid_keys = set(hypervisc_data.keys()) - valid_keys
+            if invalid_keys:
+                raise NamelistError(
+                    f"Invalid hyperviscosity key(s): {invalid_keys}. Valid keys: {valid_keys}"
+                )
+            if "enabled" in hypervisc_data:
+                enabled = hypervisc_data["enabled"]
+                if not isinstance(enabled, bool):
+                    raise NamelistError(
+                        f"hyperviscosity 'enabled' must be true or false, got {enabled}"
+                    )
 
         # Validate output config if present
         if "output" in data:

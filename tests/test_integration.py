@@ -48,11 +48,16 @@ class MockInput:
                 self.exponent = 0.75
                 self.amplitude = amplitude
 
+        class Hyperviscosity:
+            def __init__(self, enabled=False):
+                self.enabled = enabled
+
         class Physics:
             def __init__(self, viscosity, noise, subgrid_model):
                 self.viscosity = viscosity
                 self.noise = noise
                 self.subgrid_model = subgrid_model
+                self.hyperviscosity = Hyperviscosity()
 
         class DNS:
             def __init__(self, points):
@@ -87,6 +92,10 @@ class MockInput:
     @property
     def viscosity(self) -> float:
         return self.physics.viscosity
+
+    @property
+    def hyperviscosity_enabled(self) -> bool:
+        return self.physics.hyperviscosity.enabled
 
     @property
     def t_save(self) -> float:

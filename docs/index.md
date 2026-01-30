@@ -68,6 +68,24 @@ The solver employs **Williamson (1980) low-storage RK3** time integration with a
 - Nyquist mode zeroed after each RK stage to prevent aliasing accumulation
 - Output times are hit exactly by clamping dt to reach save intervals
 
+### Hyperviscosity
+
+Spectral methods can exhibit energy pile-up near the Nyquist frequency, where energy accumulates at the highest resolved wavenumbers instead of being properly dissipated. PyBurgers provides optional **hyperviscosity** to address this:
+
+$$\frac{\partial u}{\partial t} = \ldots - \nu_4 \frac{\partial^4 u}{\partial x^4}$$
+
+The hyperviscosity term provides $k^4$ dissipation that strongly damps high-wavenumber modes while leaving large scales essentially unaffected. When enabled, the coefficient is **automatically computed** as:
+
+$$\nu_4 = \Delta x^4$$
+
+This scaling ensures:
+
+- **Resolution-independent behavior**: The damping effect is consistent across different grid resolutions
+- **No timestep penalty**: The stability limit $dt \le 0.1 \Delta x^4 / \nu_4 = 0.1$ is always satisfied
+- **Appropriate strength**: Empirically tuned to eliminate spectral pile-up without over-damping resolved scales
+
+Users simply enable hyperviscosity in the namelist (`"enabled": true`) without needing to specify a coefficient. The computed coefficient is logged at startup for reference.
+
 ### Stochastic Forcing
 
 The stochastic term uses **fractional Brownian motion (FBM)** noise:
