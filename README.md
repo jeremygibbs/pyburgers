@@ -6,6 +6,7 @@ A high-performance solver for the 1D Stochastic Burgers Equation with DNS and LE
 
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.gibbs.science/pyburgers)
 [![License: WTFPL](https://img.shields.io/badge/License-WTFPL-brightgreen.svg)](http://www.wtfpl.net/about/)
+[![DOI](https://zenodo.org/badge/104835582.svg)](https://doi.org/10.5281/zenodo.18444178)
 
 ## Overview
 
