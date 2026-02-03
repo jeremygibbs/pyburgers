@@ -5,7 +5,7 @@
 A high-performance solver for the 1D Stochastic Burgers Equation with DNS and LES capabilities.
 
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.gibbs.science/pyburgers)
-[![License: WTFPL](https://img.shields.io/badge/License-WTFPL-brightgreen.svg)](http://www.wtfpl.net/about/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![DOI](https://zenodo.org/badge/104835582.svg)](https://doi.org/10.5281/zenodo.18444178)
 
 ## Overview
@@ -132,7 +132,7 @@ And reference the underlying methodology:
 
 ## License
 
-This software is free and is distributed under the **WTFPL** (Do What The Fuck You Want To Public License). It comes without any warranty, to the extent permitted by applicable law. You can redistribute it and/or modify it under the terms of the WTFPL, Version 2, as published by Sam Hocevar. See http://www.wtfpl.net for more details.
+This software is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
 
 ## Contact
 

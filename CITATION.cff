@@ -32,7 +32,7 @@ keywords:
   - fourier methods
   - subgrid-scale modeling
   - stochastic forcing
-license: WTFPL
+license: MIT
 version: 2.0.0
 date-released: '2026-02-02'
 references:

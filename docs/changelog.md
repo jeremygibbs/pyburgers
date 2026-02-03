@@ -85,7 +85,7 @@ Version 2.0 is not backward compatible with v1.x. Key migration steps:
 
 ---
 
-## [1.0.0] - 2017-02-02
+## [1.0.0] - 2019-11-03
 
 Initial release of PyBurgers.
 

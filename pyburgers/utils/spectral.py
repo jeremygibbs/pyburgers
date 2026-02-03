@@ -6,8 +6,8 @@
 #
 # This file is part of PyBurgers.
 #
-# This software is free and is distributed under the WTFPL license.
-# See accompanying LICENSE file or visit https://www.wtfpl.net.
+# This software is free and is distributed under the MIT License.
+# See accompanying LICENSE file or visit https://opensource.org/licenses/MIT.
 #
 """Spectral methods for PyBurgers.
 
