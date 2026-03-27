@@ -137,13 +137,13 @@ def main() -> None:
 
         # Initialization complete - now start timing the actual simulation
         logger.info("Initialization complete. Starting simulation...")
-        t1: float = time.time()
+        t1: float = time.perf_counter()
 
         # Run the simulation
         burgers.run()
 
         # Report timing
-        t2: float = time.time()
+        t2: float = time.perf_counter()
         elapsed: float = t2 - t1
         logger.info("Done! Completed in %.2f seconds", elapsed)
 
