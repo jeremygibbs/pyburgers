@@ -35,34 +35,21 @@ WISDOM_FILE = Path.home() / ".pyburgers_fftw_wisdom"
 LOCK_TIMEOUT = 10.0
 
 
-def load_wisdom(
-    nx_dns: int,
-    nx_les: int,
-    noise_beta: float,
-    fftw_planning: str,
-    fftw_threads: int,
-) -> tuple[bool, str]:
-    """Load FFTW wisdom from cache file if parameters match.
+def load_wisdom() -> tuple[bool, str]:
+    """Load accumulated FFTW wisdom from cache file.
 
-    FFTW wisdom contains optimized FFT plans from previous runs.
-    Loading wisdom speeds up FFT initialization significantly.
+    FFTW wisdom is cumulative: a single file can hold optimal plans for
+    many different transform sizes. This function imports whatever plans
+    are present; pyfftw will use matching plans and re-plan any missing
+    sizes on-demand.
 
-    This function validates that the cached wisdom was created with
-    the same grid sizes and parameters. If parameters have changed,
-    the wisdom is invalidated and False is returned to trigger re-warmup.
+    No parameter validation is performed — grid sizes and physical
+    parameters do not affect whether a stored plan is valid.
 
     Uses file locking to prevent concurrent access conflicts.
 
-    Args:
-        nx_dns: DNS grid resolution.
-        nx_les: LES grid resolution.
-        noise_beta: FBM noise exponent.
-        fftw_planning: FFTW planning strategy.
-        fftw_threads: Number of FFTW threads.
-
     Returns:
-        Tuple of (success: bool, message: str) indicating whether wisdom
-        was loaded and a descriptive message about the outcome.
+        Tuple of (success: bool, message: str).
     """
     if not WISDOM_FILE.exists():
         return False, "No wisdom file found"
@@ -72,34 +59,11 @@ def load_wisdom(
             with open(WISDOM_FILE, "rb") as f:
                 data = pickle.load(f)
 
-        # Handle legacy wisdom files (raw wisdom without metadata)
-        if not isinstance(data, dict):
-            return False, "Legacy wisdom format detected (no metadata)"
+        # Support both legacy dict format and current raw wisdom format
+        wisdom = data.get("wisdom") if isinstance(data, dict) else data
+        if wisdom is None:
+            return False, "No wisdom data in file"
 
-        # Extract wisdom and metadata
-        wisdom = data.get("wisdom")
-        metadata = data.get("metadata", {})
-
-        # Check each parameter and build a detailed message
-        mismatches = []
-        if metadata.get("nx_dns") != nx_dns:
-            mismatches.append(f"nx_dns ({metadata.get('nx_dns')} → {nx_dns})")
-        if metadata.get("nx_les") != nx_les:
-            mismatches.append(f"nx_les ({metadata.get('nx_les')} → {nx_les})")
-        if metadata.get("noise_beta") != noise_beta:
-            mismatches.append(f"noise_beta ({metadata.get('noise_beta')} → {noise_beta})")
-        if metadata.get("fftw_planning") != fftw_planning:
-            mismatches.append(
-                f"fftw_planning ({metadata.get('fftw_planning')} → {fftw_planning})"
-            )
-        if metadata.get("fftw_threads") != fftw_threads:
-            mismatches.append(f"fftw_threads ({metadata.get('fftw_threads')} → {fftw_threads})")
-
-        if mismatches:
-            msg = "Parameter mismatch: " + ", ".join(mismatches)
-            return False, msg
-
-        # Import the validated wisdom
         pyfftw.import_wisdom(wisdom)
         return True, "Wisdom loaded successfully"
 
@@ -109,47 +73,23 @@ def load_wisdom(
         return False, f"Error loading wisdom: {e}"
 
 
-def save_wisdom(
-    nx_dns: int,
-    nx_les: int,
-    noise_beta: float,
-    fftw_planning: str,
-    fftw_threads: int,
-) -> bool:
-    """Save FFTW wisdom with metadata to cache file.
+def save_wisdom() -> bool:
+    """Save accumulated FFTW wisdom to cache file.
 
-    Saves the accumulated FFT plans along with the grid sizes and
-    parameters used to create them. This allows validation on load
-    to ensure the cached plans match the current configuration.
+    Exports all plans that have been created in this session and writes
+    them to the cache file, merging with any plans already present.
+    Plans accumulate across runs so that each new configuration adds to
+    the file rather than replacing it.
 
     Uses file locking to prevent concurrent write conflicts.
-
-    Args:
-        nx_dns: DNS grid resolution.
-        nx_les: LES grid resolution.
-        noise_beta: FBM noise exponent.
-        fftw_planning: FFTW planning strategy.
-        fftw_threads: Number of FFTW threads.
 
     Returns:
         True if wisdom was saved successfully, False otherwise.
     """
     try:
-        # Package wisdom with metadata
-        data = {
-            "wisdom": pyfftw.export_wisdom(),
-            "metadata": {
-                "nx_dns": nx_dns,
-                "nx_les": nx_les,
-                "noise_beta": noise_beta,
-                "fftw_planning": fftw_planning,
-                "fftw_threads": fftw_threads,
-            },
-        }
-
         with FileLock(str(WISDOM_FILE) + ".lock", timeout=LOCK_TIMEOUT):
             with open(WISDOM_FILE, "wb") as f:
-                pickle.dump(data, f)
+                pickle.dump(pyfftw.export_wisdom(), f)
         return True
     except Timeout:
         return False
