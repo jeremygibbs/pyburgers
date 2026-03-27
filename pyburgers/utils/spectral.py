@@ -151,10 +151,6 @@ class Derivatives:
         # compute rfft
         self.fft()
 
-        # Only save fu if both "sq" and 4 are requested (sq overwrites fu)
-        needs_fu_copy = "sq" in order and 4 in order
-        fu_original = self.fu.copy() if needs_fu_copy else self.fu
-
         # loop through order of derivative from user
         for key in order:
             if key == 1:
@@ -173,8 +169,7 @@ class Derivatives:
                 np.multiply(self.fac3, self.der, out=self._out_3)
                 derivatives["3"] = self._out_3
             if key == 4:
-                # Use fu_original since "sq" overwrites self.fu
-                self.fun[:] = self.k4 * fu_original
+                self.fun[:] = self.k4 * self.fu
                 self.ifft()
                 np.multiply(self.fac4, self.der, out=self._out_4)
                 derivatives["4"] = self._out_4
@@ -192,11 +187,8 @@ class Derivatives:
                 self.up[:] = self.up**2
                 # Transform back to spectral space
                 self.fftp()
-                # Extract non-aliased modes and correct for 2x array size
-                self.fu[:] = self.fup[0 : self.nk] / 2
-                self.fu[self.nk - 1] = 0  # Zero Nyquist
-                # Compute derivative
-                self.fun[:] = 1j * self.k * self.fu
+                # Compute derivative directly from padded result; self.k zeros Nyquist
+                self.fun[:] = 1j * self.k * (self.fup[0 : self.nk] / 2)
                 self.ifft()
                 np.multiply(self.fac, self.der, out=self._out_sq)
                 derivatives["sq"] = self._out_sq
