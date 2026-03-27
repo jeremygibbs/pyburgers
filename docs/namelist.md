@@ -42,7 +42,8 @@ Here's a typical configuration for running both DNS and LES:
         "subgrid_model": 2,
         "noise": {
             "exponent": -0.75,
-            "amplitude": 1e-6
+            "amplitude": 1e-6,
+            "seed": 1
         },
         "hyperviscosity": {
             "enabled": true

@@ -76,7 +76,7 @@ Full documentation is available at: **https://docs.gibbs.science/pyburgers**
 
 ## Performance
 
-PyBurgers v2.0 delivers dramatic performance improvements through real FFTs, optimized FFTW planning, and efficient buffer management.
+PyBurgers v2.0.1 delivers dramatic performance improvements through real FFTs, optimized FFTW planning, and efficient buffer management.
 
 **Benchmark: Default namelist (8192 DNS / 512 LES grid points, 200s duration)**
 
@@ -84,7 +84,7 @@ PyBurgers v2.0 delivers dramatic performance improvements through real FFTs, opt
 |---------|-----|-----|
 | Original Matlab | ~35 min | ~16 min |
 | PyBurgers v1.0 | ~43 min | ~23 min |
-| **PyBurgers v2.0** | **~40 sec** | **~7 sec** |
+| **PyBurgers v2.0.1** | **~34 sec** | **~7 sec** |
 
 *Tested on a late 2023 MacBook Pro (M3 Max). Performance varies by system; results illustrate relative gains.*
 
@@ -94,6 +94,7 @@ PyBurgers v2.0 delivers dramatic performance improvements through real FFTs, opt
 - NumPy ≥ 2.1
 - pyFFTW ≥ 0.15
 - netCDF4 ≥ 1.7
+- filelock ≥ 3.12
 
 ## Citation
 
@@ -105,7 +106,7 @@ If you use PyBurgers in your research, please cite:
   title = {PyBurgers: 1D Stochastic Burgers Equation Solver},
   year = {2026},
   url = {https://github.com/jeremygibbs/pyburgers},
-  version = {2.0.0}
+  version = {2.0.1}
 }
 ```
 

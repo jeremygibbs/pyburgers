@@ -19,6 +19,7 @@ The following packages are installed automatically:
 | NumPy | ≥2.1 | Array operations and numerical computing |
 | pyFFTW | ≥0.15 | Fast Fourier transforms via FFTW |
 | netCDF4 | ≥1.7 | Output file format for simulation data |
+| filelock | ≥3.12 | Cross-platform file locking for FFTW wisdom |
 
 ## Installation
 
@@ -102,7 +103,8 @@ PyBurgers is configured using a JSON namelist file. The repository includes a de
         "subgrid_model": 2,
         "noise": {
             "exponent": -0.75,
-            "amplitude": 1e-6
+            "amplitude": 1e-6,
+            "seed": 1
         }
     },
     "output": {

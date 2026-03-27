@@ -5,6 +5,30 @@ All notable changes to PyBurgers will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-03-27
+
+### Added
+
+- **`-i/--input` flag**: Specify a custom namelist path without renaming files, enabling multiple configuration files for different experiments
+
+### Fixed
+
+- **Array overwrite bug**: Corrected in-place overwrite in `Derivatives.compute` sq branch that corrupted spectral data
+- **Output timing check**: Fixed floating-point precision failure that could skip saving output frames
+- **FFTW wisdom accumulation**: Plans now accumulate across config changes rather than being invalidated, improving cold-start performance on subsequent runs
+- **Cross-platform file locking**: Replaced `fcntl` (Unix-only) with `filelock` for portable wisdom file access
+
+### Changed
+
+- **Random seed API**: Replaced hardcoded random seed with NumPy's configurable `Generator` API for improved reproducibility control
+- **Simulation timing**: Switched to `time.perf_counter()` for higher-resolution elapsed time measurement
+
+### Improved
+
+- **DNS performance**: Runtime reduced from ~40 sec to ~34 sec via pre-allocated RHS buffer, precomputed noise scale constant, and eliminated redundant FFT pairs in RK3 Nyquist zeroing
+
+---
+
 ## [2.0.0] - 2026-02-02
 
 Version 2.0 represents a complete rewrite of PyBurgers with modern Python practices, significant performance improvements, and enhanced usability.
