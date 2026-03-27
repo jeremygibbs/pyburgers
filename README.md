@@ -56,10 +56,10 @@ Install the optional visualization dependencies:
 pip install -e ".[viz]"
 ```
 
-Then compare TKE output from one DNS run and multiple LES runs:
+Then plot TKE output:
 
 ```bash
-python scripts/compare_tke.py -d pyburgers_dns.nc -l pyburgers_les.nc -l pyburgers_les_alt.nc
+python scripts/plot_tke.py pyburgers_dns.nc pyburgers_les.nc
 ```
 
 ## Documentation
