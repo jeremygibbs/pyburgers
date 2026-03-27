@@ -74,8 +74,8 @@ class Burgers(ABC):
         self.logger: logging.Logger = get_logger(self.mode_name)
         self.logger.info("You are running in %s mode", self.mode_name)
 
-        # Initialize random number generator for reproducibility
-        np.random.seed(1)
+        # Initialize random number generator (seed=None means random each run)
+        self.rng = np.random.default_rng(input_obj.physics.noise.seed)
 
         # Store input/output objects
         self.logger.debug("Reading input settings")

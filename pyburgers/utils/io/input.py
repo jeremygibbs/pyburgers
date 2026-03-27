@@ -106,6 +106,7 @@ class Input:
             noise=NoiseConfig(
                 exponent=float(noise_data.get("exponent", 0.75)),
                 amplitude=float(noise_data.get("amplitude", 1e-6)),
+                seed=noise_data.get("seed", None),
             ),
             viscosity=float(physics_data["viscosity"]),
             subgrid_model=int(physics_data.get("subgrid_model", 1)),

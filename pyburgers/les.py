@@ -88,6 +88,7 @@ class LES(Burgers):
             noise_nx=self.nx_dns,  # Generate noise at DNS resolution
             fftw_planning=self.fftw_planning,
             fftw_threads=self.fftw_threads,
+            rng=self.rng,
         )
 
     def _setup_mode_specific(self) -> None:

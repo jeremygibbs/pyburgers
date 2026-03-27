@@ -206,6 +206,18 @@ Configures the stochastic forcing term (fractional Brownian motion).
 
     **Example:** `1e-6`
 
+`seed`
+:   **Type:** Integer or null (optional)
+    **Default:** `null`
+
+    Seed for the random number generator used in noise generation.
+
+    When set to an integer, the simulation is fully reproducible: every run with the same seed and namelist produces identical results. This is useful for debugging and regression testing. When set to `null` (or omitted), a random seed is drawn at startup. For ensemble studies, seeds can also be controlled externally by incrementing this value across runs.
+
+    Uses NumPy's `default_rng` (PCG64 generator). Note that seeds are not portable across NumPy versions.
+
+    **Example:** `1`
+
 ### Subsection: physics.hyperviscosity
 
 Configures optional hyperviscosity for damping high-wavenumber energy pile-up.

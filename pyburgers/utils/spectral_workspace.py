@@ -21,11 +21,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 from pyburgers.utils.fbm import FBM
 from pyburgers.utils.spectral import Dealias, Derivatives, Filter
 
 if TYPE_CHECKING:
-    import numpy as np
+    pass
 
 
 class SpectralWorkspace:
@@ -68,6 +70,7 @@ class SpectralWorkspace:
         noise_nx: int | None = None,
         fftw_planning: str = "FFTW_MEASURE",
         fftw_threads: int = 1,
+        rng: np.random.Generator | None = None,
     ) -> None:
         """Initialize the spectral workspace.
 
@@ -122,6 +125,7 @@ class SpectralWorkspace:
                 n_pts=self.noise_nx,
                 fftw_planning=fftw_planning,
                 fftw_threads=fftw_threads,
+                rng=rng,
             )
         else:
             self.noise = None

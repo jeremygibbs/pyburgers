@@ -17,7 +17,7 @@ PyBurgers implements direct numerical simulation (DNS) and large-eddy simulation
 - **Dual Simulation Modes**: DNS for full resolution and LES for coarse-grained modeling
 - **Four SGS Models**: Constant Smagorinsky, Dynamic Smagorinsky, Dynamic Wong-Lilly, and Deardorff 1.5-order TKE
 - **Optimized FFTs**: FFTW with intelligent wisdom caching for fast repeated runs
-- **Fractional Brownian Motion**: Configurable stochastic forcing with spectral control
+- **Fractional Brownian Motion**: Configurable stochastic forcing with spectral control and optional reproducible seeding
 - **NetCDF Output**: Standard format for analysis and visualization
 - **Schema-Validated Configuration**: JSON namelist with comprehensive validation
 
@@ -45,6 +45,8 @@ python burgers.py -m les -o my_simulation.nc
 ```
 
 Configuration is controlled via `namelist.json`. See the [documentation](https://docs.gibbs.science/pyburgers) for details.
+
+To make a run reproducible, set `physics.noise.seed` to an integer in `namelist.json`. Omit the field (or set it to `null`) to draw a random seed at startup.
 
 ### Compare DNS vs LES TKE
 

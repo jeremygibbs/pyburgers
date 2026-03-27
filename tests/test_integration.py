@@ -47,6 +47,7 @@ class MockInput:
         sgs_model: int = 1,
         t_save: float = 0.005,
         domain_length: float = 2 * np.pi,
+        seed: int | None = None,
     ) -> None:
         class Time:
             def __init__(self, duration, cfl, max_step):
@@ -55,9 +56,10 @@ class MockInput:
                 self.max_step = max_step
 
         class Noise:
-            def __init__(self, amplitude):
+            def __init__(self, amplitude, seed):
                 self.exponent = 0.75
                 self.amplitude = amplitude
+                self.seed = seed
 
         class Hyperviscosity:
             def __init__(self, enabled=False):
@@ -84,7 +86,7 @@ class MockInput:
                 self.les = LES(nx_les)
 
         self.time = Time(duration, cfl, max_step)
-        self.physics = Physics(visc, Noise(namp), subgrid_model=sgs_model)
+        self.physics = Physics(visc, Noise(namp, seed), subgrid_model=sgs_model)
         self.grid = Grid(nx_dns, nx_les)
         self.domain_length = domain_length
         self.fftw_planning = "FFTW_ESTIMATE"
@@ -303,8 +305,7 @@ class TestReproducibility:
     def test_dns_reproducibility(self, tmp_path: Path) -> None:
         """Test that DNS produces identical results with same seed."""
         # Run 1
-        np.random.seed(1)
-        input_obj1 = MockInput(duration=0.02, t_save=0.01)
+        input_obj1 = MockInput(duration=0.02, t_save=0.01, seed=1)
         output1 = tmp_path / "test_dns1.nc"
         dns1 = DNS(input_obj1, Output(str(output1)))
         dns1.run()
@@ -313,8 +314,7 @@ class TestReproducibility:
         gc.collect()
 
         # Run 2
-        np.random.seed(1)
-        input_obj2 = MockInput(duration=0.02, t_save=0.01)
+        input_obj2 = MockInput(duration=0.02, t_save=0.01, seed=1)
         output2 = tmp_path / "test_dns2.nc"
         dns2 = DNS(input_obj2, Output(str(output2)))
         dns2.run()
@@ -325,8 +325,7 @@ class TestReproducibility:
     def test_les_reproducibility(self, tmp_path: Path) -> None:
         """Test that LES produces identical results with same seed."""
         # Run 1
-        np.random.seed(1)
-        input_obj1 = MockInput(duration=0.02, t_save=0.01, sgs_model=1)
+        input_obj1 = MockInput(duration=0.02, t_save=0.01, sgs_model=1, seed=1)
         output1 = tmp_path / "test_les1.nc"
         les1 = LES(input_obj1, Output(str(output1)))
         les1.run()
@@ -335,8 +334,7 @@ class TestReproducibility:
         gc.collect()
 
         # Run 2
-        np.random.seed(1)
-        input_obj2 = MockInput(duration=0.02, t_save=0.01, sgs_model=1)
+        input_obj2 = MockInput(duration=0.02, t_save=0.01, sgs_model=1, seed=1)
         output2 = tmp_path / "test_les2.nc"
         les2 = LES(input_obj2, Output(str(output2)))
         les2.run()

@@ -110,10 +110,12 @@ class NoiseConfig:
     Attributes:
         exponent: FBM exponent controlling the spectral slope.
         amplitude: Noise amplitude.
+        seed: RNG seed for reproducibility. None means a random seed.
     """
 
     exponent: float
     amplitude: float
+    seed: int | None = None
 
 
 @dataclass(frozen=True)

@@ -30,7 +30,6 @@ class TestFBM:
 
     def test_noise_zero_mean(self, grid_small: dict) -> None:
         """Test that noise has approximately zero mean."""
-        np.random.seed(42)
         fbm = FBM(-0.75, grid_small["nx"])
 
         # Average over multiple realizations
@@ -52,7 +51,6 @@ class TestFBM:
 
     def test_noise_different_realizations(self, grid_small: dict) -> None:
         """Test that consecutive calls produce different noise."""
-        np.random.seed(42)
         fbm = FBM(-0.75, grid_small["nx"])
 
         noise1 = fbm.compute_noise().copy()
@@ -63,7 +61,6 @@ class TestFBM:
 
     def test_spectral_slope(self) -> None:
         """Test that noise has correct spectral slope."""
-        np.random.seed(42)
         nx = 256
         beta = -0.75
         fbm = FBM(beta, nx)
@@ -95,7 +92,6 @@ class TestFBM:
     def test_different_beta(self) -> None:
         """Test that different beta values produce different spectra."""
         nx = 128
-        np.random.seed(42)
 
         fbm_low = FBM(-0.5, nx)
         fbm_high = FBM(-1.0, nx)
@@ -117,7 +113,6 @@ class TestFBM:
 
     def test_noise_variance_scaling(self) -> None:
         """Test that noise variance scales with amplitude squared."""
-        np.random.seed(42)
         nx = 128
 
         # Generate noise with two different amplitudes

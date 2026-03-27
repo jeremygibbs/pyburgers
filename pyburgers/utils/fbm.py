@@ -43,6 +43,7 @@ class FBM:
         n_pts: int,
         fftw_planning: str = "FFTW_MEASURE",
         fftw_threads: int = 1,
+        rng: np.random.Generator | None = None,
     ) -> None:
         """Initialize the FBM noise generator.
 
@@ -52,7 +53,10 @@ class FBM:
             n_pts: Number of grid points.
             fftw_planning: FFTW planning strategy (default: 'FFTW_MEASURE').
             fftw_threads: Number of FFTW threads (default: 1).
+            rng: NumPy Generator for reproducible noise. If None, a fresh
+                default_rng() is created (non-reproducible).
         """
+        self.rng = rng if rng is not None else np.random.default_rng()
         self.beta = beta
         self.n_pts = n_pts
         self.fftw_planning = fftw_planning
@@ -106,7 +110,7 @@ class FBM:
             values, make a copy: ``noise.copy()``.
         """
         # Generate white noise input (faster than inverse CDF)
-        self.x[:] = np.sqrt(self.n_pts) * np.random.standard_normal(self.n_pts)
+        self.x[:] = np.sqrt(self.n_pts) * self.rng.standard_normal(self.n_pts)
 
         # Transform to spectral space
         self.fft()

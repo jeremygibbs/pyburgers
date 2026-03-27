@@ -75,6 +75,7 @@ class DNS(Burgers):
             noise_nx=self.nx,
             fftw_planning=self.fftw_planning,
             fftw_threads=self.fftw_threads,
+            rng=self.rng,
         )
 
     def _setup_mode_specific(self) -> None:
