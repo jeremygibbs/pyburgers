@@ -22,82 +22,17 @@ instances access the wisdom file concurrently.
 
 from __future__ import annotations
 
-import fcntl
 import pickle
-import time
-from collections.abc import Iterator
-from contextlib import contextmanager
 from pathlib import Path
 
 import pyfftw
+from filelock import FileLock, Timeout
 
 # Wisdom cache file location
 WISDOM_FILE = Path.home() / ".pyburgers_fftw_wisdom"
 
 # Lock timeout in seconds
 LOCK_TIMEOUT = 10.0
-
-
-@contextmanager
-def _file_lock(file_path: Path, exclusive: bool = False) -> Iterator[None]:
-    """Context manager for file locking.
-
-    Uses fcntl advisory locks to prevent concurrent access issues.
-    Multiple readers can hold shared locks simultaneously, but
-    only one writer can hold an exclusive lock at a time.
-
-    Args:
-        file_path: Path to file to lock.
-        exclusive: If True, acquire exclusive lock (write).
-                   If False, acquire shared lock (read).
-
-    Yields:
-        None
-
-    Raises:
-        TimeoutError: If lock cannot be acquired within timeout.
-        OSError: If file operations fail.
-    """
-    # Create lock file (append .lock to original filename)
-    lock_file_path = Path(str(file_path) + ".lock")
-    lock_file_path.touch(exist_ok=True)
-
-    lock_type = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
-    lock_file = None
-
-    try:
-        lock_file = open(lock_file_path, "r+")
-
-        # Try to acquire lock with timeout
-        start_time = time.time()
-        while True:
-            try:
-                # Non-blocking lock attempt
-                fcntl.flock(lock_file.fileno(), lock_type | fcntl.LOCK_NB)
-                break
-            except BlockingIOError as err:
-                # Lock is held by another process
-                elapsed = time.time() - start_time
-                if elapsed > LOCK_TIMEOUT:
-                    raise TimeoutError(
-                        f"Could not acquire {'exclusive' if exclusive else 'shared'} "
-                        f"lock on {file_path} within {LOCK_TIMEOUT}s"
-                    ) from err
-                # Wait a bit before retrying
-                time.sleep(0.1)
-
-        # Lock acquired, yield control
-        yield
-
-    finally:
-        # Release lock and close file
-        if lock_file is not None:
-            try:
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
-                lock_file.close()
-            except Exception:
-                # Ignore errors during cleanup
-                pass
 
 
 def load_wisdom(
@@ -116,8 +51,7 @@ def load_wisdom(
     the same grid sizes and parameters. If parameters have changed,
     the wisdom is invalidated and False is returned to trigger re-warmup.
 
-    Uses shared file locking to allow concurrent reads while preventing
-    read/write conflicts.
+    Uses file locking to prevent concurrent access conflicts.
 
     Args:
         nx_dns: DNS grid resolution.
@@ -134,8 +68,7 @@ def load_wisdom(
         return False, "No wisdom file found"
 
     try:
-        # Acquire shared lock for reading (multiple readers OK)
-        with _file_lock(WISDOM_FILE, exclusive=False):
+        with FileLock(str(WISDOM_FILE) + ".lock", timeout=LOCK_TIMEOUT):
             with open(WISDOM_FILE, "rb") as f:
                 data = pickle.load(f)
 
@@ -170,8 +103,8 @@ def load_wisdom(
         pyfftw.import_wisdom(wisdom)
         return True, "Wisdom loaded successfully"
 
-    except TimeoutError as e:
-        return False, f"Lock timeout: {e}"
+    except Timeout:
+        return False, f"Lock timeout after {LOCK_TIMEOUT}s"
     except Exception as e:
         return False, f"Error loading wisdom: {e}"
 
@@ -189,8 +122,7 @@ def save_wisdom(
     parameters used to create them. This allows validation on load
     to ensure the cached plans match the current configuration.
 
-    Uses exclusive file locking to prevent concurrent writes and
-    read/write conflicts.
+    Uses file locking to prevent concurrent write conflicts.
 
     Args:
         nx_dns: DNS grid resolution.
@@ -215,13 +147,11 @@ def save_wisdom(
             },
         }
 
-        # Acquire exclusive lock for writing (blocks all other access)
-        with _file_lock(WISDOM_FILE, exclusive=True):
+        with FileLock(str(WISDOM_FILE) + ".lock", timeout=LOCK_TIMEOUT):
             with open(WISDOM_FILE, "wb") as f:
                 pickle.dump(data, f)
         return True
-    except TimeoutError:
-        # Could not acquire lock - another process is accessing file
+    except Timeout:
         return False
     except Exception:
         return False

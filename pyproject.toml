@@ -8,6 +8,7 @@ dependencies = [
     "numpy>=2.1",
     "pyfftw>=0.15",
     "netCDF4>=1.7",
+    "filelock>=3.12",
 ]
 
 [project.optional-dependencies]
