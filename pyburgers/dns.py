@@ -75,6 +75,7 @@ class DNS(Burgers):
             noise_nx=self.nx,
             fftw_planning=self.fftw_planning,
             fftw_threads=self.fftw_threads,
+            rng=self.rng,
         )
 
     def _setup_mode_specific(self) -> None:
@@ -146,18 +147,14 @@ class DNS(Burgers):
         d2udx2 = derivatives["2"]
         du2dx = derivatives["sq"]
 
-        rhs = (
-            self.visc * d2udx2
-            - 0.5 * du2dx
-            + np.sqrt(2 * self.noise_amp / self.max_step) * noise
-        )
+        self.rhs[:] = self.visc * d2udx2 - 0.5 * du2dx + self._noise_scale * noise
 
         # Add hyperviscosity term if enabled
         if self.hypervisc > 0:
             d4udx4 = derivatives["4"]
-            rhs -= self.hypervisc * d4udx4
+            self.rhs -= self.hypervisc * d4udx4
 
-        return rhs
+        return self.rhs
 
     def _save_diagnostics(
         self, derivatives: dict[str, np.ndarray], t_out: int, t_loop: float

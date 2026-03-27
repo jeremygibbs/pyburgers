@@ -19,6 +19,7 @@ The following packages are installed automatically:
 | NumPy | ≥2.1 | Array operations and numerical computing |
 | pyFFTW | ≥0.15 | Fast Fourier transforms via FFTW |
 | netCDF4 | ≥1.7 | Output file format for simulation data |
+| filelock | ≥3.12 | Cross-platform file locking for FFTW wisdom |
 
 ## Installation
 
@@ -102,7 +103,8 @@ PyBurgers is configured using a JSON namelist file. The repository includes a de
         "subgrid_model": 2,
         "noise": {
             "exponent": -0.75,
-            "amplitude": 1e-6
+            "amplitude": 1e-6,
+            "seed": 1
         }
     },
     "output": {
@@ -170,6 +172,16 @@ python burgers.py -m les
 ```
 
 This uses the LES grid resolution (`grid.les.points`) and applies the specified subgrid-scale model (`physics.subgrid_model`).
+
+### Custom Namelist
+
+Specify a different configuration file with `-i`:
+
+```bash
+python burgers.py -m dns -i my_config.json
+```
+
+This lets you maintain multiple namelists for different experiments without renaming files.
 
 ### Custom Output File
 
@@ -334,7 +346,11 @@ Create a test namelist (`test_namelist.json`):
 }
 ```
 
-Then copy it over `namelist.json` to use it.
+Then run it directly without touching `namelist.json`:
+
+```bash
+python burgers.py -m dns -i test_namelist.json
+```
 
 ### Production DNS Run
 
@@ -347,16 +363,15 @@ Use the default `namelist.json` with:
 
 Run both modes to compare:
 
+Create a separate namelist for each SGS model, then run without modifying any files:
+
 ```bash
 # DNS reference
 python burgers.py -m dns -o reference_dns.nc
 
 # LES with different SGS models
-sed -i 's/"subgrid_model": 1/"subgrid_model": 1/' namelist.json
-python burgers.py -m les -o les_smagorinsky.nc
-
-sed -i 's/"subgrid_model": 1/"subgrid_model": 2/' namelist.json
-python burgers.py -m les -o les_dynamic.nc
+python burgers.py -m les -i namelist_smag.json -o les_smagorinsky.nc
+python burgers.py -m les -i namelist_dynamic.json -o les_dynamic.nc
 ```
 
 Then compare the results to evaluate SGS model performance.

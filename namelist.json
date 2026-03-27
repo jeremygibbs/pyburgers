@@ -18,7 +18,8 @@
         "subgrid_model": 4,
         "noise": {
             "exponent": -0.75,
-            "amplitude": 1e-06
+            "amplitude": 1e-06,
+            "seed": 1
         },
         "hyperviscosity": {
             "enabled": true

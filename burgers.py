@@ -58,6 +58,14 @@ def main() -> None:
         help="Simulation mode: 'dns' or 'les' (default: dns)",
     )
     parser.add_argument(
+        "-i",
+        "--input",
+        dest="namelist",
+        type=str,
+        default="namelist.json",
+        help="Namelist configuration file (default: namelist.json)",
+    )
+    parser.add_argument(
         "-o",
         "--output",
         dest="outfile",
@@ -72,7 +80,7 @@ def main() -> None:
     # Welcome message
     print("#"*100)
     print("#"+(" "*98)+"#")
-    print("#"+(" "*32)+"Welcome to PyBurgers (version 2.0)"+(" "*32)+"#")
+    print("#"+(" "*31)+"Welcome to PyBurgers (version 2.0.1)"+(" "*31)+"#")
     print("#"+(" "*24)+"A toy to study Burgers turbulence with DNS and LES"+(" "*24)+"#")
     print("#"+(" "*40)+"by: Jeremy A Gibbs"+(" "*40)+"#")
     print("#"+(" "*98)+"#")
@@ -80,8 +88,7 @@ def main() -> None:
 
     try:
         # Create Input instance from namelist (configures logging)
-        namelist = "namelist.json"
-        input_obj: Input = Input(namelist)
+        input_obj: Input = Input(args.namelist)
 
         # Get logger after Input sets up logging
         logger = get_logger("Main")
@@ -91,57 +98,33 @@ def main() -> None:
             "FFTW Planning: %s, Threads: %d", input_obj.fftw_planning, input_obj.fftw_threads
         )
 
-        # Load FFTW wisdom at startup for optimized FFT plans
-        # Validates that wisdom matches current grid sizes and parameters
-        wisdom_loaded, wisdom_msg = load_wisdom(
-            input_obj.grid.dns.points,
-            input_obj.grid.les.points,
-            input_obj.physics.noise.exponent,
-            input_obj.fftw_planning,
-            input_obj.fftw_threads,
-        )
+        # Load any accumulated wisdom from previous runs.
+        # pyfftw wisdom is cumulative: plans for many sizes coexist in one file.
+        # Matching plans are reused immediately; missing sizes are planned on-demand.
+        wisdom_loaded, wisdom_msg = load_wisdom()
+        logger.debug("FFTW wisdom: %s", wisdom_msg)
 
-        if wisdom_loaded:
-            logger.debug("FFTW wisdom: %s", wisdom_msg)
-        else:
-            logger.debug("FFTW wisdom: %s", wisdom_msg)
+        # Register save_wisdom to run at exit (accumulates plans across runs)
+        atexit.register(save_wisdom)
 
-        # Register save_wisdom to run at exit
-        atexit.register(
-            save_wisdom,
-            input_obj.grid.dns.points,
-            input_obj.grid.les.points,
-            input_obj.physics.noise.exponent,
-            input_obj.fftw_planning,
-            input_obj.fftw_threads,
-        )
-
-        # Generate FFTW plans if no wisdom is available yet
+        # Warm up plans for the current configuration.
+        # Fast when wisdom is already loaded; required on first run or new config.
         if not wisdom_loaded:
             logger.info("Building FFTW plans to populate wisdom cache...")
-            warmup_success, warmup_msg = warmup_fftw_plans(
-                input_obj.grid.dns.points,
-                input_obj.grid.les.points,
-                input_obj.physics.noise.exponent,
-                input_obj.fftw_planning,
-                input_obj.fftw_threads,
-                input_obj.domain_length,
-            )
+        warmup_success, warmup_msg = warmup_fftw_plans(
+            input_obj.grid.dns.points,
+            input_obj.grid.les.points,
+            input_obj.physics.noise.exponent,
+            input_obj.fftw_planning,
+            input_obj.fftw_threads,
+            input_obj.domain_length,
+        )
 
-            if warmup_success:
-                logger.debug("FFTW warmup: %s", warmup_msg)
-                # Save wisdom immediately after successful warmup
-                save_wisdom(
-                    input_obj.grid.dns.points,
-                    input_obj.grid.les.points,
-                    input_obj.physics.noise.exponent,
-                    input_obj.fftw_planning,
-                    input_obj.fftw_threads,
-                )
-                logger.debug("FFTW wisdom saved to cache")
-            else:
-                logger.warning("FFTW warmup: %s", warmup_msg)
-                logger.warning("Continuing without pre-warmed plans (will plan on-demand)")
+        if warmup_success:
+            logger.debug("FFTW warmup: %s", warmup_msg)
+        else:
+            logger.warning("FFTW warmup: %s", warmup_msg)
+            logger.warning("Continuing without pre-warmed plans (will plan on-demand)")
 
         # Create Output instance
         if not outfile:
@@ -161,13 +144,13 @@ def main() -> None:
 
         # Initialization complete - now start timing the actual simulation
         logger.info("Initialization complete. Starting simulation...")
-        t1: float = time.time()
+        t1: float = time.perf_counter()
 
         # Run the simulation
         burgers.run()
 
         # Report timing
-        t2: float = time.time()
+        t2: float = time.perf_counter()
         elapsed: float = t2 - t1
         logger.info("Done! Completed in %.2f seconds", elapsed)
 

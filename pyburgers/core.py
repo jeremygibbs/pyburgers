@@ -74,8 +74,8 @@ class Burgers(ABC):
         self.logger: logging.Logger = get_logger(self.mode_name)
         self.logger.info("You are running in %s mode", self.mode_name)
 
-        # Initialize random number generator for reproducibility
-        np.random.seed(1)
+        # Initialize random number generator (seed=None means random each run)
+        self.rng = np.random.default_rng(input_obj.physics.noise.seed)
 
         # Store input/output objects
         self.logger.debug("Reading input settings")
@@ -134,6 +134,10 @@ class Burgers(ABC):
 
         # Common output field
         self.tke = np.zeros(1)
+
+        # Pre-allocated RHS buffer and precomputed noise scaling constant
+        self.rhs = np.zeros(self.nx)
+        self._noise_scale = np.sqrt(2.0 * self.noise_amp / self.max_step)
 
         # Mode-specific setup (noise, SGS, etc.)
         self._setup_mode_specific()
@@ -285,7 +289,7 @@ class Burgers(ABC):
             if dt < 1e-15:
                 break
 
-            is_output_step = abs(t_current + dt - t_next_save) < 1e-14
+            is_output_step = abs(t_current + dt - t_next_save) <= 1e-12 * max(1.0, t_next_save)
 
             # 3-stage RK3
             Q[:] = 0.0
@@ -295,10 +299,8 @@ class Burgers(ABC):
                 Q[:] = A[stage] * Q + rhs
                 self.u[:] = self.u + B[stage] * dt * Q
 
-                # Zero Nyquist after each stage
-                self.spectral.derivatives.fft()
-                self.fu[self.mp] = 0
-                self.spectral.derivatives.ifft_nyquist()
+                # Zero Nyquist; restore physical space only on final stage
+                self.spectral.derivatives.zero_nyquist(restore_physical=(stage == 2))
 
             t_current += dt
 

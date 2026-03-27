@@ -17,7 +17,7 @@ PyBurgers implements direct numerical simulation (DNS) and large-eddy simulation
 - **Dual Simulation Modes**: DNS for full resolution and LES for coarse-grained modeling
 - **Four SGS Models**: Constant Smagorinsky, Dynamic Smagorinsky, Dynamic Wong-Lilly, and Deardorff 1.5-order TKE
 - **Optimized FFTs**: FFTW with intelligent wisdom caching for fast repeated runs
-- **Fractional Brownian Motion**: Configurable stochastic forcing with spectral control
+- **Fractional Brownian Motion**: Configurable stochastic forcing with spectral control and optional reproducible seeding
 - **NetCDF Output**: Standard format for analysis and visualization
 - **Schema-Validated Configuration**: JSON namelist with comprehensive validation
 
@@ -42,9 +42,14 @@ python burgers.py -m dns
 
 # Run LES simulation with custom output file
 python burgers.py -m les -o my_simulation.nc
+
+# Use a custom namelist (useful for managing multiple configurations)
+python burgers.py -m dns -i my_config.json
 ```
 
-Configuration is controlled via `namelist.json`. See the [documentation](https://docs.gibbs.science/pyburgers) for details.
+Configuration is controlled via a JSON namelist file (default: `namelist.json`). Use `-i` to specify a different file. See the [documentation](https://docs.gibbs.science/pyburgers) for details.
+
+To make a run reproducible, set `physics.noise.seed` to an integer in `namelist.json`. Omit the field (or set it to `null`) to draw a random seed at startup.
 
 ### Compare DNS vs LES TKE
 
@@ -54,10 +59,10 @@ Install the optional visualization dependencies:
 pip install -e ".[viz]"
 ```
 
-Then compare TKE output from one DNS run and multiple LES runs:
+Then plot TKE output:
 
 ```bash
-python scripts/compare_tke.py -d pyburgers_dns.nc -l pyburgers_les.nc -l pyburgers_les_alt.nc
+python scripts/plot_tke.py pyburgers_dns.nc pyburgers_les.nc
 ```
 
 ## Documentation
@@ -71,7 +76,7 @@ Full documentation is available at: **https://docs.gibbs.science/pyburgers**
 
 ## Performance
 
-PyBurgers v2.0 delivers dramatic performance improvements through real FFTs, optimized FFTW planning, and efficient buffer management.
+PyBurgers v2.0.1 delivers dramatic performance improvements through real FFTs, optimized FFTW planning, and efficient buffer management.
 
 **Benchmark: Default namelist (8192 DNS / 512 LES grid points, 200s duration)**
 
@@ -79,7 +84,7 @@ PyBurgers v2.0 delivers dramatic performance improvements through real FFTs, opt
 |---------|-----|-----|
 | Original Matlab | ~35 min | ~16 min |
 | PyBurgers v1.0 | ~43 min | ~23 min |
-| **PyBurgers v2.0** | **~40 sec** | **~7 sec** |
+| **PyBurgers v2.0.1** | **~34 sec** | **~7 sec** |
 
 *Tested on a late 2023 MacBook Pro (M3 Max). Performance varies by system; results illustrate relative gains.*
 
@@ -89,6 +94,7 @@ PyBurgers v2.0 delivers dramatic performance improvements through real FFTs, opt
 - NumPy ≥ 2.1
 - pyFFTW ≥ 0.15
 - netCDF4 ≥ 1.7
+- filelock ≥ 3.12
 
 ## Citation
 
@@ -100,7 +106,7 @@ If you use PyBurgers in your research, please cite:
   title = {PyBurgers: 1D Stochastic Burgers Equation Solver},
   year = {2026},
   url = {https://github.com/jeremygibbs/pyburgers},
-  version = {2.0.0}
+  version = {2.0.1}
 }
 ```
 
