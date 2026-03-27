@@ -285,7 +285,7 @@ class Burgers(ABC):
             if dt < 1e-15:
                 break
 
-            is_output_step = abs(t_current + dt - t_next_save) < 1e-14
+            is_output_step = abs(t_current + dt - t_next_save) <= 1e-12 * max(1.0, t_next_save)
 
             # 3-stage RK3
             Q[:] = 0.0
