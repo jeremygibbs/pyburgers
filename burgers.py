@@ -58,6 +58,14 @@ def main() -> None:
         help="Simulation mode: 'dns' or 'les' (default: dns)",
     )
     parser.add_argument(
+        "-i",
+        "--input",
+        dest="namelist",
+        type=str,
+        default="namelist.json",
+        help="Namelist configuration file (default: namelist.json)",
+    )
+    parser.add_argument(
         "-o",
         "--output",
         dest="outfile",
@@ -80,8 +88,7 @@ def main() -> None:
 
     try:
         # Create Input instance from namelist (configures logging)
-        namelist = "namelist.json"
-        input_obj: Input = Input(namelist)
+        input_obj: Input = Input(args.namelist)
 
         # Get logger after Input sets up logging
         logger = get_logger("Main")

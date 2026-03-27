@@ -42,9 +42,12 @@ python burgers.py -m dns
 
 # Run LES simulation with custom output file
 python burgers.py -m les -o my_simulation.nc
+
+# Use a custom namelist (useful for managing multiple configurations)
+python burgers.py -m dns -i my_config.json
 ```
 
-Configuration is controlled via `namelist.json`. See the [documentation](https://docs.gibbs.science/pyburgers) for details.
+Configuration is controlled via a JSON namelist file (default: `namelist.json`). Use `-i` to specify a different file. See the [documentation](https://docs.gibbs.science/pyburgers) for details.
 
 To make a run reproducible, set `physics.noise.seed` to an integer in `namelist.json`. Omit the field (or set it to `null`) to draw a random seed at startup.
 

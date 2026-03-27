@@ -171,6 +171,16 @@ python burgers.py -m les
 
 This uses the LES grid resolution (`grid.les.points`) and applies the specified subgrid-scale model (`physics.subgrid_model`).
 
+### Custom Namelist
+
+Specify a different configuration file with `-i`:
+
+```bash
+python burgers.py -m dns -i my_config.json
+```
+
+This lets you maintain multiple namelists for different experiments without renaming files.
+
 ### Custom Output File
 
 Specify a custom output filename:
@@ -334,7 +344,11 @@ Create a test namelist (`test_namelist.json`):
 }
 ```
 
-Then copy it over `namelist.json` to use it.
+Then run it directly without touching `namelist.json`:
+
+```bash
+python burgers.py -m dns -i test_namelist.json
+```
 
 ### Production DNS Run
 
@@ -347,16 +361,15 @@ Use the default `namelist.json` with:
 
 Run both modes to compare:
 
+Create a separate namelist for each SGS model, then run without modifying any files:
+
 ```bash
 # DNS reference
 python burgers.py -m dns -o reference_dns.nc
 
 # LES with different SGS models
-sed -i 's/"subgrid_model": 1/"subgrid_model": 1/' namelist.json
-python burgers.py -m les -o les_smagorinsky.nc
-
-sed -i 's/"subgrid_model": 1/"subgrid_model": 2/' namelist.json
-python burgers.py -m les -o les_dynamic.nc
+python burgers.py -m les -i namelist_smag.json -o les_smagorinsky.nc
+python burgers.py -m les -i namelist_dynamic.json -o les_dynamic.nc
 ```
 
 Then compare the results to evaluate SGS model performance.
