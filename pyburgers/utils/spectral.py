@@ -128,6 +128,9 @@ class Derivatives:
             threads=fftw_threads,
         )
 
+        # Flag indicating self.fu is current for self.u (skip redundant FFT)
+        self._fu_valid = False
+
     def compute(self, u: np.ndarray, order: list[int | str]) -> dict[str, np.ndarray]:
         """Compute spectral derivatives of the input field.
 
@@ -145,11 +148,12 @@ class Derivatives:
         """
         derivatives = {}
 
-        # copy input array
-        self.u[:] = u
-
-        # compute rfft
-        self.fft()
+        # FFT input to spectral space. Skip if fu is already current for self.u
+        # (set by zero_nyquist when restore_physical=False).
+        if not self._fu_valid or u is not self.u:
+            self.u[:] = u
+            self.fft()
+        self._fu_valid = False
 
         # loop through order of derivative from user
         for key in order:
@@ -194,6 +198,24 @@ class Derivatives:
                 derivatives["sq"] = self._out_sq
 
         return derivatives
+
+    def zero_nyquist(self, restore_physical: bool = True) -> None:
+        """FFT self.u, zero the Nyquist mode, and optionally restore physical space.
+
+        Called at the end of each RK3 stage to enforce the Nyquist constraint.
+
+        Args:
+            restore_physical: If True (default), IFFT back so self.u reflects
+                the Nyquist-zeroed velocity. If False, skip the IFFT and mark
+                self.fu as valid so the next compute() call skips the redundant
+                FFT. Use False for intermediate RK stages, True for the final stage.
+        """
+        self.fft()
+        self.fu[self.m] = 0
+        if restore_physical:
+            self.ifft_nyquist()
+        else:
+            self._fu_valid = True
 
 
 class Dealias:

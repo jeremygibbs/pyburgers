@@ -299,10 +299,8 @@ class Burgers(ABC):
                 Q[:] = A[stage] * Q + rhs
                 self.u[:] = self.u + B[stage] * dt * Q
 
-                # Zero Nyquist after each stage
-                self.spectral.derivatives.fft()
-                self.fu[self.mp] = 0
-                self.spectral.derivatives.ifft_nyquist()
+                # Zero Nyquist; restore physical space only on final stage
+                self.spectral.derivatives.zero_nyquist(restore_physical=(stage == 2))
 
             t_current += dt
 
