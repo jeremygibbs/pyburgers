@@ -237,19 +237,19 @@ class LES(Burgers):
         # Restore u
         self.u[:] = u_saved
 
-        rhs = (
+        self.rhs[:] = (
             self.visc * d2udx2
             - 0.5 * du2dx
-            + np.sqrt(2 * self.noise_amp / self.max_step) * noise
+            + self._noise_scale * noise
             - 0.5 * dtaudx
         )
 
         # Add hyperviscosity term if enabled
         if self.hypervisc > 0:
             d4udx4 = derivatives["4"]
-            rhs -= self.hypervisc * d4udx4
+            self.rhs -= self.hypervisc * d4udx4
 
-        return rhs
+        return self.rhs
 
     def _save_diagnostics(
         self, derivatives: dict[str, np.ndarray], t_out: int, t_loop: float

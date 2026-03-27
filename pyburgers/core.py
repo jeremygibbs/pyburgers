@@ -135,6 +135,10 @@ class Burgers(ABC):
         # Common output field
         self.tke = np.zeros(1)
 
+        # Pre-allocated RHS buffer and precomputed noise scaling constant
+        self.rhs = np.zeros(self.nx)
+        self._noise_scale = np.sqrt(2.0 * self.noise_amp / self.max_step)
+
         # Mode-specific setup (noise, SGS, etc.)
         self._setup_mode_specific()
 
