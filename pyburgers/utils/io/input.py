@@ -104,7 +104,7 @@ class Input:
         hypervisc_data = physics_data.get("hyperviscosity", {})
         self.physics: PhysicsConfig = PhysicsConfig(
             noise=NoiseConfig(
-                exponent=float(noise_data.get("exponent", 0.75)),
+                exponent=float(noise_data.get("exponent", -0.75)),
                 amplitude=float(noise_data.get("amplitude", 1e-6)),
                 seed=noise_data.get("seed", None),
             ),
