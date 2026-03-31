@@ -5,6 +5,31 @@ All notable changes to PyBurgers will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-03-31
+
+### Fixed
+
+- **Buffer mutation in `Derivatives.compute()`**: External inputs (SGS stress, TKE) no longer corrupt the velocity buffer; auto-save/restore eliminates error-prone manual copies in LES and Deardorff SGS
+- **Float equality in dynamic SGS models**: Replaced exact `== 0` comparison with tolerance (`< 1e-30`) in `SmagDynamic` and `WongLilly` coefficient computation to avoid division-by-zero edge cases
+- **Default noise exponent sign**: Changed default from `0.75` to `-0.75` in `Input` to match namelist convention and prevent silent sign error when the exponent is omitted
+
+### Changed
+
+- **`Derivatives.compute()` parameter**: Renamed `order` to `orders` for clarity (it accepts a list)
+- **RK3 coefficient variables**: Renamed `A`/`B` to `rk3_a`/`rk3_b` in `core.py` for PEP 8 compliance
+
+### Improved
+
+- **Spectral performance**: Replaced `up**2` with `np.square(self.up, out=self.up)` for in-place squaring; eliminated unnecessary `.copy()` in `Dealias.compute()` return
+- **`Derivatives.compute()` dispatch**: Changed `if`/`if`/`if` chain to `elif` for mutually exclusive derivative keys, avoiding redundant comparisons
+- **Google style guide compliance**: Added missing docstrings, fixed parameter documentation in SGS models, and corrected casing inconsistencies
+
+### Removed
+
+- Dead `TYPE_CHECKING` block in `spectral_workspace.py`
+
+---
+
 ## [2.0.1] - 2026-03-27
 
 ### Added

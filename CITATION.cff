@@ -33,8 +33,8 @@ keywords:
   - subgrid-scale modeling
   - stochastic forcing
 license: MIT
-version: 2.0.1
-date-released: '2026-03-27'
+version: 2.1.0
+date-released: '2026-03-31'
 references:
   - type: article
     authors:
