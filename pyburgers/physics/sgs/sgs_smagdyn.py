@@ -64,6 +64,7 @@ class SmagDynamic(SGS):
             u: Velocity field array.
             dudx: Velocity gradient array.
             tke_sgs: Subgrid TKE (unused in this model).
+            dt: Current time step size (unused in this model).
 
         Returns:
             Dictionary with 'tau' (SGS stress) and 'coeff' (Cs).
