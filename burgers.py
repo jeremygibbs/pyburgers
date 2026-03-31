@@ -80,7 +80,7 @@ def main() -> None:
     # Welcome message
     print("#"*100)
     print("#"+(" "*98)+"#")
-    print("#"+(" "*31)+"Welcome to PyBurgers (version 2.0.1)"+(" "*31)+"#")
+    print("#"+(" "*31)+"Welcome to PyBurgers (version 2.1.0)"+(" "*31)+"#")
     print("#"+(" "*24)+"A toy to study Burgers turbulence with DNS and LES"+(" "*24)+"#")
     print("#"+(" "*40)+"by: Jeremy A Gibbs"+(" "*40)+"#")
     print("#"+(" "*98)+"#")
