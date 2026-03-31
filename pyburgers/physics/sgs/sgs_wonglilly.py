@@ -81,10 +81,11 @@ class WongLilly(SGS):
         M11 = self.dx**exponent * (1 - ratio_pow) * dudxf
 
         # Wong-Lilly coefficient
-        if np.mean(M11 * M11) == 0:
+        M11_sq_mean = np.mean(M11 * M11)
+        if M11_sq_mean < 1e-30:
             cwl = 0
         else:
-            cwl = 0.5 * np.mean(L11 * M11) / np.mean(M11 * M11)
+            cwl = 0.5 * np.mean(L11 * M11) / M11_sq_mean
             if cwl < 0:
                 cwl = 0
 

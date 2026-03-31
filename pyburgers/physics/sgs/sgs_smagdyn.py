@@ -86,10 +86,11 @@ class SmagDynamic(SGS):
         dudx2 = self.spectral.dealias.compute(dudx)
 
         # Dynamic Smagorinsky coefficient
-        if np.mean(M11 * M11) == 0:
+        M11_sq_mean = np.mean(M11 * M11)
+        if M11_sq_mean < 1e-30:
             cs2 = 0
         else:
-            cs2 = 0.5 * np.mean(L11 * M11) / np.mean(M11 * M11)
+            cs2 = 0.5 * np.mean(L11 * M11) / M11_sq_mean
             if cs2 < 0:
                 cs2 = 0
 
