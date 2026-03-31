@@ -162,22 +162,22 @@ class Derivatives:
                 self.ifft()
                 np.multiply(self.fac, self.der, out=self._out_1)
                 derivatives["1"] = self._out_1
-            if key == 2:
+            elif key == 2:
                 self.fun[:] = -self.k2 * self.fu
                 self.ifft()
                 np.multiply(self.fac2, self.der, out=self._out_2)
                 derivatives["2"] = self._out_2
-            if key == 3:
+            elif key == 3:
                 self.fun[:] = -1j * self.k3 * self.fu
                 self.ifft()
                 np.multiply(self.fac3, self.der, out=self._out_3)
                 derivatives["3"] = self._out_3
-            if key == 4:
+            elif key == 4:
                 self.fun[:] = self.k4 * self.fu
                 self.ifft()
                 np.multiply(self.fac4, self.der, out=self._out_4)
                 derivatives["4"] = self._out_4
-            if key == "sq":
+            elif key == "sq":
                 # Dealiased computation of d(u^2)/dx using 2x zero-padding
                 # With rfft, only non-negative frequencies are stored
                 # Zero-pad: copy all nk values to padded array (nk_padded = nx + 1)
