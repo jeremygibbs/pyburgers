@@ -198,9 +198,9 @@ class Derivatives:
                 # Transform to padded physical space
                 self.ifftp()
                 # Correct for 2x padding normalization: irfft divides by 2n instead of n
-                self.up[:] *= 2
+                self.up *= 2
                 # Square in physical space
-                self.up[:] = self.up**2
+                np.square(self.up, out=self.up)
                 # Transform back to spectral space
                 self.fftp()
                 # Compute derivative directly from padded result; self.k zeros Nyquist
@@ -308,54 +308,40 @@ class Dealias:
             x: Input array (real-valued).
 
         Returns:
-            Dealiased result of |x| * x.
+            Dealiased result of |x| * x. The returned array is an
+            internal buffer; copy it if you need to preserve the values
+            across calls.
         """
-        # constants
         scale = c.spectral.DEALIAS_SCALE
 
-        # copy input array
         self.x[:] = x
-
-        # compute rfft of x
         self.fft()
 
-        # zero-pad fx (simpler with rfft - just copy to beginning)
+        # Zero-pad fx
         self.fxp[:] = 0
         self.fxp[0 : self.nk] = self.fx
-
-        # compute irfft of fxp
         self.ifftp()
 
-        # store xp in temp
+        # Store padded x in temp
         self.temp[:] = self.xp
 
-        # change x to abs(x)
-        self.x[:] = np.abs(x)
-
-        # compute rfft of x
+        # Compute padded |x|
+        np.abs(x, out=self.x)
         self.fft()
-
-        # zero-pad fx
         self.fxp[:] = 0
         self.fxp[0 : self.nk] = self.fx
-
-        # compute irfft of fxp
         self.ifftp()
 
-        # multiply xp[x] with xp[abs(x)]
-        self.xp[:] = self.xp * self.temp
+        # Multiply x * |x| in padded space
+        np.multiply(self.xp, self.temp, out=self.xp)
 
-        # compute rfft of xp
+        # Transform back and de-alias
         self.fftp()
-
-        # de-alias fxp (simpler with rfft - just take first nk values)
         self.fx[:] = self.fxp[0 : self.nk]
-
-        # compute irfft of fx
         self.ifft()
 
-        # return de-aliased input
-        return scale * self.x.copy()
+        self.x *= scale
+        return self.x
 
 
 class Filter:
