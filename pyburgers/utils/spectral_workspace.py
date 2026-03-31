@@ -19,15 +19,10 @@ memory usage.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import numpy as np
 
 from pyburgers.utils.fbm import FBM
 from pyburgers.utils.spectral import Dealias, Derivatives, Filter
-
-if TYPE_CHECKING:
-    pass
 
 
 class SpectralWorkspace:
