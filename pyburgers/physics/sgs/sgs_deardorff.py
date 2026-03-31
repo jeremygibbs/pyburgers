@@ -74,9 +74,6 @@ class Deardorff(SGS):
         ce = c.sgs.DEARDORFF_CE  # Dissipation coefficient
         c1 = c.sgs.DEARDORFF_C1  # Eddy viscosity coefficient
 
-        # Derivatives.compute uses the shared velocity buffer; preserve u.
-        u_local = u.copy()
-
         # Strain rate squared (1D), used for production
         dudx2 = dudx * dudx
 
@@ -84,7 +81,7 @@ class Deardorff(SGS):
         derivs_k = self.spectral.derivatives.compute(tke_sgs, [1])
         dkdx = derivs_k["1"]
 
-        derivs_ku = self.spectral.derivatives.compute(tke_sgs * u_local, [1])
+        derivs_ku = self.spectral.derivatives.compute(tke_sgs * u, [1])
         dkudx = derivs_ku["1"]
 
         # Eddy viscosity and SGS stress
@@ -105,7 +102,6 @@ class Deardorff(SGS):
 
         # Update subgrid TKE
         tke_sgs_new = np.maximum(tke_sgs + dtke, 0.0)
-        self.spectral.u[:] = u_local
 
         self.result["tau"] = tau
         self.result["coeff"] = c1

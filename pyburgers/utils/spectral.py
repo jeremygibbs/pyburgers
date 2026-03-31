@@ -134,23 +134,35 @@ class Derivatives:
     def compute(self, u: np.ndarray, order: list[int | str]) -> dict[str, np.ndarray]:
         """Compute spectral derivatives of the input field.
 
+        When ``u`` is not the internal buffer (``self.u``), the buffer is
+        automatically saved before the computation and restored afterward.
+        This allows callers to compute derivatives of arbitrary arrays
+        (e.g., SGS stress) without corrupting the velocity field.
+
         Args:
-            u: Input velocity field array (real-valued).
+            u: Input field array (real-valued).
             order: List of derivative orders to compute. Can include
-                integers (1, 2, 3) for standard derivatives or 'sq'
+                integers (1, 2, 3, 4) for standard derivatives or 'sq'
                 for the dealiased derivative of u^2.
 
         Returns:
-            Dictionary mapping order keys ('1', '2', '3', 'sq') to
+            Dictionary mapping order keys ('1', '2', '3', '4', 'sq') to
             the corresponding derivative arrays. Arrays are reused
             internally, so callers should consume values before the
             next compute() call.
         """
         derivatives = {}
 
+        # If computing derivatives of a non-velocity field, preserve the
+        # primary velocity buffer so callers don't need manual save/restore.
+        external_input = u is not self.u
+        if external_input:
+            u_saved = self.u.copy()
+            fu_saved = self.fu.copy()
+
         # FFT input to spectral space. Skip if fu is already current for self.u
         # (set by zero_nyquist when restore_physical=False).
-        if not self._fu_valid or u is not self.u:
+        if not self._fu_valid or external_input:
             self.u[:] = u
             self.fft()
         self._fu_valid = False
@@ -196,6 +208,12 @@ class Derivatives:
                 self.ifft()
                 np.multiply(self.fac, self.der, out=self._out_sq)
                 derivatives["sq"] = self._out_sq
+
+        # Restore the primary velocity buffer if we were computing on
+        # an external array (e.g., tau, tke_sgs).
+        if external_input:
+            self.u[:] = u_saved
+            self.fu[:] = fu_saved
 
         return derivatives
 
