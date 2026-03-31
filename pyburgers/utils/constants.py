@@ -14,9 +14,9 @@
 This module provides a centralized location for all constants used throughout
 PyBurgers. Constants are grouped into logical namespaces using frozen dataclasses.
 
-Attributes:
-    spectral (SpectralConstants): Spectral algorithm constants
-    sgs (SGSConstants): Subgrid-scale model constants
+Module-level instances:
+    spectral: Spectral algorithm constants.
+    sgs: Subgrid-scale model constants.
 """
 
 from dataclasses import dataclass

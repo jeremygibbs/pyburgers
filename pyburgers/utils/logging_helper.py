@@ -27,7 +27,20 @@ LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 
 class _ShortNameFormatter(logging.Formatter):
+    """Formatter that uses only the last segment of the logger name.
+
+    For example, 'PyBurgers.DNS' is displayed as 'DNS'.
+    """
+
     def format(self, record: logging.LogRecord) -> str:
+        """Format the log record with a shortened logger name.
+
+        Args:
+            record: The log record to format.
+
+        Returns:
+            The formatted log string.
+        """
         original_name = record.name
         record.name = original_name.rsplit(".", 1)[-1]
         try:

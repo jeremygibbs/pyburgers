@@ -264,8 +264,8 @@ class Burgers(ABC):
         exact multiples of t_save by clamping dt to hit output times.
         """
         # Williamson (1980) low-storage RK3 coefficients
-        A = (0.0, -5.0 / 9.0, -153.0 / 128.0)
-        B = (1.0 / 3.0, 15.0 / 16.0, 8.0 / 15.0)
+        rk3_a = (0.0, -5.0 / 9.0, -153.0 / 128.0)
+        rk3_b = (1.0 / 3.0, 15.0 / 16.0, 8.0 / 15.0)
 
         t_current = 0.0
         t_next_save = self.t_save
@@ -296,8 +296,8 @@ class Burgers(ABC):
             for stage in range(3):
                 derivatives = self._compute_derivatives(False)
                 rhs = self._compute_rhs(derivatives, noise, dt)
-                Q[:] = A[stage] * Q + rhs
-                self.u[:] = self.u + B[stage] * dt * Q
+                Q[:] = rk3_a[stage] * Q + rhs
+                self.u[:] = self.u + rk3_b[stage] * dt * Q
 
                 # Zero Nyquist; restore physical space only on final stage
                 self.spectral.derivatives.zero_nyquist(restore_physical=(stage == 2))

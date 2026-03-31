@@ -131,7 +131,7 @@ class Derivatives:
         # Flag indicating self.fu is current for self.u (skip redundant FFT)
         self._fu_valid = False
 
-    def compute(self, u: np.ndarray, order: list[int | str]) -> dict[str, np.ndarray]:
+    def compute(self, u: np.ndarray, orders: list[int | str]) -> dict[str, np.ndarray]:
         """Compute spectral derivatives of the input field.
 
         When ``u`` is not the internal buffer (``self.u``), the buffer is
@@ -141,7 +141,7 @@ class Derivatives:
 
         Args:
             u: Input field array (real-valued).
-            order: List of derivative orders to compute. Can include
+            orders: List of derivative orders to compute. Can include
                 integers (1, 2, 3, 4) for standard derivatives or 'sq'
                 for the dealiased derivative of u^2.
 
@@ -167,8 +167,8 @@ class Derivatives:
             self.fft()
         self._fu_valid = False
 
-        # loop through order of derivative from user
-        for key in order:
+        # Loop through requested derivative orders
+        for key in orders:
             if key == 1:
                 self.fun[:] = 1j * self.k * self.fu
                 self.ifft()

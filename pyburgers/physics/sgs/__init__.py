@@ -9,7 +9,7 @@
 # This software is free and is distributed under the MIT License.
 # See accompanying LICENSE file or visit https://opensource.org/licenses/MIT.
 #
-"""pyBurgers SGS Physics Subpackage.
+"""PyBurgers SGS Physics Subpackage.
 
 This module serves as the entry point for the subgrid-scale (SGS) model
 component of the LES solver. It imports and exposes the main `SGS`
