@@ -1,53 +1,85 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "PyBurgers Namelist Validation Schema",
-    "description": "Schema to validate the configuration namelist for PyBurgers.",
+    "title": "PyBurgers Namelist Configuration",
+    "description": "Schema to validate the configuration namelist for PyBurgers v2.1.",
     "type": "object",
     "properties": {
         "time": {
             "type": "object",
+            "description": "Controls simulation duration and adaptive time stepping.",
             "properties": {
-                "nt": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "description": "Total number of time steps to simulate."
-                },
-                "dt": {
+                "duration": {
                     "type": "number",
                     "exclusiveMinimum": 0,
-                    "description": "Time step size in seconds."
+                    "description": "Total simulation time in seconds."
+                },
+                "cfl": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "exclusiveMaximum": 0.55,
+                    "description": "Target CFL number for adaptive time stepping."
+                },
+                "max_step": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Maximum allowed time step in seconds."
                 }
             },
-            "required": ["nt", "dt"]
+            "required": ["duration", "cfl", "max_step"]
+        },
+        "grid": {
+            "type": "object",
+            "description": "Defines the computational domain and spatial resolution.",
+            "properties": {
+                "length": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "default": 6.283185307179586,
+                    "description": "Length of the periodic domain in meters (default: 2π)."
+                },
+                "dns": {
+                    "type": "object",
+                    "properties": {
+                        "points": {
+                            "type": "integer",
+                            "minimum": 2,
+                            "default": 8192,
+                            "description": "Number of grid points for DNS resolution (must be even)."
+                        }
+                    }
+                },
+                "les": {
+                    "type": "object",
+                    "properties": {
+                        "points": {
+                            "type": "integer",
+                            "minimum": 2,
+                            "default": 512,
+                            "description": "Number of grid points for LES resolution (must be even)."
+                        }
+                    }
+                }
+            },
+            "anyOf": [
+                { "required": ["dns"] },
+                { "required": ["les"] }
+            ]
         },
         "physics": {
             "type": "object",
+            "description": "Defines the physical parameters of the Burgers equation.",
             "properties": {
-                "noise": {
-                    "type": "object",
-                    "properties": {
-                        "beta": { 
-                            "type": "number",
-                            "description": "Spectral exponent of FBM."
-                        },
-                        "amplitude": { 
-                            "type": "number", 
-                            "exclusiveMinimum": 0,
-                            "description": "Amplitude of FBM."
-                        }
-                    },
-                    "required": ["beta", "amplitude"]
-                },
-                "viscosity": { 
-                    "type": "number", 
+                "viscosity": {
+                    "type": "number",
                     "exclusiveMinimum": 0,
-                    "description": "Kinematic viscosity [m^2/s]"
+                    "description": "Kinematic viscosity [m^2/s]."
                 },
-                "sgs_model": { 
-                    "type": "integer", 
-                    "minimum": 0, 
+                "subgrid_model": {
+                    "type": "integer",
+                    "minimum": 0,
                     "maximum": 4,
-                    "description": "Subgrid-scale model selector.",
+                    "default": 1,
+                    "description": "Subgrid-scale model selector (LES only).",
                     "oneOf": [
                         { "const": 0, "description": "No SGS model" },
                         { "const": 1, "description": "Constant Smagorinsky" },
@@ -55,103 +87,94 @@
                         { "const": 3, "description": "Dynamic Wong-Lilly" },
                         { "const": 4, "description": "Deardorff 1.5-order TKE" }
                     ]
-                }
-            },
-            "required": ["noise", "viscosity"]
-        },
-        "grid": {
-            "type": "object",
-            "properties": {
-                "domain_length": {
-                    "type": "number",
-                    "exclusiveMinimum": 0,
-                    "description": "Length of the periodic domain in meters (default: 2π)."
                 },
-                "dns": {
+                "noise": {
                     "type": "object",
+                    "description": "Stochastic forcing (fractional Brownian motion) parameters.",
                     "properties": {
-                        "nx": {
-                            "type": "integer",
-                            "minimum": 1,
-                            "description": "Number of grid points for DNS resolution (must be even)."
+                        "exponent": {
+                            "type": "number",
+                            "default": -0.75,
+                            "description": "FBM spectral exponent controlling noise correlation structure."
+                        },
+                        "amplitude": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "default": 1e-6,
+                            "description": "Amplitude of the stochastic forcing."
+                        },
+                        "seed": {
+                            "type": ["integer", "null"],
+                            "default": null,
+                            "description": "RNG seed for reproducibility. Null means random each run."
+                        }
+                    }
+                },
+                "hyperviscosity": {
+                    "type": "object",
+                    "description": "Optional fourth-order hyperviscosity for high-k damping.",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "default": false,
+                            "description": "Whether to enable hyperviscosity (coefficient auto-computed as dx^4)."
                         }
                     },
-                    "required": ["nx"]
-                },
-                "les": {
-                    "type": "object",
-                    "properties": {
-                        "nx": {
-                            "type": "integer",
-                            "minimum": 1,
-                            "description": "Number of grid points for LES resolution (must be even)."
-                        }
-                    },
-                    "required": ["nx"]
+                    "additionalProperties": false
                 }
             },
-            "required": ["dns", "les"]
+            "required": ["viscosity"]
         },
         "output": {
             "type": "object",
+            "description": "Controls output file writing and progress reporting.",
             "properties": {
-                "t_save": {
+                "interval_save": {
                     "type": "number",
                     "exclusiveMinimum": 0,
-                    "description": "Output interval in simulation seconds (not wall-clock time)."
+                    "description": "Output interval in simulation seconds."
                 },
-                "t_print": {
+                "interval_print": {
                     "type": "number",
                     "exclusiveMinimum": 0,
-                    "description": "Progress reporting interval in simulation seconds (optional, defaults to t_save)."
+                    "description": "Progress reporting interval in simulation seconds."
                 }
-            },
-            "required": ["t_save"]
+            }
         },
         "logging": {
             "type": "object",
+            "description": "Configures runtime logging behavior.",
             "properties": {
                 "level": {
                     "type": "string",
                     "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-                    "description": "Logging severity.",
-                    "oneOf": [
-                      { "const": "DEBUG", "description": "Verbose diagnostics." },
-                      { "const": "INFO", "description": "Normal runtime info." },
-                      { "const": "WARNING", "description": "Potential issues." },
-                      { "const": "ERROR", "description": "Errors that stop work." },
-                      { "const": "CRITICAL", "description": "Serious failures." }
-                    ]
+                    "default": "INFO",
+                    "description": "Logging verbosity level."
                 },
                 "file": {
                     "type": "string",
                     "description": "Path to log file (optional, logs to console if omitted)."
                 }
-            },
-            "required": ["level"]
+            }
         },
         "fftw": {
             "type": "object",
+            "description": "Configures FFTW planning and threading.",
             "properties": {
                 "planning": {
                     "type": "string",
                     "enum": ["FFTW_ESTIMATE", "FFTW_MEASURE", "FFTW_PATIENT", "FFTW_EXHAUSTIVE"],
-                    "description": "FFTW planning strategy.",
-                    "oneOf": [
-                      { "const": "FFTW_ESTIMATE", "description": "Fastest plan; Slower FFTs." },
-                      { "const": "FFTW_MEASURE", "description": "Balances planning vs speed." },
-                      { "const": "FFTW_PATIENT", "description": "Slower plan; Faster FFTs." },
-                      { "const": "FFTW_EXHAUSTIVE", "description": "Slowest plan; Fastest FFTs."}
-                    ]
+                    "default": "FFTW_MEASURE",
+                    "description": "FFTW planning strategy."
                 },
                 "threads": {
                     "type": "integer",
                     "minimum": 1,
+                    "default": 4,
                     "description": "Number of threads for FFT operations."
                 }
-            },
-            "required": ["planning", "threads"]
+            }
         }
     },
-    "required": ["time", "physics", "grid", "output", "logging", "fftw"]
+    "required": ["time", "physics", "grid"]
 }
