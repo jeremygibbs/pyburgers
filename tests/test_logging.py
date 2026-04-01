@@ -146,8 +146,8 @@ class TestInputLogging:
         namelist_file.write_text(namelist_content)
 
         input_obj = Input(str(namelist_file))
-        # Level is stored as-is, setup_logging will handle normalization
-        assert input_obj.log_level == "debug"
+        # Level is normalized to uppercase during validation
+        assert input_obj.log_level == "DEBUG"
 
 
 class TestLoggingLevels:

@@ -9,6 +9,7 @@ dependencies = [
     "pyfftw>=0.15",
     "netCDF4>=1.7",
     "filelock>=3.12",
+    "jsonschema>=4.0",
 ]
 
 [project.optional-dependencies]

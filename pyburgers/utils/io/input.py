@@ -20,7 +20,10 @@ access all setup information.
 import json
 import logging
 import math
+from pathlib import Path
 from typing import Any
+
+import jsonschema
 
 from ...data_models import (
     DNSConfig,
@@ -69,8 +72,7 @@ class Input:
         self.logger: logging.Logger = get_logger("Input")
         self.logger.info("Reading %s", namelist_path)
 
-        namelist_data = self._load_namelist(namelist_path)
-        self._validate_namelist(namelist_data)
+        namelist_data = self._load_and_validate_namelist(namelist_path)
 
         # Extract and finalize logging config first so we can adjust log level
         logging_data = namelist_data.get("logging", {})
@@ -185,127 +187,42 @@ class Input:
         """Print interval in seconds."""
         return self.output.interval_print
 
-    def _load_namelist(self, namelist_path: str) -> dict[str, Any]:
-        """Load the JSON namelist file.
+    def _load_and_validate_namelist(self, namelist_path: str) -> dict[str, Any]:
+        """Load and validate the JSON namelist file against the schema.
 
         Args:
             namelist_path: The path to the JSON namelist file.
 
         Returns:
-            A dictionary containing the namelist data.
+            A dictionary containing the validated namelist data.
 
         Raises:
             FileNotFoundError: If the namelist file cannot be found.
             json.JSONDecodeError: If the namelist is not valid JSON.
+            NamelistError: If the namelist fails schema validation.
         """
+        schema_path = str(Path(__file__).parent.parent.parent / "schema_namelist.json")
+
         try:
+            with open(schema_path, encoding="utf-8") as f:
+                schema = json.load(f)
             with open(namelist_path, encoding="utf-8") as f:
-                return json.load(f)
+                namelist_data = json.load(f)
+            # Normalize log level to uppercase before validation
+            if "logging" in namelist_data and "level" in namelist_data["logging"]:
+                namelist_data["logging"]["level"] = namelist_data["logging"]["level"].upper()
+            jsonschema.validate(instance=namelist_data, schema=schema)
+            self.logger.debug("Namelist validation successful")
+            return namelist_data
         except FileNotFoundError:
-            self.logger.error("Namelist file not found: %s", namelist_path)
+            self.logger.error("File not found: %s", namelist_path)
             raise
         except json.JSONDecodeError as e:
             self.logger.error("Invalid JSON in namelist: %s", e)
             raise
-
-    def _validate_namelist(self, data: dict[str, Any]) -> None:
-        """Validate required namelist sections and values.
-
-        Args:
-            data: The namelist dictionary to validate.
-
-        Raises:
-            NamelistError: If required sections or values are missing.
-        """
-        required_sections = ["time", "physics", "grid"]
-        for section in required_sections:
-            if section not in data:
-                raise NamelistError(f"Missing required section: '{section}'")
-
-        # Validate time section
-        time_data = data["time"]
-        if "duration" not in time_data:
-            raise NamelistError("Missing 'duration' in time section")
-        if "cfl" not in time_data:
-            raise NamelistError("Missing 'cfl' in time section")
-        if "max_step" not in time_data:
-            raise NamelistError("Missing 'max_step' in time section")
-        cfl_val = float(time_data["cfl"])
-        if cfl_val <= 0 or cfl_val >= 0.55:
-            raise NamelistError("time 'cfl' must be in (0, 0.55)")
-        if float(time_data["max_step"]) <= 0:
-            raise NamelistError("time 'max_step' must be positive")
-        if float(time_data["duration"]) <= 0:
-            raise NamelistError("time 'duration' must be positive")
-
-        # Validate grid section
-        grid_data = data["grid"]
-        if "length" in grid_data and float(grid_data["length"]) <= 0:
-            raise NamelistError("grid 'length' must be positive")
-
-        # Validate physics section
-        physics_data = data["physics"]
-        if "viscosity" not in physics_data:
-            raise NamelistError("Missing 'viscosity' in physics section")
-        if float(physics_data["viscosity"]) <= 0:
-            raise NamelistError("'viscosity' must be positive")
-
-        if "dns" not in grid_data and "les" not in grid_data:
-            raise NamelistError("At least one of 'dns' or 'les' must be in grid section")
-
-        # Validate DNS config if present
-        if "dns" in grid_data:
-            dns_data = grid_data["dns"]
-            if "points" in dns_data and int(dns_data["points"]) <= 0:
-                raise NamelistError("dns 'points' must be positive")
-
-        # Validate LES config if present
-        if "les" in grid_data:
-            les_data = grid_data["les"]
-            if "points" in les_data and int(les_data["points"]) <= 0:
-                raise NamelistError("les 'points' must be positive")
-
-        if "subgrid_model" in physics_data:
-            sgs = int(physics_data["subgrid_model"])
-            if sgs < 0 or sgs > 4:
-                raise NamelistError(f"physics 'subgrid_model' must be 0-4, got {sgs}")
-
-        # Validate hyperviscosity config if present
-        if "hyperviscosity" in physics_data:
-            hypervisc_data = physics_data["hyperviscosity"]
-            valid_keys = {"enabled"}
-            invalid_keys = set(hypervisc_data.keys()) - valid_keys
-            if invalid_keys:
-                raise NamelistError(
-                    f"Invalid hyperviscosity key(s): {invalid_keys}. Valid keys: {valid_keys}"
-                )
-            if "enabled" in hypervisc_data:
-                enabled = hypervisc_data["enabled"]
-                if not isinstance(enabled, bool):
-                    raise NamelistError(
-                        f"hyperviscosity 'enabled' must be true or false, got {enabled}"
-                    )
-
-        # Validate output config if present
-        if "output" in data:
-            output_data = data["output"]
-            if "interval_save" in output_data and float(output_data["interval_save"]) <= 0:
-                raise NamelistError("output 'interval_save' must be positive")
-            if "interval_print" in output_data and float(output_data["interval_print"]) <= 0:
-                raise NamelistError("output 'interval_print' must be positive")
-
-        # Validate FFTW config if present
-        if "fftw" in data:
-            fftw_data = data["fftw"]
-            valid_planning = ["FFTW_ESTIMATE", "FFTW_MEASURE", "FFTW_PATIENT", "FFTW_EXHAUSTIVE"]
-            planning = fftw_data.get("planning", "FFTW_MEASURE")
-            if planning not in valid_planning:
-                raise NamelistError(
-                    f"Invalid FFTW planning: '{planning}'. Valid options: {valid_planning}"
-                )
-            threads = fftw_data.get("threads", 4)
-            if int(threads) < 1:
-                raise NamelistError("FFTW 'threads' must be at least 1")
+        except jsonschema.ValidationError as e:
+            self.logger.error("Namelist validation error: %s", e.message)
+            raise NamelistError(e.message) from e
 
     def _log_configuration(self) -> None:
         """Log the loaded configuration for debugging."""
