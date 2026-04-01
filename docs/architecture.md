@@ -161,7 +161,7 @@ classDiagram
         +run()
         +_compute_rhs()*
         +_initialize_velocity()
-        +_compute_cfl()
+        +_compute_dt()
     }
 
     class DNS {
@@ -273,35 +273,14 @@ flowchart TD
     Start([Initialization]) --> CheckFile{Wisdom file<br/>exists?}
 
     CheckFile -->|No| Warmup[Run Warmup:<br/>Create all plans]
-    CheckFile -->|Yes| Lock[Acquire Read Lock]
+    CheckFile -->|Yes| Lock[Acquire File Lock]
 
-    Lock --> Load[Load Wisdom File]
-    Load --> CheckMeta{Metadata<br/>matches?}
+    Lock --> Load[Load & Import Wisdom]
+    Load --> Import[Reuse Cached Plans<br/>Missing sizes planned on-demand]
 
-    CheckMeta -->|nx_dns matches?| CheckLES
-    CheckMeta -->|No| Invalid1[Mark Invalid]
+    Import --> Continue([Continue])
 
-    CheckLES -->|nx_les matches?| CheckBeta
-    CheckLES -->|No| Invalid2[Mark Invalid]
-
-    CheckBeta -->|noise_beta matches?| CheckPlan
-    CheckBeta -->|No| Invalid3[Mark Invalid]
-
-    CheckPlan -->|FFTW planning matches?| CheckThreads
-    CheckPlan -->|No| Invalid4[Mark Invalid]
-
-    CheckThreads -->|Threads match?| Import
-    CheckThreads -->|No| Invalid5[Mark Invalid]
-
-    Invalid1 --> Warmup
-    Invalid2 --> Warmup
-    Invalid3 --> Warmup
-    Invalid4 --> Warmup
-    Invalid5 --> Warmup
-
-    Import[Import Wisdom<br/>Fast startup] --> Continue([Continue])
-
-    Warmup --> Save[Save Wisdom<br/>with metadata]
+    Warmup --> Save[Save Wisdom<br/>cumulative across runs]
     Save --> Continue
 
     style CheckFile fill:#e1f5ff
@@ -318,7 +297,7 @@ flowchart TD
     ReadConfig --> Factory{Model ID}
 
     Factory -->|0| NoModel[No SGS Model<br/>τ = 0]
-    Factory -->|1| SmagC[Constant Smagorinsky<br/>C_s = 0.18]
+    Factory -->|1| SmagC[Constant Smagorinsky<br/>C_s = 0.16]
     Factory -->|2| SmagD[Dynamic Smagorinsky<br/>C_s computed]
     Factory -->|3| WongL[Wong-Lilly<br/>Dynamic + similarity]
     Factory -->|4| Dear[Deardorff TKE<br/>1.5-order closure]
@@ -355,6 +334,6 @@ flowchart TD
 - Provides clean interface to complex FFT operations
 
 ### Caching Pattern
-- FFTW wisdom stored with metadata validation
+- FFTW wisdom is cumulative across runs and configurations
 - First run: slow planning, subsequent runs: instant
-- Automatic invalidation on parameter changes
+- File locking prevents concurrent access conflicts
