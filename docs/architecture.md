@@ -22,6 +22,12 @@ flowchart TB
         LES[LES Class<br/>Large-Eddy Simulation]
     end
 
+    subgraph numerics[Numerical Methods]
+        TI[TimeIntegrator Base]
+        RK3[RK3<br/>Low-Storage RK3]
+        AB2[AB2<br/>Adams-Bashforth 2]
+    end
+
     subgraph physics[Physics Models]
         SGS[SGS Base Class]
         Smag[Smagorinsky Models]
@@ -51,6 +57,9 @@ flowchart TB
     DNS --> Base
     LES --> Base
     LES --> SGS
+    Base --> TI
+    TI --> RK3
+    TI --> AB2
     SGS --> Smag
     SGS --> Wong
     SGS --> Dear
@@ -68,6 +77,7 @@ flowchart TB
     style DNS fill:#e8f5e9
     style LES fill:#e8f5e9
     style Spectral fill:#f3e5f5
+    style TI fill:#fce4ec
     style Output fill:#ffe0b2
 ```
 
@@ -96,13 +106,18 @@ flowchart TD
     LoadSGS --> InitIC
 
     InitIC[Initialize Velocity Field<br/>Random + low-k energy] --> CreateOutput[Create NetCDF Output]
-    CreateOutput --> TimeLoop{t < duration?}
+    CreateOutput --> SelectIntegrator{Integrator}
 
-    TimeLoop -->|Yes| RK3Step[RK3 Time Step]
-    RK3Step --> Stage1[Stage 1:<br/>Compute RHS, Update u]
-    Stage1 --> Stage2[Stage 2:<br/>Compute RHS, Update u]
-    Stage2 --> Stage3[Stage 3:<br/>Compute RHS, Update u]
-    Stage3 --> ComputeCFL[Compute CFL<br/>Adaptive Δt]
+    SelectIntegrator -->|1| UseRK3[RK3 Integrator]
+    SelectIntegrator -->|2| UseAB2[AB2 Integrator]
+
+    UseRK3 --> TimeLoop
+    UseAB2 --> TimeLoop
+
+    TimeLoop{t < duration?}
+
+    TimeLoop -->|Yes| TimeStep[Time Step<br/>via Integrator]
+    TimeStep --> ComputeCFL[Compute CFL<br/>Adaptive Δt]
     ComputeCFL --> CheckSave{Time to<br/>save?}
 
     CheckSave -->|Yes| WriteNC[Write to NetCDF]
@@ -118,12 +133,13 @@ flowchart TD
 
     style Start fill:#e1f5ff
     style End fill:#e1f5ff
-    style RK3Step fill:#fff4e1
+    style TimeStep fill:#fff4e1
+    style SelectIntegrator fill:#fce4ec
     style WriteNC fill:#e8f5e9
     style InitSolver fill:#f3e5f5
 ```
 
-## RK3 Stage Details
+## RK3 Stage Details (Integrator ID 1)
 
 Each Runge-Kutta stage computes the right-hand side (RHS) of the Burgers equation:
 
@@ -156,6 +172,7 @@ classDiagram
     class Burgers {
         <<abstract>>
         +SpectralWorkspace workspace
+        +TimeIntegrator integrator
         +Input input_obj
         +Output output
         +run()
@@ -173,6 +190,24 @@ classDiagram
         +SGS sgs_model
         +_compute_rhs()
         Override: Includes SGS stress
+    }
+
+    class TimeIntegrator {
+        <<abstract>>
+        +step()*
+        +get_integrator()$
+    }
+
+    class RK3 {
+        +Q: array
+        +step()
+        3-stage low-storage
+    }
+
+    class AB2 {
+        +rhs_prev: array
+        +step()
+        2nd-order multistep
     }
 
     class SGS {
@@ -213,6 +248,9 @@ classDiagram
     Burgers <|-- DNS
     Burgers <|-- LES
     Burgers *-- SpectralWorkspace
+    Burgers *-- TimeIntegrator
+    TimeIntegrator <|-- RK3
+    TimeIntegrator <|-- AB2
     LES *-- SGS
     SGS <|-- SmagConstant
     SGS <|-- SmagDynamic
@@ -325,8 +363,9 @@ flowchart TD
 
 ### Factory Pattern
 - `SGS.get_model()` creates appropriate SGS model instance
-- Centralizes model selection logic
-- Easy to add new SGS models
+- `TimeIntegrator.get_integrator()` creates appropriate time integration scheme
+- Centralizes model/scheme selection logic
+- Easy to add new SGS models or time integrators
 
 ### Workspace Pattern
 - `SpectralWorkspace` bundles all spectral operations

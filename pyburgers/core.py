@@ -25,6 +25,7 @@ import numpy as np
 
 from .utils import get_logger
 from .utils.spectral_workspace import SpectralWorkspace
+from .numerics import get_integrator
 
 if TYPE_CHECKING:
     from .utils.io import Input, Output
@@ -35,8 +36,7 @@ class Burgers(ABC):
 
     Provides common functionality for solving the 1D stochastic Burgers
     equation using Fourier collocation for spatial derivatives and
-    Williamson (1980) low-storage RK3 time integration with CFL-based
-    adaptive time stepping.
+    pluggable time integration with CFL-based adaptive time stepping.
 
     Subclasses must implement:
         - _get_nx(): Return the grid resolution for this mode
@@ -141,6 +141,9 @@ class Burgers(ABC):
 
         # Mode-specific setup (noise, SGS, etc.)
         self._setup_mode_specific()
+
+        # Create time integrator
+        self.integrator = get_integrator(input_obj.time.integrator, self.nx)
 
         # Setup output
         self.output_dims = {"t": 0, "x": self.nx}
@@ -259,19 +262,14 @@ class Burgers(ABC):
     def run(self) -> None:
         """Execute the time integration loop.
 
-        Advances the simulation using Williamson (1980) low-storage RK3
+        Advances the simulation using the configured time integrator
         with CFL-based adaptive time stepping. Output is written at
         exact multiples of t_save by clamping dt to hit output times.
         """
-        # Williamson (1980) low-storage RK3 coefficients
-        rk3_a = (0.0, -5.0 / 9.0, -153.0 / 128.0)
-        rk3_b = (1.0 / 3.0, 15.0 / 16.0, 8.0 / 15.0)
-
         t_current = 0.0
         t_next_save = self.t_save
         t_next_print = self.t_print
         save_idx = 0
-        Q = np.zeros_like(self.u)
 
         # Sample noise at fixed max_step intervals so that DNS and LES
         # consume the same random sequence regardless of adaptive dt.
@@ -291,16 +289,15 @@ class Burgers(ABC):
 
             is_output_step = abs(t_current + dt - t_next_save) <= 1e-12 * max(1.0, t_next_save)
 
-            # 3-stage RK3
-            Q[:] = 0.0
-            for stage in range(3):
+            # Build the RHS callable for the integrator
+            def compute_rhs() -> np.ndarray:
                 derivatives = self._compute_derivatives(False)
-                rhs = self._compute_rhs(derivatives, noise, dt)
-                Q[:] = rk3_a[stage] * Q + rhs
-                self.u[:] = self.u + rk3_b[stage] * dt * Q
+                return self._compute_rhs(derivatives, noise, dt)
 
-                # Zero Nyquist; restore physical space only on final stage
-                self.spectral.derivatives.zero_nyquist(restore_physical=(stage == 2))
+            # Delegate the full timestep to the integrator
+            self.integrator.step(
+                self.u, dt, compute_rhs, self.spectral.derivatives.zero_nyquist
+            )
 
             t_current += dt
 

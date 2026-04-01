@@ -23,6 +23,17 @@
                     "type": "number",
                     "exclusiveMinimum": 0,
                     "description": "Maximum allowed time step in seconds."
+                },
+                "integrator": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2,
+                    "default": 1,
+                    "description": "Time integration scheme: 1 = Williamson low-storage RK3, 2 = Adams-Bashforth 2nd order.",
+                    "oneOf": [
+                        { "const": 1, "description": "Williamson low-storage RK3" },
+                        { "const": 2, "description": "Adams-Bashforth 2nd order" }
+                    ]
                 }
             },
             "required": ["duration", "cfl", "max_step"]

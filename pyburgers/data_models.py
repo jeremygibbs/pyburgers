@@ -156,8 +156,10 @@ class TimeConfig:
         duration: Total simulation time [s].
         cfl: Target CFL number for adaptive time stepping.
         max_step: Maximum allowed time step [s].
+        integrator: Time integration scheme ID (1=RK3, 2=AB2).
     """
 
     duration: float
     cfl: float
     max_step: float
+    integrator: int = 1

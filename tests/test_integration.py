@@ -54,6 +54,7 @@ class MockInput:
                 self.duration = duration
                 self.cfl = cfl
                 self.max_step = max_step
+                self.integrator = 1
 
         class Noise:
             def __init__(self, amplitude, seed):

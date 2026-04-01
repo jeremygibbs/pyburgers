@@ -26,7 +26,8 @@ Here's a typical configuration for running both DNS and LES:
     "time": {
         "duration": 200.0,
         "cfl": 0.4,
-        "max_step": 0.01
+        "max_step": 0.01,
+        "integrator": 1
     },
     "grid": {
         "length": 6.283185307179586,
@@ -102,6 +103,22 @@ Controls the simulation duration and adaptive time stepping.
     **Note:** Stochastic noise is refreshed at `max_step` intervals in both DNS and LES modes. This ensures both simulations consume the same random sequence, making their results directly comparable even though adaptive time stepping may produce different sub-step sizes.
 
     **Example:** `0.01`
+
+`integrator`
+:   **Type:** Integer (optional)
+    **Default:** `1`
+    **Valid values:** `1`, `2`
+
+    Time integration scheme selector.
+
+    **Available schemes:**
+
+    - `1` - Williamson (1980) low-storage RK3 (3rd-order, 3 stages per step)
+    - `2` - Adams-Bashforth 2nd order (2nd-order, 1 evaluation per step, bootstrapped with forward Euler)
+
+    **Note:** AB2 uses the standard constant-dt formula. With CFL-based adaptive time stepping the dt changes slowly, so the error introduced is small. AB2 requires less computation per step than RK3 but is lower order.
+
+    **Example:** `1`
 
 ---
 
