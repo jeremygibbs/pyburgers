@@ -189,13 +189,13 @@ Configures the stochastic forcing term (fractional Brownian motion).
 
 `exponent`
 :   **Type:** Number (optional)
-    **Default:** `0.75`
+    **Default:** `-0.75`
 
     Spectral exponent for fractional Brownian motion.
 
-    Controls the correlation structure of the noise. Values typically range from 0.5 to 1.5. A value of 0.75 produces realistic turbulent forcing.
+    Controls the correlation structure of the noise. Negative values produce red noise (energy concentrated at low wavenumbers), which is physically appropriate for turbulent forcing. A value of -0.75 produces realistic turbulent forcing following Basu (2009).
 
-    **Example:** `0.75`
+    **Example:** `-0.75`
 
 `amplitude`
 :   **Type:** Number (optional)
