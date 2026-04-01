@@ -4,7 +4,7 @@ PyBurgers is configured using a JSON namelist file (default: `namelist.json`). T
 
 ## Quick Reference
 
-A complete namelist has six sections:
+A complete namelist has seven sections:
 
 ```json
 {
@@ -12,6 +12,7 @@ A complete namelist has six sections:
     "grid": { ... },
     "physics": { ... },
     "output": { ... },
+    "numerics": { ... },
     "logging": { ... },
     "fftw": { ... }
 }
@@ -26,8 +27,7 @@ Here's a typical configuration for running both DNS and LES:
     "time": {
         "duration": 200.0,
         "cfl": 0.4,
-        "max_step": 0.01,
-        "integrator": 1
+        "max_step": 0.01
     },
     "grid": {
         "length": 6.283185307179586,
@@ -61,6 +61,9 @@ Here's a typical configuration for running both DNS and LES:
     "fftw": {
         "planning": "FFTW_PATIENT",
         "threads": 1
+    },
+    "numerics": {
+        "integrator": 1
     }
 }
 ```
@@ -103,22 +106,6 @@ Controls the simulation duration and adaptive time stepping.
     **Note:** Stochastic noise is refreshed at `max_step` intervals in both DNS and LES modes. This ensures both simulations consume the same random sequence, making their results directly comparable even though adaptive time stepping may produce different sub-step sizes.
 
     **Example:** `0.01`
-
-`integrator`
-:   **Type:** Integer (optional)
-    **Default:** `1`
-    **Valid values:** `1`, `2`
-
-    Time integration scheme selector.
-
-    **Available schemes:**
-
-    - `1` - Williamson (1980) low-storage RK3 (3rd-order, 3 stages per step)
-    - `2` - Adams-Bashforth 2nd order (2nd-order, 1 evaluation per step, bootstrapped with forward Euler)
-
-    **Note:** AB2 uses the standard constant-dt formula. With CFL-based adaptive time stepping the dt changes slowly, so the error introduced is small. AB2 requires less computation per step than RK3 but is lower order.
-
-    **Example:** `1`
 
 ---
 
@@ -289,6 +276,28 @@ Controls output file writing and progress reporting.
     Progress messages are printed to the console every `interval_print` seconds of simulated time. This is independent of `interval_save`, allowing you to monitor progress more frequently without increasing file output.
 
     **Example:** `0.1`
+
+---
+
+## Section: numerics
+
+Configures numerical method selections.
+
+`integrator`
+:   **Type:** Integer (optional)
+    **Default:** `1`
+    **Valid values:** `1`, `2`
+
+    Time integration scheme selector.
+
+    **Available schemes:**
+
+    - `1` - Williamson (1980) low-storage RK3 (3rd-order, 3 stages per step)
+    - `2` - Adams-Bashforth 2nd order (2nd-order, 1 evaluation per step, bootstrapped with forward Euler)
+
+    **Note:** AB2 uses the standard constant-dt formula. With CFL-based adaptive time stepping the dt changes slowly, so the error introduced is small. AB2 requires less computation per step than RK3 but is lower order.
+
+    **Example:** `1`
 
 ---
 

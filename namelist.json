@@ -36,5 +36,8 @@
     "fftw": {
         "planning": "FFTW_PATIENT",
         "threads": 1
+    },
+    "numerics": {
+        "integrator": 2
     }
 }

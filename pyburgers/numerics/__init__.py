@@ -17,6 +17,6 @@ It contains the time integration schemes, with the structure designed
 to accommodate future spatial discretization abstractions.
 """
 
-from .time import TimeIntegrator, get_integrator
+from .integrate import TimeIntegrator, get_integrator
 
 __all__ = ["TimeIntegrator", "get_integrator"]

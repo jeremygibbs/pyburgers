@@ -90,7 +90,9 @@ class Input:
         max_step = float(time_data["max_step"])
         self.time: TimeConfig = TimeConfig(
             duration=duration, cfl=cfl, max_step=max_step,
-            integrator=int(time_data.get("integrator", 1)),
+            integrator=int(
+                namelist_data.get("numerics", {}).get("integrator", 1)
+            ),
         )
 
         # Grid configuration (DNS and LES)
