@@ -13,7 +13,7 @@
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 
@@ -23,19 +23,21 @@ from .integration import TimeIntegrator
 class AB2(TimeIntegrator):
     """Adams-Bashforth 2nd-order multistep method.
 
-    Uses the standard constant-dt AB2 formula:
-        u^{n+1} = u^n + dt * (3/2 * F^n - 1/2 * F^{n-1})
+    Uses the variable-step AB2 formula to maintain 2nd-order accuracy
+    under CFL-based adaptive time stepping:
 
+        ω = dt_n / dt_{n-1}
+        u^{n+1} = u^n + dt_n · [(1 + ω/2) · F^n  −  (ω/2) · F^{n-1}]
+
+    Reduces to the standard (3/2, -1/2) coefficients when dt is constant.
     The first timestep is bootstrapped with forward Euler since no
     previous RHS is available.
-
-    Note: The standard AB2 coefficients assume constant dt. With
-    CFL-based adaptive time stepping the dt changes slowly, so
-    the error introduced is small and acceptable for educational use.
 
     Attributes:
         _rhs_prev: RHS from the previous timestep, or None before
             the first step (triggers Euler bootstrap).
+        _dt_prev: Time step used on the previous timestep, or None before
+            the first step.
     """
 
     def __init__(self, nx: int) -> None:
@@ -46,6 +48,7 @@ class AB2(TimeIntegrator):
         """
         super().__init__(nx)
         self._rhs_prev: np.ndarray | None = None
+        self._dt_prev: float | None = None
 
     def step(
         self,
@@ -69,8 +72,12 @@ class AB2(TimeIntegrator):
             u[:] = u + dt * rhs
             self._rhs_prev = rhs.copy()
         else:
-            # AB2: u^{n+1} = u^n + dt * (3/2 * F^n - 1/2 * F^{n-1})
-            u[:] = u + dt * (1.5 * rhs - 0.5 * self._rhs_prev)
+            # Variable-step AB2: ω = dt_n / dt_{n-1}
+            omega = dt / self._dt_prev
+            c0 = 1.0 + 0.5 * omega
+            c1 = 0.5 * omega
+            u[:] = u + dt * (c0 * rhs - c1 * self._rhs_prev)
             self._rhs_prev[:] = rhs
 
+        self._dt_prev = dt
         zero_nyquist(restore_physical=True)

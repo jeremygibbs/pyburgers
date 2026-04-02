@@ -36,7 +36,7 @@
         "threads": 1
     },
     "numerics": {
-        "integration": 1,
+        "integration": 2,
         "cfl": 0.4,
         "max_step": 0.01
     }

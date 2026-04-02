@@ -23,9 +23,9 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
+from .numerics import get_integrator
 from .utils import get_logger
 from .utils.spectral_workspace import SpectralWorkspace
-from .numerics import get_integrator
 
 if TYPE_CHECKING:
     from .utils.io import Input, Output
@@ -106,11 +106,11 @@ class Burgers(ABC):
         self._dt_visc = 0.2 * self.dx**2 / self.visc
 
         # Hyperviscosity: auto-compute coefficient as dx⁴ when enabled
-        # This scaling ensures consistent damping across resolutions
-        # and negligible impact on the timestep
+        # This scaling ensures consistent damping across resolutions.
+        # Spectral stability limit: dt < C / (ν₄ · k_max⁴), k_max = π/dx
         if input_obj.hyperviscosity_enabled:
             self.hypervisc = self.dx**4
-            self._dt_hypervisc = 0.1 * self.dx**4 / self.hypervisc
+            self._dt_hypervisc = 0.1 * self.dx**4 / (self.hypervisc * np.pi**4)
             self.logger.info(
                 "Hyperviscosity enabled: coefficient = %.2e",
                 self.hypervisc,
@@ -290,7 +290,7 @@ class Burgers(ABC):
             is_output_step = abs(t_current + dt - t_next_save) <= 1e-12 * max(1.0, t_next_save)
 
             # Build the RHS callable for the integrator
-            def compute_rhs() -> np.ndarray:
+            def compute_rhs(dt=dt, noise=noise) -> np.ndarray:
                 derivatives = self._compute_derivatives(False)
                 return self._compute_rhs(derivatives, noise, dt)
 
