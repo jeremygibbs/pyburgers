@@ -1,8 +1,6 @@
 {
     "time": {
-        "duration": 200.0,
-        "cfl": 0.4,
-        "max_step": 0.01
+        "duration": 200.0
     },
     "grid": {
         "length": 6.283185307179586,
@@ -38,6 +36,8 @@
         "threads": 1
     },
     "numerics": {
-        "integration": 2
+        "integration": 1,
+        "cfl": 0.4,
+        "max_step": 0.01
     }
 }

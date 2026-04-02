@@ -6,26 +6,15 @@
     "properties": {
         "time": {
             "type": "object",
-            "description": "Controls simulation duration and adaptive time stepping.",
+            "description": "Controls simulation duration.",
             "properties": {
                 "duration": {
                     "type": "number",
                     "exclusiveMinimum": 0,
                     "description": "Total simulation time in seconds."
-                },
-                "cfl": {
-                    "type": "number",
-                    "exclusiveMinimum": 0,
-                    "exclusiveMaximum": 0.55,
-                    "description": "Target CFL number for adaptive time stepping."
-                },
-                "max_step": {
-                    "type": "number",
-                    "exclusiveMinimum": 0,
-                    "description": "Maximum allowed time step in seconds."
                 }
             },
-            "required": ["duration", "cfl", "max_step"]
+            "required": ["duration"]
         },
         "grid": {
             "type": "object",
@@ -177,7 +166,7 @@
         },
         "numerics": {
             "type": "object",
-            "description": "Configures numerical method selections.",
+            "description": "Configures numerical method selections and time stepping parameters.",
             "properties": {
                 "integration": {
                     "type": "integer",
@@ -189,6 +178,17 @@
                         { "const": 1, "description": "Williamson low-storage RK3" },
                         { "const": 2, "description": "Adams-Bashforth 2nd order" }
                     ]
+                },
+                "cfl": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "exclusiveMaximum": 0.55,
+                    "description": "Target CFL number for adaptive time stepping."
+                },
+                "max_step": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Maximum allowed time step in seconds."
                 }
             },
             "additionalProperties": false

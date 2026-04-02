@@ -150,13 +150,17 @@ class PhysicsConfig:
 
 @dataclass(frozen=True)
 class NumericsConfig:
-    """Numerical method selections.
+    """Numerical method selections and time stepping parameters.
 
     Attributes:
         integration: Time integration scheme ID (1=RK3, 2=AB2).
+        cfl: Target CFL number for adaptive time stepping.
+        max_step: Maximum allowed time step [s].
     """
 
     integration: int = 1
+    cfl: float = 0.4
+    max_step: float = 0.01
 
 
 @dataclass(frozen=True)
@@ -165,10 +169,6 @@ class TimeConfig:
 
     Attributes:
         duration: Total simulation time [s].
-        cfl: Target CFL number for adaptive time stepping.
-        max_step: Maximum allowed time step [s].
     """
 
     duration: float
-    cfl: float
-    max_step: float

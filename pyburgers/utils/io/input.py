@@ -49,9 +49,10 @@ class Input:
     validated and organized into the appropriate dataclasses.
 
     Attributes:
-        time: Dataclass with time-related parameters (duration, cfl, max_step).
+        time: Dataclass with time-related parameters (duration).
         physics: Dataclass with physics parameters (noise, viscosity).
         grid: Dataclass with grid configuration (length, DNS, LES).
+        numerics: Dataclass with numerical method selections (integration, cfl, max_step).
         output: Dataclass with output file configuration.
         logging: Dataclass with logging settings.
         fftw: Dataclass with FFTW configuration.
@@ -87,16 +88,14 @@ class Input:
         # Time configuration
         time_data = namelist_data["time"]
         duration = float(time_data["duration"])
-        cfl = float(time_data["cfl"])
-        max_step = float(time_data["max_step"])
-        self.time: TimeConfig = TimeConfig(
-            duration=duration, cfl=cfl, max_step=max_step,
-        )
+        self.time: TimeConfig = TimeConfig(duration=duration)
 
         # Numerics configuration
         numerics_data = namelist_data.get("numerics", {})
         self.numerics: NumericsConfig = NumericsConfig(
             integration=int(numerics_data.get("integration", 1)),
+            cfl=float(numerics_data.get("cfl", 0.4)),
+            max_step=float(numerics_data.get("max_step", 0.01)),
         )
 
         # Grid configuration (DNS and LES)
@@ -128,7 +127,7 @@ class Input:
 
         # Output configuration
         output_data = namelist_data.get("output", {})
-        default_interval = 100 * max_step
+        default_interval = 100 * self.numerics.max_step
         self.output: OutputConfig = OutputConfig(
             interval_save=float(output_data.get("interval_save", default_interval)),
             interval_print=float(output_data.get("interval_print", default_interval)),
@@ -164,12 +163,12 @@ class Input:
     @property
     def cfl_target(self) -> float:
         """Target CFL number for adaptive time stepping."""
-        return self.time.cfl
+        return self.numerics.cfl
 
     @property
     def max_step(self) -> float:
         """Maximum allowed time step."""
-        return self.time.max_step
+        return self.numerics.max_step
 
     @property
     def domain_length(self) -> float:
@@ -241,14 +240,14 @@ class Input:
     def _log_configuration(self) -> None:
         """Log the loaded configuration for debugging."""
         self.logger.debug(
-            "Time: duration=%g, cfl=%g, max_step=%g",
+            "Time: duration=%g",
             self.time.duration,
-            self.time.cfl,
-            self.time.max_step,
         )
         self.logger.debug(
-            "Numerics: integration=%d",
+            "Numerics: integration=%d, cfl=%g, max_step=%g",
             self.numerics.integration,
+            self.numerics.cfl,
+            self.numerics.max_step,
         )
         self.logger.debug(
             "Physics: viscosity=%g, noise(exponent=%g, amplitude=%g)",
@@ -283,8 +282,8 @@ class Input:
         """
         return {
             "nx": self.grid.dns.points,
-            "cfl": self.time.cfl,
-            "max_step": self.time.max_step,
+            "cfl": self.numerics.cfl,
+            "max_step": self.numerics.max_step,
             "integrator": self.numerics.integration,
             "viscosity": self.physics.viscosity,
             "noise_beta": self.physics.noise.exponent,
@@ -302,8 +301,8 @@ class Input:
         return {
             "nx": self.grid.les.points,
             "sgs_model": self.physics.subgrid_model,
-            "cfl": self.time.cfl,
-            "max_step": self.time.max_step,
+            "cfl": self.numerics.cfl,
+            "max_step": self.numerics.max_step,
             "integrator": self.numerics.integration,
             "viscosity": self.physics.viscosity,
             "noise_beta": self.physics.noise.exponent,

@@ -30,9 +30,10 @@ def create_namelist(tmp_path: Path, data: dict) -> Path:
 def get_valid_namelist() -> dict:
     """Return a minimal valid namelist configuration."""
     return {
-        "time": {"duration": 0.01, "cfl": 0.4, "max_step": 0.001},
+        "time": {"duration": 0.01},
         "grid": {"dns": {"points": 64}, "les": {"points": 32}},
         "physics": {"viscosity": 0.01},
+        "numerics": {"cfl": 0.4, "max_step": 0.001},
     }
 
 
@@ -79,24 +80,6 @@ class TestMissingRequiredFields:
         with pytest.raises(NamelistError, match="'duration' is a required property"):
             Input(str(namelist_file))
 
-    def test_missing_cfl_raises_error(self, tmp_path: Path) -> None:
-        """Test that missing 'cfl' in time section raises NamelistError."""
-        data = get_valid_namelist()
-        del data["time"]["cfl"]
-        namelist_file = create_namelist(tmp_path, data)
-
-        with pytest.raises(NamelistError, match="'cfl' is a required property"):
-            Input(str(namelist_file))
-
-    def test_missing_max_step_raises_error(self, tmp_path: Path) -> None:
-        """Test that missing 'max_step' in time section raises NamelistError."""
-        data = get_valid_namelist()
-        del data["time"]["max_step"]
-        namelist_file = create_namelist(tmp_path, data)
-
-        with pytest.raises(NamelistError, match="'max_step' is a required property"):
-            Input(str(namelist_file))
-
     def test_missing_viscosity_raises_error(self, tmp_path: Path) -> None:
         """Test that missing 'viscosity' in physics section raises NamelistError."""
         data = get_valid_namelist()
@@ -113,7 +96,7 @@ class TestInvalidTimeValues:
     def test_cfl_zero_raises_error(self, tmp_path: Path) -> None:
         """Test that CFL = 0 raises NamelistError."""
         data = get_valid_namelist()
-        data["time"]["cfl"] = 0.0
+        data["numerics"]["cfl"] = 0.0
         namelist_file = create_namelist(tmp_path, data)
 
         with pytest.raises(NamelistError):
@@ -122,7 +105,7 @@ class TestInvalidTimeValues:
     def test_cfl_negative_raises_error(self, tmp_path: Path) -> None:
         """Test that negative CFL raises NamelistError."""
         data = get_valid_namelist()
-        data["time"]["cfl"] = -0.1
+        data["numerics"]["cfl"] = -0.1
         namelist_file = create_namelist(tmp_path, data)
 
         with pytest.raises(NamelistError):
@@ -131,7 +114,7 @@ class TestInvalidTimeValues:
     def test_cfl_above_limit_raises_error(self, tmp_path: Path) -> None:
         """Test that CFL >= 0.55 raises NamelistError."""
         data = get_valid_namelist()
-        data["time"]["cfl"] = 0.55
+        data["numerics"]["cfl"] = 0.55
         namelist_file = create_namelist(tmp_path, data)
 
         with pytest.raises(NamelistError):
@@ -158,7 +141,7 @@ class TestInvalidTimeValues:
     def test_max_step_negative_raises_error(self, tmp_path: Path) -> None:
         """Test that negative max_step raises NamelistError."""
         data = get_valid_namelist()
-        data["time"]["max_step"] = -0.001
+        data["numerics"]["max_step"] = -0.001
         namelist_file = create_namelist(tmp_path, data)
 
         with pytest.raises(NamelistError):
@@ -167,7 +150,7 @@ class TestInvalidTimeValues:
     def test_max_step_zero_raises_error(self, tmp_path: Path) -> None:
         """Test that zero max_step raises NamelistError."""
         data = get_valid_namelist()
-        data["time"]["max_step"] = 0.0
+        data["numerics"]["max_step"] = 0.0
         namelist_file = create_namelist(tmp_path, data)
 
         with pytest.raises(NamelistError):
@@ -247,8 +230,8 @@ class TestValidConfigurations:
         input_obj = Input(str(namelist_file))
 
         assert input_obj.time.duration == 0.01
-        assert input_obj.time.cfl == 0.4
-        assert input_obj.time.max_step == 0.001
+        assert input_obj.numerics.cfl == 0.4
+        assert input_obj.numerics.max_step == 0.001
         assert input_obj.physics.viscosity == 0.01
         assert input_obj.grid.dns.points == 64
         assert input_obj.grid.les.points == 32
@@ -256,7 +239,7 @@ class TestValidConfigurations:
     def test_valid_full_namelist_loads(self, tmp_path: Path) -> None:
         """Test that a full valid namelist loads successfully."""
         data = {
-            "time": {"duration": 1.0, "cfl": 0.4, "max_step": 0.001},
+            "time": {"duration": 1.0},
             "grid": {
                 "length": 6.283185307179586,
                 "dns": {"points": 8192},
@@ -270,14 +253,15 @@ class TestValidConfigurations:
             "output": {"interval_save": 0.1, "interval_print": 0.01},
             "logging": {"level": "DEBUG"},
             "fftw": {"planning": "FFTW_MEASURE", "threads": 4},
+            "numerics": {"integration": 1, "cfl": 0.4, "max_step": 0.001},
         }
         namelist_file = create_namelist(tmp_path, data)
 
         input_obj = Input(str(namelist_file))
 
         assert input_obj.time.duration == 1.0
-        assert input_obj.time.cfl == 0.4
-        assert input_obj.time.max_step == 0.001
+        assert input_obj.numerics.cfl == 0.4
+        assert input_obj.numerics.max_step == 0.001
         assert input_obj.grid.length == 6.283185307179586
         assert input_obj.grid.dns.points == 8192
         assert input_obj.grid.les.points == 512
