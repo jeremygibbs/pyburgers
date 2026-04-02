@@ -143,7 +143,7 @@ class Burgers(ABC):
         self._setup_mode_specific()
 
         # Create time integrator
-        self.integrator = get_integrator(input_obj.time.integrator, self.nx)
+        self.integrator = get_integrator(input_obj.numerics.integration, self.nx)
 
         # Setup output
         self.output_dims = {"t": 0, "x": self.nx}

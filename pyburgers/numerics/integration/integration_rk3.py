@@ -17,7 +17,7 @@ from typing import Callable
 
 import numpy as np
 
-from .integrate import TimeIntegrator
+from .integration import TimeIntegrator
 
 
 class RK3(TimeIntegrator):

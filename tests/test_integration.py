@@ -54,7 +54,10 @@ class MockInput:
                 self.duration = duration
                 self.cfl = cfl
                 self.max_step = max_step
-                self.integrator = 1
+
+        class Numerics:
+            def __init__(self):
+                self.integration = 1
 
         class Noise:
             def __init__(self, amplitude, seed):
@@ -87,6 +90,7 @@ class MockInput:
                 self.les = LES(nx_les)
 
         self.time = Time(duration, cfl, max_step)
+        self.numerics = Numerics()
         self.physics = Physics(visc, Noise(namp, seed), subgrid_model=sgs_model)
         self.grid = Grid(nx_dns, nx_les)
         self.domain_length = domain_length

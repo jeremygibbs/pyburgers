@@ -33,6 +33,7 @@ from ...data_models import (
     LESConfig,
     LoggingConfig,
     NoiseConfig,
+    NumericsConfig,
     OutputConfig,
     PhysicsConfig,
     TimeConfig,
@@ -90,9 +91,12 @@ class Input:
         max_step = float(time_data["max_step"])
         self.time: TimeConfig = TimeConfig(
             duration=duration, cfl=cfl, max_step=max_step,
-            integrator=int(
-                namelist_data.get("numerics", {}).get("integrator", 1)
-            ),
+        )
+
+        # Numerics configuration
+        numerics_data = namelist_data.get("numerics", {})
+        self.numerics: NumericsConfig = NumericsConfig(
+            integration=int(numerics_data.get("integration", 1)),
         )
 
         # Grid configuration (DNS and LES)
@@ -195,7 +199,7 @@ class Input:
     @property
     def integrator(self) -> int:
         """Time integration scheme identifier."""
-        return self.time.integrator
+        return self.numerics.integration
 
     def _load_and_validate_namelist(self, namelist_path: str) -> dict[str, Any]:
         """Load and validate the JSON namelist file against the schema.
@@ -211,7 +215,7 @@ class Input:
             json.JSONDecodeError: If the namelist is not valid JSON.
             NamelistError: If the namelist fails schema validation.
         """
-        schema_path = str(Path(__file__).parent.parent.parent / "schema_namelist.json")
+        schema_path = str(Path(__file__).parent / "schema_namelist.json")
 
         try:
             with open(schema_path, encoding="utf-8") as f:
@@ -237,11 +241,14 @@ class Input:
     def _log_configuration(self) -> None:
         """Log the loaded configuration for debugging."""
         self.logger.debug(
-            "Time: duration=%g, cfl=%g, max_step=%g, integrator=%d",
+            "Time: duration=%g, cfl=%g, max_step=%g",
             self.time.duration,
             self.time.cfl,
             self.time.max_step,
-            self.time.integrator,
+        )
+        self.logger.debug(
+            "Numerics: integration=%d",
+            self.numerics.integration,
         )
         self.logger.debug(
             "Physics: viscosity=%g, noise(exponent=%g, amplitude=%g)",
@@ -278,7 +285,7 @@ class Input:
             "nx": self.grid.dns.points,
             "cfl": self.time.cfl,
             "max_step": self.time.max_step,
-            "integrator": self.time.integrator,
+            "integrator": self.numerics.integration,
             "viscosity": self.physics.viscosity,
             "noise_beta": self.physics.noise.exponent,
             "noise_amplitude": self.physics.noise.amplitude,
@@ -297,7 +304,7 @@ class Input:
             "sgs_model": self.physics.subgrid_model,
             "cfl": self.time.cfl,
             "max_step": self.time.max_step,
-            "integrator": self.time.integrator,
+            "integrator": self.numerics.integration,
             "viscosity": self.physics.viscosity,
             "noise_beta": self.physics.noise.exponent,
             "noise_amplitude": self.physics.noise.amplitude,

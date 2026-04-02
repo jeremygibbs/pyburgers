@@ -38,6 +38,6 @@
         "threads": 1
     },
     "numerics": {
-        "integrator": 2
+        "integration": 2
     }
 }

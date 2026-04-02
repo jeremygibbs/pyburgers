@@ -179,7 +179,7 @@
             "type": "object",
             "description": "Configures numerical method selections.",
             "properties": {
-                "integrator": {
+                "integration": {
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 2,

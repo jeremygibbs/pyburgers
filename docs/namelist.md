@@ -63,7 +63,7 @@ Here's a typical configuration for running both DNS and LES:
         "threads": 1
     },
     "numerics": {
-        "integrator": 1
+        "integration": 1
     }
 }
 ```
@@ -283,7 +283,7 @@ Controls output file writing and progress reporting.
 
 Configures numerical method selections.
 
-`integrator`
+`integration`
 :   **Type:** Integer (optional)
     **Default:** `1`
     **Valid values:** `1`, `2`

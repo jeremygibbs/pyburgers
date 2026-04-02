@@ -47,11 +47,11 @@ class TimeIntegrator:
             Instance of the requested TimeIntegrator subclass.
         """
         if scheme == 1:
-            from .time_rk3 import RK3
+            from .integration_rk3 import RK3
 
             return RK3(nx)
         if scheme == 2:
-            from .time_ab2 import AB2
+            from .integration_ab2 import AB2
 
             return AB2(nx)
         raise ValueError(f"--- Unknown time integrator ID: {scheme}. Valid options: 1-2.")

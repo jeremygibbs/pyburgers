@@ -16,7 +16,7 @@ of the solver. It imports and exposes the main `TimeIntegrator` base class
 and factory method, making them accessible to the rest of the model.
 """
 
-from .time_integrator import TimeIntegrator
+from .integration import TimeIntegrator
 
 # Export factory method as module-level function
 get_integrator = TimeIntegrator.get_integrator
