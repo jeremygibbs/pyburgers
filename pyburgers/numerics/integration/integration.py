@@ -17,12 +17,13 @@ creating different time integration schemes.
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from collections.abc import Callable
 
 import numpy as np
 
 
-class TimeIntegrator:
+class TimeIntegrator(ABC):
     """Base class for time integration schemes.
 
     Provides the interface and factory method for time integrators used
@@ -64,6 +65,7 @@ class TimeIntegrator:
         """
         self.nx = nx
 
+    @abstractmethod
     def step(
         self,
         u: np.ndarray,
@@ -80,4 +82,3 @@ class TimeIntegrator:
             zero_nyquist: Callable that zeros the Nyquist mode.
                 Accepts a `restore_physical` boolean argument.
         """
-        raise NotImplementedError
