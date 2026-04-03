@@ -29,7 +29,6 @@ from ...data_models import (
     DNSConfig,
     FFTWConfig,
     GridConfig,
-    HyperviscosityConfig,
     LESConfig,
     LoggingConfig,
     NoiseConfig,
@@ -93,10 +92,20 @@ class Input:
         # Numerics configuration
         numerics_data = namelist_data.get("numerics", {})
         self.numerics: NumericsConfig = NumericsConfig(
-            integration=int(numerics_data.get("integration", 1)),
+            temporal=int(numerics_data.get("temporal", 2)),
+            spatial=int(numerics_data.get("spatial", 3)),
             cfl=float(numerics_data.get("cfl", 0.4)),
             max_step=float(numerics_data.get("max_step", 0.01)),
         )
+
+        # AB2 has a limited stability region for hyperbolic terms; warn if CFL
+        # is set higher than the recommended limit for that scheme.
+        if self.numerics.temporal == 1 and self.numerics.cfl > 0.4:
+            self.logger.warning(
+                "CFL target %.2f exceeds the recommended limit of 0.4 for AB2 "
+                "(temporal=1). Consider reducing cfl or switching to RK3 (temporal=2).",
+                self.numerics.cfl,
+            )
 
         # Grid configuration (DNS and LES)
         grid_data = namelist_data["grid"]
@@ -111,7 +120,6 @@ class Input:
         # Physics configuration
         physics_data = namelist_data["physics"]
         noise_data = physics_data.get("noise", {})
-        hypervisc_data = physics_data.get("hyperviscosity", {})
         self.physics: PhysicsConfig = PhysicsConfig(
             noise=NoiseConfig(
                 exponent=float(noise_data.get("exponent", -0.75)),
@@ -120,9 +128,6 @@ class Input:
             ),
             viscosity=float(physics_data["viscosity"]),
             subgrid_model=int(physics_data.get("subgrid_model", 1)),
-            hyperviscosity=HyperviscosityConfig(
-                enabled=bool(hypervisc_data.get("enabled", False)),
-            ),
         )
 
         # Output configuration
@@ -181,11 +186,6 @@ class Input:
         return self.physics.viscosity
 
     @property
-    def hyperviscosity_enabled(self) -> bool:
-        """Convenience accessor for hyperviscosity enabled flag."""
-        return self.physics.hyperviscosity.enabled
-
-    @property
     def t_save(self) -> float:
         """Save interval in seconds."""
         return self.output.interval_save
@@ -196,9 +196,9 @@ class Input:
         return self.output.interval_print
 
     @property
-    def integrator(self) -> int:
+    def temporal(self) -> int:
         """Time integration scheme identifier."""
-        return self.numerics.integration
+        return self.numerics.temporal
 
     def _load_and_validate_namelist(self, namelist_path: str) -> dict[str, Any]:
         """Load and validate the JSON namelist file against the schema.
@@ -244,8 +244,9 @@ class Input:
             self.time.duration,
         )
         self.logger.debug(
-            "Numerics: integration=%d, cfl=%g, max_step=%g",
-            self.numerics.integration,
+            "Numerics: temporal=%d, spatial=%d, cfl=%g, max_step=%g",
+            self.numerics.temporal,
+            self.numerics.spatial,
             self.numerics.cfl,
             self.numerics.max_step,
         )
@@ -284,7 +285,7 @@ class Input:
             "nx": self.grid.dns.points,
             "cfl": self.numerics.cfl,
             "max_step": self.numerics.max_step,
-            "integrator": self.numerics.integration,
+            "temporal": self.numerics.temporal,
             "viscosity": self.physics.viscosity,
             "noise_beta": self.physics.noise.exponent,
             "noise_amplitude": self.physics.noise.amplitude,
@@ -303,7 +304,7 @@ class Input:
             "sgs_model": self.physics.subgrid_model,
             "cfl": self.numerics.cfl,
             "max_step": self.numerics.max_step,
-            "integrator": self.numerics.integration,
+            "temporal": self.numerics.temporal,
             "viscosity": self.physics.viscosity,
             "noise_beta": self.physics.noise.exponent,
             "noise_amplitude": self.physics.noise.amplitude,

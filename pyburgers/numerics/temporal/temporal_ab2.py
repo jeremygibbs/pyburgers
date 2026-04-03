@@ -17,10 +17,10 @@ from collections.abc import Callable
 
 import numpy as np
 
-from .integration import TimeIntegrator
+from .temporal import TemporalIntegrator
 
 
-class AB2(TimeIntegrator):
+class AB2(TemporalIntegrator):
     """Adams-Bashforth 2nd-order multistep method.
 
     Uses the variable-step AB2 formula to maintain 2nd-order accuracy
@@ -33,12 +33,21 @@ class AB2(TimeIntegrator):
     The first timestep is bootstrapped with forward Euler since no
     previous RHS is available.
 
+    AB2 has a stability boundary at |λ dt| = 1 for real negative eigenvalues.
+    At that boundary the parasitic root z = -1, so high-k dissipative modes
+    stop decaying. A limit of 0.4 keeps |z_parasitic| well below 1, ensuring
+    effective hyperviscous damping of the highest wavenumber modes without
+    over-constraining the time step below the CFL limit.
+
     Attributes:
+        dissipative_stability_limit: 0.4 — safely within AB2's |λ dt| ≤ 1 bound.
         _rhs_prev: RHS from the previous timestep, or None before
             the first step (triggers Euler bootstrap).
         _dt_prev: Time step used on the previous timestep, or None before
             the first step.
     """
+
+    dissipative_stability_limit: float = 0.4
 
     def __init__(self, nx: int) -> None:
         """Initialize AB2 integrator.
@@ -69,14 +78,17 @@ class AB2(TimeIntegrator):
 
         if self._rhs_prev is None:
             # Bootstrap: forward Euler for the first step
-            u[:] = u + dt * rhs
+            u += dt * rhs
             self._rhs_prev = rhs.copy()
         else:
             # Variable-step AB2: ω = dt_n / dt_{n-1}
+            # Use _rhs_prev as scratch (overwritten with rhs at the end).
             omega = dt / self._dt_prev
             c0 = 1.0 + 0.5 * omega
             c1 = 0.5 * omega
-            u[:] = u + dt * (c0 * rhs - c1 * self._rhs_prev)
+            self._rhs_prev *= -c1          # in-place: -c1 * F^{n-1}
+            self._rhs_prev += c0 * rhs     # in-place: c0*F^n - c1*F^{n-1}
+            u += dt * self._rhs_prev
             self._rhs_prev[:] = rhs
 
         self._dt_prev = dt

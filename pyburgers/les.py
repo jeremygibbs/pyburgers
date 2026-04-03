@@ -178,7 +178,7 @@ class LES(Burgers):
             orders.append(3)
         if self.hypervisc > 0:
             orders.append(4)
-        return self.spectral.derivatives.compute(self.u, orders)
+        return self.gradient_op.compute(self.u, orders)
 
     def _compute_noise(self) -> np.ndarray:
         """Generate and filter FBM noise from DNS to LES scales.
@@ -230,7 +230,7 @@ class LES(Burgers):
             self._last_tke_diss = sgs.get("tke_diss", 0.0)
 
         # Compute SGS stress divergence
-        sgsder = self.spectral.derivatives.compute(tau, [1])
+        sgsder = self.gradient_op.compute(tau, [1])
         dtaudx = sgsder["1"]
 
         self.rhs[:] = (

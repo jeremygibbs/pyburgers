@@ -17,18 +17,27 @@ from collections.abc import Callable
 
 import numpy as np
 
-from .integration import TimeIntegrator
+from .temporal import TemporalIntegrator
 
 
-class RK3(TimeIntegrator):
+class RK3(TemporalIntegrator):
     """Williamson (1980) low-storage 3rd-order Runge-Kutta.
 
     Uses two coefficient vectors for a three-stage integration with
     a single auxiliary storage array Q.
 
+    RK3's stability region for real negative eigenvalues extends to
+    |λ dt| ~ 2.5+, so the dissipative_stability_limit of 2.5 is set well
+    above typical max_step · π⁴ values and will not constrain the time step
+    in practice. The limit is retained for interface consistency.
+
     Attributes:
+        dissipative_stability_limit: 2.5 — exceeds typical hyperviscous
+            eigenvalue at max_step, so max_step governs instead.
         Q: Low-storage register array.
     """
+
+    dissipative_stability_limit: float = 2.5
 
     _A = (0.0, -5.0 / 9.0, -153.0 / 128.0)
     _B = (1.0 / 3.0, 15.0 / 16.0, 8.0 / 15.0)
@@ -57,11 +66,11 @@ class RK3(TimeIntegrator):
             compute_rhs: Callable that computes and returns the RHS vector.
             zero_nyquist: Callable that zeros the Nyquist mode.
         """
-        self.Q[:] = 0.0
         for stage in range(3):
             rhs = compute_rhs()
-            self.Q[:] = self._A[stage] * self.Q + rhs
-            u[:] = u + self._B[stage] * dt * self.Q
+            self.Q *= self._A[stage]       # in-place; stage 0: _A[0]=0 zeros Q
+            self.Q += rhs                  # in-place
+            u += self._B[stage] * dt * self.Q
 
             # Zero Nyquist; restore physical space only on final stage
             zero_nyquist(restore_physical=(stage == 2))

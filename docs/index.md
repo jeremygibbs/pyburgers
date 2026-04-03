@@ -70,21 +70,29 @@ The solver employs **Williamson (1980) low-storage RK3** time integration with a
 
 ### Hyperviscosity
 
-Spectral methods can exhibit energy pile-up near the Nyquist frequency, where energy accumulates at the highest resolved wavenumbers instead of being properly dissipated. PyBurgers provides optional **hyperviscosity** to address this:
+Spectral methods can exhibit energy pile-up near the Nyquist frequency, where energy accumulates at the highest resolved wavenumbers instead of being properly dissipated. PyBurgers automatically applies **hyperviscosity** to all spatial schemes:
 
 $$\frac{\partial u}{\partial t} = \ldots - \nu_4 \frac{\partial^4 u}{\partial x^4}$$
 
-The hyperviscosity term provides $k^4$ dissipation that strongly damps high-wavenumber modes while leaving large scales essentially unaffected. When enabled, the coefficient is **automatically computed** as:
+The hyperviscosity term provides $k^4$ dissipation that strongly damps high-wavenumber modes while leaving large scales essentially unaffected. The coefficient is **automatically computed** and **normalized per scheme** so that the Nyquist damping rate is equal across all spatial discretizations:
 
-$$\nu_4 = \Delta x^4$$
+$$\nu_4 = \frac{\pi^4 \Delta x^4}{\lambda_\text{hypervisc}}$$
 
-This scaling ensures:
+where $\lambda_\text{hypervisc}$ is the scheme's maximum modified wavenumber magnitude $\max|\tilde{k}^4| \cdot \Delta x^4$:
 
-- **Resolution-independent behavior**: The damping effect is consistent across different grid resolutions
-- **No timestep penalty**: The stability limit $dt \le 0.1 \Delta x^4 / \nu_4 = 0.1$ is always satisfied
-- **Appropriate strength**: Empirically tuned to eliminate spectral pile-up without over-damping resolved scales
+| Scheme | $\lambda_\text{hypervisc}$ | $\nu_4$ |
+|--------|--------------------------|---------|
+| FD2 (`spatial: 1`) | 16 | $\approx 6.09\,\Delta x^4$ |
+| FD4 (`spatial: 2`) | 80/3 | $\approx 3.65\,\Delta x^4$ |
+| Spectral (`spatial: 3`) | $\pi^4$ | $\Delta x^4$ |
 
-Users simply enable hyperviscosity in the namelist (`"enabled": true`) without needing to specify a coefficient. The computed coefficient is logged at startup for reference.
+This normalization ensures:
+
+- **Equal Nyquist damping rate**: Every scheme damps its highest resolved mode at the same rate
+- **Scheme-independent timestep limit**: The hyperviscous stability constraint reduces to $dt \le C/\pi^4$ for all schemes
+- **Resolution-independent behavior**: Scaling with $\Delta x^4$ is consistent across grid resolutions
+
+The active coefficient is logged at startup for reference.
 
 ### Stochastic Forcing
 

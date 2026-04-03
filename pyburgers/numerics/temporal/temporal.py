@@ -9,9 +9,9 @@
 # This software is free and is distributed under the MIT License.
 # See accompanying LICENSE file or visit https://opensource.org/licenses/MIT.
 #
-"""Time integration base class for PyBurgers.
+"""Temporal integration base class for PyBurgers.
 
-This module provides the base TimeIntegrator class and factory method for
+This module provides the base TemporalIntegrator class and factory method for
 creating different time integration schemes.
 """
 
@@ -23,7 +23,7 @@ from collections.abc import Callable
 import numpy as np
 
 
-class TimeIntegrator(ABC):
+class TemporalIntegrator(ABC):
     """Base class for time integration schemes.
 
     Provides the interface and factory method for time integrators used
@@ -32,30 +32,36 @@ class TimeIntegrator(ABC):
 
     Attributes:
         nx: Number of grid points.
+        dissipative_stability_limit: Maximum stable |λ dt| for real negative
+            eigenvalues (dissipative operators). Used by the core to set the
+            hyperviscous time step limit. Subclasses override this based on
+            their stability region for purely dissipative terms.
     """
 
+    dissipative_stability_limit: float = 1.0
+
     @staticmethod
-    def get_integrator(scheme: int, nx: int) -> TimeIntegrator:
+    def get_integrator(scheme: int, nx: int) -> TemporalIntegrator:
         """Factory method to create the appropriate time integrator.
 
         Args:
             scheme: Time integration scheme identifier.
-                1 = Williamson low-storage RK3
-                2 = Adams-Bashforth 2nd order
+                1 = Adams-Bashforth 2nd order
+                2 = Williamson low-storage RK3
             nx: Number of grid points for pre-allocating storage arrays.
 
         Returns:
-            Instance of the requested TimeIntegrator subclass.
+            Instance of the requested TemporalIntegrator subclass.
         """
         if scheme == 1:
-            from .integration_rk3 import RK3
-
-            return RK3(nx)
-        if scheme == 2:
-            from .integration_ab2 import AB2
+            from .temporal_ab2 import AB2
 
             return AB2(nx)
-        raise ValueError(f"--- Unknown time integrator ID: {scheme}. Valid options: 1-2.")
+        if scheme == 2:
+            from .temporal_rk3 import RK3
+
+            return RK3(nx)
+        raise ValueError(f"Unknown time integrator ID: {scheme}. Valid options: 1-2.")
 
     def __init__(self, nx: int) -> None:
         """Initialize the time integrator.

@@ -46,9 +46,6 @@ Here's a typical configuration for running both DNS and LES:
             "amplitude": 1e-6,
             "seed": 1
         },
-        "hyperviscosity": {
-            "enabled": true
-        }
     },
     "output": {
         "interval_save": 0.1,
@@ -63,7 +60,8 @@ Here's a typical configuration for running both DNS and LES:
         "threads": 1
     },
     "numerics": {
-        "integration": 1
+        "temporal": 2,
+        "spatial": 3
     }
 }
 ```
@@ -223,34 +221,6 @@ Configures the stochastic forcing term (fractional Brownian motion).
 
     **Example:** `1`
 
-### Subsection: physics.hyperviscosity
-
-Configures optional hyperviscosity for damping high-wavenumber energy pile-up.
-
-`enabled`
-:   **Type:** Boolean (optional)
-    **Default:** `false`
-
-    Whether to enable hyperviscosity.
-
-    When enabled, adds a $-\nu_4 \partial^4 u / \partial x^4$ term that provides $k^4$ dissipation at high wavenumbers. This prevents spectral pile-up (energy accumulation near the Nyquist frequency) that can occur in spectral methods.
-
-    The coefficient $\nu_4$ is **automatically computed** as $\Delta x^4$, which:
-
-    - Scales correctly with grid resolution
-    - Has negligible impact on the timestep
-    - Provides appropriate damping strength
-
-    The computed coefficient is logged at startup.
-
-    **Example:** `true`
-
-    ```json
-    "hyperviscosity": {
-        "enabled": true
-    }
-    ```
-
 ---
 
 ## Section: output
@@ -283,7 +253,7 @@ Controls output file writing and progress reporting.
 
 Configures numerical method selections.
 
-`integration`
+`temporal`
 :   **Type:** Integer (optional)
     **Default:** `1`
     **Valid values:** `1`, `2`
@@ -292,12 +262,29 @@ Configures numerical method selections.
 
     **Available schemes:**
 
-    - `1` - Williamson (1980) low-storage RK3 (3rd-order, 3 stages per step)
-    - `2` - Adams-Bashforth 2nd order (2nd-order, 1 evaluation per step, bootstrapped with forward Euler)
+    - `1` - Adams-Bashforth 2nd order (2nd-order, 1 evaluation per step, bootstrapped with forward Euler)
+    - `2` - Williamson (1980) low-storage RK3 (3rd-order, 3 stages per step)
 
     **Note:** AB2 uses the standard constant-dt formula. With CFL-based adaptive time stepping the dt changes slowly, so the error introduced is small. AB2 requires less computation per step than RK3 but is lower order.
 
-    **Example:** `1`
+    **Example:** `2`
+
+`spatial`
+:   **Type:** Integer (optional)
+    **Default:** `1`
+    **Valid values:** `1`, `2`, `3`
+
+    Spatial discretization scheme selector. Controls how all spatial derivatives (advection, viscosity, hyperviscosity) are computed.
+
+    **Available schemes:**
+
+    - `1` - 2nd-order central finite differences
+    - `2` - 4th-order central finite differences
+    - `3` - Spectral (Fourier collocation)
+
+    **Note:** Hyperviscosity is applied automatically only when `spatial: 3`. Finite-difference schemes do not exhibit spectral pile-up and do not need it.
+
+    **Example:** `3`
 
 ---
 

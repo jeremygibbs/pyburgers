@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from .numerics import get_integrator
+from .numerics import get_integrator, get_operator
 from .utils import get_logger
 from .utils.spectral_workspace import SpectralWorkspace
 
@@ -102,25 +102,52 @@ class Burgers(ABC):
         self.mp = self.nx // 2
         self.dx = self.domain_length / self.nx
 
-        # Precompute viscous stability limit (constant for the run)
-        self._dt_visc = 0.2 * self.dx**2 / self.visc
+        # Create time integrator early so its stability coefficients inform dt limits
+        self.integrator = get_integrator(input_obj.numerics.temporal, self.nx)
 
-        # Hyperviscosity: auto-compute coefficient as dx⁴ when enabled
-        # This scaling ensures consistent damping across resolutions.
-        # Spectral stability limit: dt < C / (ν₄ · k_max⁴), k_max = π/dx
-        if input_obj.hyperviscosity_enabled:
-            self.hypervisc = self.dx**4
-            self._dt_hypervisc = 0.1 * self.dx**4 / (self.hypervisc * np.pi**4)
-            self.logger.info(
-                "Hyperviscosity enabled: coefficient = %.2e",
-                self.hypervisc,
-            )
-        else:
-            self.hypervisc = 0.0
-            self._dt_hypervisc = float("inf")
-
-        # Create spectral workspace (bundles Derivatives, Dealias, Filter)
+        # Create spectral workspace and gradient operator before computing dt limits
+        # so that the operator's eigenvalue attributes can inform those limits.
         self.spectral = self._create_spectral_workspace()
+        self.gradient_op = get_operator(
+            input_obj.numerics.spatial, self.nx, self.dx, self.spectral
+        )
+
+        # Precompute viscous stability limit (constant for the run).
+        # The gradient operator's viscous_eigenvalue (max |k̃²|·dx²) scales the
+        # limit correctly across spectral and finite-difference schemes.
+        # Use the integrator's dissipative_stability_limit (same coefficient used
+        # for hyperviscosity) so the limit is consistent with the chosen scheme.
+        _C = self.integrator.dissipative_stability_limit
+        self._dt_visc = (
+            _C * self.dx**2
+            / (self.visc * self.gradient_op.viscous_eigenvalue)
+        )
+
+        # Hyperviscosity: coefficient normalized so the Nyquist damping rate
+        # (ν₄ · k̃⁴_max) is equal across all spatial schemes.
+        #
+        # For the spectral scheme, k̃⁴_max = (π/dx)⁴, so ν₄ = dx⁴ gives a
+        # Nyquist rate of π⁴.  FD stencils have smaller k̃⁴_max (16 for FD2,
+        # 80/3 for FD4), so their coefficients are scaled up by π⁴/λ to
+        # compensate:
+        #
+        #   ν₄ = dx⁴ · π⁴ / λ_hypervisc
+        #
+        # A beneficial side-effect: the dt stability limit reduces to C/π⁴ for
+        # every scheme, so the hyperviscous timestep constraint is
+        # scheme-independent.
+        _C = self.integrator.dissipative_stability_limit
+        self.hypervisc = (
+            self.dx**4 * np.pi**4 / self.gradient_op.hyperviscous_eigenvalue
+        )
+        self._dt_hypervisc = (
+            _C * self.dx**4
+            / (self.hypervisc * self.gradient_op.hyperviscous_eigenvalue)
+        )
+        self.logger.info(
+            "Hyperviscosity: coefficient = %.2e",
+            self.hypervisc,
+        )
 
         # Grid coordinates
         self.x = np.arange(0, self.domain_length, self.dx)
@@ -139,11 +166,12 @@ class Burgers(ABC):
         self.rhs = np.zeros(self.nx)
         self._noise_scale = np.sqrt(2.0 * self.noise_amp / self.max_step)
 
+        # Step-scoped state for the RHS callable (avoids closure allocation in the loop)
+        self._step_dt: float = 0.0
+        self._step_noise: np.ndarray = np.zeros(self.nx)
+
         # Mode-specific setup (noise, SGS, etc.)
         self._setup_mode_specific()
-
-        # Create time integrator
-        self.integrator = get_integrator(input_obj.numerics.integration, self.nx)
 
         # Setup output
         self.output_dims = {"t": 0, "x": self.nx}
@@ -259,6 +287,15 @@ class Burgers(ABC):
             dt_adv = self.max_step
         return min(dt_adv, self._dt_visc, self._dt_hypervisc, self.max_step)
 
+    def _rhs_for_step(self) -> np.ndarray:
+        """RHS callable passed to the integrator each timestep.
+
+        Reads step-scoped state (_step_dt, _step_noise) set by run() before
+        each integrator.step() call, avoiding closure allocation in the loop.
+        """
+        derivatives = self._compute_derivatives(False)
+        return self._compute_rhs(derivatives, self._step_noise, self._step_dt)
+
     def run(self) -> None:
         """Execute the time integration loop.
 
@@ -289,14 +326,11 @@ class Burgers(ABC):
 
             is_output_step = abs(t_current + dt - t_next_save) <= 1e-12 * max(1.0, t_next_save)
 
-            # Build the RHS callable for the integrator
-            def compute_rhs(dt=dt, noise=noise) -> np.ndarray:
-                derivatives = self._compute_derivatives(False)
-                return self._compute_rhs(derivatives, noise, dt)
-
-            # Delegate the full timestep to the integrator
+            # Set step-scoped state and delegate to the integrator
+            self._step_dt = dt
+            self._step_noise = noise
             self.integrator.step(
-                self.u, dt, compute_rhs, self.spectral.derivatives.zero_nyquist
+                self.u, dt, self._rhs_for_step, self.gradient_op.zero_nyquist
             )
 
             t_current += dt

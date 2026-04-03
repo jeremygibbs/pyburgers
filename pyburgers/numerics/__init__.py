@@ -12,11 +12,11 @@
 
 """PyBurgers Numerics Subpackage.
 
-This package provides the numerical method abstractions for PyBurgers.
-It contains the time integration schemes, with the structure designed
-to accommodate future spatial discretization abstractions.
+This package provides the numerical method abstractions for PyBurgers,
+including temporal integration schemes and spatial discretization operators.
 """
 
-from .integration import TimeIntegrator, get_integrator
+from .spatial import SpatialOperator, get_operator
+from .temporal import TemporalIntegrator, get_integrator
 
-__all__ = ["TimeIntegrator", "get_integrator"]
+__all__ = ["SpatialOperator", "get_operator", "TemporalIntegrator", "get_integrator"]

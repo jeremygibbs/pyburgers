@@ -98,18 +98,6 @@
                             "description": "RNG seed for reproducibility. Null means random each run."
                         }
                     }
-                },
-                "hyperviscosity": {
-                    "type": "object",
-                    "description": "Optional fourth-order hyperviscosity for high-k damping.",
-                    "properties": {
-                        "enabled": {
-                            "type": "boolean",
-                            "default": false,
-                            "description": "Whether to enable hyperviscosity (coefficient auto-computed as dx^4)."
-                        }
-                    },
-                    "additionalProperties": false
                 }
             },
             "required": ["viscosity"]
@@ -168,22 +156,34 @@
             "type": "object",
             "description": "Configures numerical method selections and time stepping parameters.",
             "properties": {
-                "integration": {
+                "temporal": {
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 2,
-                    "default": 1,
-                    "description": "Time integration scheme: 1 = Williamson low-storage RK3, 2 = Adams-Bashforth 2nd order.",
+                    "default": 2,
+                    "description": "Time integration scheme: 1 = Adams-Bashforth 2nd order, 2 = Williamson low-storage RK3.",
                     "oneOf": [
-                        { "const": 1, "description": "Williamson low-storage RK3" },
-                        { "const": 2, "description": "Adams-Bashforth 2nd order" }
+                        { "const": 1, "description": "Adams-Bashforth 2nd order" },
+                        { "const": 2, "description": "Williamson low-storage RK3" }
+                    ]
+                },
+                "spatial": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 3,
+                    "default": 3,
+                    "description": "Spatial discretization scheme: 1 = 2nd-order finite differences, 2 = 4th-order finite differences, 3 = Spectral (Fourier collocation).",
+                    "oneOf": [
+                        { "const": 1, "description": "2nd-order central finite differences" },
+                        { "const": 2, "description": "4th-order central finite differences" },
+                        { "const": 3, "description": "Spectral (Fourier collocation)" }
                     ]
                 },
                 "cfl": {
                     "type": "number",
                     "exclusiveMinimum": 0,
-                    "exclusiveMaximum": 0.55,
-                    "description": "Target CFL number for adaptive time stepping."
+                    "exclusiveMaximum": 1.0,
+                    "description": "Target CFL number for adaptive time stepping. Recommended: 0.4 (RK3+spectral), 0.8 (RK3+FD2 or RK3+FD4), 0.3–0.4 (AB2, any spatial)."
                 },
                 "max_step": {
                     "type": "number",

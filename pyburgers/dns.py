@@ -115,7 +115,7 @@ class DNS(Burgers):
         orders: list[int | str] = [2, "sq"]
         if self.hypervisc > 0:
             orders.append(4)
-        return self.spectral.derivatives.compute(self.u, orders)
+        return self.gradient_op.compute(self.u, orders)
 
     def _compute_noise(self) -> np.ndarray:
         """Generate FBM noise at full resolution.
