@@ -49,7 +49,7 @@ class Deardorff(SGS):
         """
         super().__init__(input_obj, spectral)
         self.logger: logging.Logger = get_logger("SGS")
-        self.logger.info("--- Using the Deardorff TKE model")
+        self.logger.info("--- using the Deardorff TKE model")
 
     def compute(
         self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float, dt: float

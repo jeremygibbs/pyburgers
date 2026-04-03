@@ -159,12 +159,13 @@
                 "temporal": {
                     "type": "integer",
                     "minimum": 1,
-                    "maximum": 2,
-                    "default": 2,
-                    "description": "Time integration scheme: 1 = Adams-Bashforth 2nd order, 2 = Williamson low-storage RK3.",
+                    "maximum": 3,
+                    "default": 3,
+                    "description": "Time integration scheme: 1 = Adams-Bashforth 2nd order, 2 = Adams-Moulton 2nd order predictor-corrector, 3 = Williamson low-storage RK3.",
                     "oneOf": [
                         { "const": 1, "description": "Adams-Bashforth 2nd order" },
-                        { "const": 2, "description": "Williamson low-storage RK3" }
+                        { "const": 2, "description": "Adams-Moulton 2nd order predictor-corrector" },
+                        { "const": 3, "description": "Williamson low-storage RK3" }
                     ]
                 },
                 "spatial": {
@@ -183,7 +184,7 @@
                     "type": "number",
                     "exclusiveMinimum": 0,
                     "exclusiveMaximum": 1.0,
-                    "description": "Target CFL number for adaptive time stepping. Recommended: 0.4 (RK3+spectral), 0.8 (RK3+FD2 or RK3+FD4), 0.3–0.4 (AB2, any spatial)."
+                    "description": "Target CFL number for adaptive time stepping. Recommended: 0.4 (RK3+spectral), 0.8 (RK3+FD2 or RK3+FD4), 0.3–0.4 (AB2 or AM2, any spatial)."
                 },
                 "max_step": {
                     "type": "number",

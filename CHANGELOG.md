@@ -7,10 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Adams-Moulton 2nd-order predictor-corrector (`AM2`)**: New time integration scheme (`numerics.temporal = 2`) pairing the variable-step AB2 predictor with the A-stable AM2 (trapezoidal) corrector in a PECE scheme. Reduces local truncation error compared to AB2 at the cost of one additional RHS evaluation per step.
+
 ### Changed
 
 - **Namelist keys renamed**: `numerics.integration` → `numerics.temporal`; `numerics.advection` → `numerics.spatial`. Names now match the `TemporalIntegrator` and `SpatialOperator` class hierarchy.
-- **Scheme IDs reordered (simpler → more capable)**: Temporal: `1`=AB2, `2`=RK3 (was `1`=RK3, `2`=AB2). Spatial: `1`=FD2, `2`=FD4, `3`=Spectral (was `1`=Spectral, `2`=FD2, `3`=FD4).
+- **Scheme IDs reordered (simpler → more capable)**: Temporal: `1`=AB2, `2`=AM2, `3`=RK3 (was `1`=RK3, `2`=AB2). Spatial: `1`=FD2, `2`=FD4, `3`=Spectral (was `1`=Spectral, `2`=FD2, `3`=FD4).
 - **Hyperviscosity is now always active and scheme-normalized**: Previously a user-configurable namelist option, hyperviscosity is now applied automatically to all spatial schemes. The coefficient is normalized as `ν₄ = π⁴·dx⁴/λ_hypervisc`, where `λ_hypervisc` is the scheme's maximum modified wavenumber magnitude. This ensures equal Nyquist damping rate and a scheme-independent hyperviscous timestep limit (`C/π⁴`) across FD2, FD4, and Spectral. The `physics.hyperviscosity` namelist key and `HyperviscosityConfig` dataclass have been removed.
 
 ## [2.1.0] - 2026-03-31

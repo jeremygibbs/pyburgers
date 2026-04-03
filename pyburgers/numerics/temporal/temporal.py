@@ -47,7 +47,8 @@ class TemporalIntegrator(ABC):
         Args:
             scheme: Time integration scheme identifier.
                 1 = Adams-Bashforth 2nd order
-                2 = Williamson low-storage RK3
+                2 = Adams-Moulton 2nd order predictor-corrector
+                3 = Williamson low-storage RK3
             nx: Number of grid points for pre-allocating storage arrays.
 
         Returns:
@@ -58,10 +59,14 @@ class TemporalIntegrator(ABC):
 
             return AB2(nx)
         if scheme == 2:
+            from .temporal_am2 import AM2
+
+            return AM2(nx)
+        if scheme == 3:
             from .temporal_rk3 import RK3
 
             return RK3(nx)
-        raise ValueError(f"Unknown time integrator ID: {scheme}. Valid options: 1-2.")
+        raise ValueError(f"Unknown time integrator ID: {scheme}. Valid options: 1-3.")
 
     def __init__(self, nx: int) -> None:
         """Initialize the time integrator.

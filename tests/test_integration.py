@@ -55,7 +55,7 @@ class MockInput:
 
         class Numerics:
             def __init__(self, cfl, max_step):
-                self.temporal = 2
+                self.temporal = 3
                 self.spatial = 3
                 self.cfl = cfl
                 self.max_step = max_step

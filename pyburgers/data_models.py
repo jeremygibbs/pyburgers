@@ -133,7 +133,7 @@ class NumericsConfig:
     """Numerical method selections and time stepping parameters.
 
     Attributes:
-        temporal: Time integration scheme ID (1=AB2, 2=RK3).
+        temporal: Time integration scheme ID (1=AB2, 2=AM2, 3=RK3).
         spatial: Spatial discretization scheme ID (1=FD2, 2=FD4, 3=Spectral).
         cfl: Target CFL number for adaptive time stepping.
         max_step: Maximum allowed time step [s].

@@ -33,7 +33,7 @@
         "threads": 1
     },
     "numerics": {
-        "temporal": 2,
+        "temporal": 3,
         "spatial": 3,
         "cfl": 0.4,
         "max_step": 0.01

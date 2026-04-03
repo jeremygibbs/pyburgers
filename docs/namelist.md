@@ -60,7 +60,7 @@ Here's a typical configuration for running both DNS and LES:
         "threads": 1
     },
     "numerics": {
-        "temporal": 2,
+        "temporal": 3,
         "spatial": 3
     }
 }
@@ -255,19 +255,20 @@ Configures numerical method selections.
 
 `temporal`
 :   **Type:** Integer (optional)
-    **Default:** `1`
-    **Valid values:** `1`, `2`
+    **Default:** `3`
+    **Valid values:** `1`, `2`, `3`
 
     Time integration scheme selector.
 
     **Available schemes:**
 
     - `1` - Adams-Bashforth 2nd order (2nd-order, 1 evaluation per step, bootstrapped with forward Euler)
-    - `2` - Williamson (1980) low-storage RK3 (3rd-order, 3 stages per step)
+    - `2` - Adams-Moulton 2nd order predictor-corrector (2nd-order, 2 evaluations per step: AB2 predictor + AM2 corrector, bootstrapped with forward Euler)
+    - `3` - Williamson (1980) low-storage RK3 (3rd-order, 3 stages per step)
 
-    **Note:** AB2 uses the standard constant-dt formula. With CFL-based adaptive time stepping the dt changes slowly, so the error introduced is small. AB2 requires less computation per step than RK3 but is lower order.
+    **Note:** AB2 and AM2 are multistep methods that use the variable-step formula to maintain 2nd-order accuracy under CFL-based adaptive time stepping. AM2 uses AB2 as its predictor and applies the trapezoidal corrector, reducing the local truncation error at the cost of one additional RHS evaluation per step. RK3 is higher-order and self-starting (no bootstrap required), making it the recommended default for accuracy-critical simulations.
 
-    **Example:** `2`
+    **Example:** `3`
 
 `spatial`
 :   **Type:** Integer (optional)

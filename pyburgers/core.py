@@ -150,7 +150,7 @@ class Burgers(ABC):
         )
 
         # Grid coordinates
-        self.x = np.arange(0, self.domain_length, self.dx)
+        self.x = np.linspace(0, self.domain_length, self.nx, endpoint=False)
 
         # Reference workspace buffers (zero-copy)
         self.u = self.spectral.u
@@ -168,7 +168,7 @@ class Burgers(ABC):
 
         # Step-scoped state for the RHS callable (avoids closure allocation in the loop)
         self._step_dt: float = 0.0
-        self._step_noise: np.ndarray = np.zeros(self.nx)
+        self._step_noise: np.ndarray | None = None
 
         # Mode-specific setup (noise, SGS, etc.)
         self._setup_mode_specific()
@@ -293,6 +293,7 @@ class Burgers(ABC):
         Reads step-scoped state (_step_dt, _step_noise) set by run() before
         each integrator.step() call, avoiding closure allocation in the loop.
         """
+        assert self._step_noise is not None
         derivatives = self._compute_derivatives(False)
         return self._compute_rhs(derivatives, self._step_noise, self._step_dt)
 

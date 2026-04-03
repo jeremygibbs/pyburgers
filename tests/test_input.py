@@ -253,7 +253,7 @@ class TestValidConfigurations:
             "output": {"interval_save": 0.1, "interval_print": 0.01},
             "logging": {"level": "DEBUG"},
             "fftw": {"planning": "FFTW_MEASURE", "threads": 4},
-            "numerics": {"temporal": 2, "cfl": 0.4, "max_step": 0.001},
+            "numerics": {"temporal": 3, "cfl": 0.4, "max_step": 0.001},
         }
         namelist_file = create_namelist(tmp_path, data)
 

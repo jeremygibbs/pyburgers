@@ -103,7 +103,7 @@ class Input:
         if self.numerics.temporal == 1 and self.numerics.cfl > 0.4:
             self.logger.warning(
                 "CFL target %.2f exceeds the recommended limit of 0.4 for AB2 "
-                "(temporal=1). Consider reducing cfl or switching to RK3 (temporal=2).",
+                "(temporal=1). Consider reducing cfl or switching to RK3 (temporal=3).",
                 self.numerics.cfl,
             )
 

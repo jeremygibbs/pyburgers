@@ -24,8 +24,9 @@ flowchart TB
 
     subgraph numerics[Numerical Methods]
         TI[TimeIntegrator Base]
-        RK3[RK3<br/>Low-Storage RK3]
         AB2[AB2<br/>Adams-Bashforth 2]
+        AM2[AM2<br/>Adams-Moulton 2 PC]
+        RK3[RK3<br/>Low-Storage RK3]
     end
 
     subgraph physics[Physics Models]
@@ -58,8 +59,9 @@ flowchart TB
     LES --> Base
     LES --> SGS
     Base --> TI
-    TI --> RK3
     TI --> AB2
+    TI --> AM2
+    TI --> RK3
     SGS --> Smag
     SGS --> Wong
     SGS --> Dear
@@ -108,11 +110,13 @@ flowchart TD
     InitIC[Initialize Velocity Field<br/>Random + low-k energy] --> CreateOutput[Create NetCDF Output]
     CreateOutput --> SelectIntegrator{Integrator}
 
-    SelectIntegrator -->|1| UseRK3[RK3 Integrator]
-    SelectIntegrator -->|2| UseAB2[AB2 Integrator]
+    SelectIntegrator -->|1| UseAB2[AB2 Integrator]
+    SelectIntegrator -->|2| UseAM2[AM2 Integrator]
+    SelectIntegrator -->|3| UseRK3[RK3 Integrator]
 
-    UseRK3 --> TimeLoop
     UseAB2 --> TimeLoop
+    UseAM2 --> TimeLoop
+    UseRK3 --> TimeLoop
 
     TimeLoop{t < duration?}
 
@@ -139,7 +143,7 @@ flowchart TD
     style InitSolver fill:#f3e5f5
 ```
 
-## RK3 Stage Details (Integrator ID 1)
+## RK3 Stage Details (Integrator ID 3)
 
 Each Runge-Kutta stage computes the right-hand side (RHS) of the Burgers equation:
 
@@ -210,6 +214,14 @@ classDiagram
         2nd-order multistep
     }
 
+    class AM2 {
+        +rhs_prev: array
+        +rhs_n: array
+        +u_save: array
+        +step()
+        2nd-order predictor-corrector
+    }
+
     class SGS {
         <<abstract>>
         +compute()*
@@ -249,8 +261,9 @@ classDiagram
     Burgers <|-- LES
     Burgers *-- SpectralWorkspace
     Burgers *-- TimeIntegrator
-    TimeIntegrator <|-- RK3
     TimeIntegrator <|-- AB2
+    TimeIntegrator <|-- AM2
+    TimeIntegrator <|-- RK3
     LES *-- SGS
     SGS <|-- SmagConstant
     SGS <|-- SmagDynamic
