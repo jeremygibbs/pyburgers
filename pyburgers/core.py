@@ -274,6 +274,17 @@ class Burgers(ABC):
         """
         raise NotImplementedError
 
+    def _post_step(self, dt: float) -> None:
+        """Hook called once after each completed integrator step.
+
+        Override in subclasses to advance prognostic quantities (e.g.,
+        subgrid TKE) that must be updated exactly once per physical
+        timestep, regardless of the number of integrator stages.
+
+        Args:
+            dt: The physical time step just completed.
+        """
+
     def _compute_dt(self) -> float:
         """Compute the adaptive time step from CFL and viscous constraints.
 
@@ -333,6 +344,9 @@ class Burgers(ABC):
             self.integrator.step(
                 self.u, dt, self._rhs_for_step, self.gradient_op.zero_nyquist
             )
+
+            # Post-step hook (e.g., advance prognostic SGS quantities once per step)
+            self._post_step(dt)
 
             t_current += dt
 

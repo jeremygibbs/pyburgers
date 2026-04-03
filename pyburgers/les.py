@@ -111,6 +111,7 @@ class LES(Burgers):
         # Initialize subgrid TKE for Deardorff model
         if self.sgs_model_id == 4:
             self.tke_sgs: np.ndarray | float = np.ones(self.nx)
+            self._last_tke_tendency: np.ndarray | None = None
             self.tke_sgs_mean = np.zeros(1)
             self.tke_sgs_prod = np.zeros(1)
             self.tke_sgs_diff = np.zeros(1)
@@ -218,13 +219,9 @@ class LES(Burgers):
         self._last_tau = tau
         self._last_coeff = sgs["coeff"]
 
-        # Update subgrid TKE for Deardorff model
+        # Store Deardorff TKE tendency (applied once per step in _post_step)
         if self.sgs_model_id == 4:
-            tke_sgs_new = sgs["tke_sgs"]
-            if isinstance(self.tke_sgs, np.ndarray):
-                self.tke_sgs[:] = tke_sgs_new
-            else:
-                self.tke_sgs = tke_sgs_new
+            self._last_tke_tendency = sgs["tke_tendency"]
             self._last_tke_prod = sgs.get("tke_prod", 0.0)
             self._last_tke_diff = sgs.get("tke_diff", 0.0)
             self._last_tke_diss = sgs.get("tke_diss", 0.0)
@@ -246,6 +243,21 @@ class LES(Burgers):
             self.rhs -= self.hypervisc * d4udx4
 
         return self.rhs
+
+    def _post_step(self, dt: float) -> None:
+        """Advance prognostic subgrid TKE once per physical timestep.
+
+        Called by the base class after the integrator step completes,
+        ensuring TKE is updated exactly once regardless of how many
+        stages the integrator uses.
+
+        Args:
+            dt: The physical time step just completed.
+        """
+        if self.sgs_model_id == 4 and self._last_tke_tendency is not None:
+            self.tke_sgs[:] = np.maximum(
+                self.tke_sgs + self._last_tke_tendency * dt, 0.0
+            )
 
     def _save_diagnostics(
         self, derivatives: dict[str, np.ndarray], t_out: int, t_loop: float

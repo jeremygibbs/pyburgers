@@ -123,10 +123,10 @@ class TestSGSModels:
         # Check coefficient is non-negative
         assert result["coeff"] >= 0
 
-    def test_deardorff_returns_tke_sgs(
+    def test_deardorff_returns_tke_tendency(
         self, test_field: tuple, spectral_workspace: SpectralWorkspace
     ) -> None:
-        """Test that Deardorff model returns subgrid TKE."""
+        """Test that Deardorff model returns TKE tendency rate."""
         u, dudx = test_field
         input_obj = MockInput()
         model = SGS.get_model(4, input_obj, spectral_workspace)
@@ -135,22 +135,24 @@ class TestSGSModels:
         tke_sgs = np.ones_like(u)
         result = model.compute(u, dudx, tke_sgs, dt=0.001)
 
-        assert "tke_sgs" in result
-        assert result["tke_sgs"].shape == u.shape
+        assert "tke_tendency" in result
+        assert result["tke_tendency"].shape == u.shape
 
-    def test_deardorff_tke_positive(
+    def test_deardorff_tke_advancement(
         self, test_field: tuple, spectral_workspace: SpectralWorkspace
     ) -> None:
-        """Test that Deardorff TKE remains positive."""
+        """Test that advancing TKE with the tendency keeps it positive."""
         u, dudx = test_field
         input_obj = MockInput()
         model = SGS.get_model(4, input_obj, spectral_workspace)
 
         tke_sgs = np.ones_like(u) * 0.1
-        result = model.compute(u, dudx, tke_sgs, dt=0.001)
+        dt = 0.001
+        result = model.compute(u, dudx, tke_sgs, dt=dt)
 
-        # TKE should be clipped to positive values
-        assert np.all(result["tke_sgs"] >= 0)
+        # Advance TKE with floor at zero (as LES._post_step does)
+        tke_new = np.maximum(tke_sgs + result["tke_tendency"] * dt, 0.0)
+        assert np.all(tke_new >= 0)
 
     def test_smagcon_coefficient_fixed(
         self, test_field: tuple, spectral_workspace: SpectralWorkspace
@@ -207,18 +209,20 @@ class TestSGSModels:
     def test_deardorff_tke_bounded(
         self, test_field: tuple, spectral_workspace: SpectralWorkspace
     ) -> None:
-        """Test that Deardorff TKE stays in [0, 1] range."""
+        """Test that advancing TKE with tendency stays in physical bounds."""
         u, dudx = test_field
         input_obj = MockInput()
         model = SGS.get_model(4, input_obj, spectral_workspace)
 
         # Start with reasonable TKE value
         tke_sgs = np.ones_like(u) * 0.5
-        result = model.compute(u, dudx, tke_sgs, dt=0.001)
+        dt = 0.001
+        result = model.compute(u, dudx, tke_sgs, dt=dt)
 
-        # TKE should remain in physical bounds
-        assert np.all(result["tke_sgs"] >= 0)
-        assert np.all(result["tke_sgs"] < 2.0)  # Reasonable upper bound
+        # Advance TKE with floor at zero (as LES._post_step does)
+        tke_new = np.maximum(tke_sgs + result["tke_tendency"] * dt, 0.0)
+        assert np.all(tke_new >= 0)
+        assert np.all(tke_new < 2.0)  # Reasonable upper bound
 
 
 class TestSGSPhysics:
