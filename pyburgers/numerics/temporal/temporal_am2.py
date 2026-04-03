@@ -13,10 +13,12 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 
 import numpy as np
 
+from ...utils import get_logger
 from .temporal import TemporalIntegrator
 
 
@@ -67,6 +69,8 @@ class AM2(TemporalIntegrator):
             nx: Number of grid points.
         """
         super().__init__(nx)
+        self.logger: logging.Logger = get_logger("Temporal")
+        self.logger.info("--- using Adams-Moulton 2nd-order predictor-corrector time integration")
         self._rhs_prev: np.ndarray | None = None
         self._rhs_n = np.zeros(nx)
         self._u_save = np.zeros(nx)

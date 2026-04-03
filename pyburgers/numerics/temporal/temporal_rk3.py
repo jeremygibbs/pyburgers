@@ -13,10 +13,12 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 
 import numpy as np
 
+from ...utils import get_logger
 from .temporal import TemporalIntegrator
 
 
@@ -49,6 +51,8 @@ class RK3(TemporalIntegrator):
             nx: Number of grid points.
         """
         super().__init__(nx)
+        self.logger: logging.Logger = get_logger("Temporal")
+        self.logger.info("--- using Williamson RK3 time integration")
         self.Q = np.zeros(nx)
 
     def step(

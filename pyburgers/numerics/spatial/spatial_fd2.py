@@ -17,8 +17,11 @@ on a uniform periodic grid. Periodicity is handled via numpy.roll.
 
 from __future__ import annotations
 
+import logging
+
 import numpy as np
 
+from ...utils import get_logger
 from .spatial import SpatialOperator
 
 
@@ -44,6 +47,11 @@ class FD2(SpatialOperator):
 
     viscous_eigenvalue: float = 4.0
     hyperviscous_eigenvalue: float = 16.0
+
+    def __init__(self, nx: int, dx: float) -> None:
+        super().__init__(nx, dx)
+        self.logger: logging.Logger = get_logger("Spatial")
+        self.logger.info("--- using 2nd-order finite-difference spatial discretization")
 
     def compute(
         self, u: np.ndarray, orders: list[int | str]

@@ -13,10 +13,12 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 
 import numpy as np
 
+from ...utils import get_logger
 from .temporal import TemporalIntegrator
 
 
@@ -56,6 +58,8 @@ class AB2(TemporalIntegrator):
             nx: Number of grid points.
         """
         super().__init__(nx)
+        self.logger: logging.Logger = get_logger("Temporal")
+        self.logger.info("--- using Adams-Bashforth 2nd-order time integration")
         self._rhs_prev: np.ndarray | None = None
         self._dt_prev: float | None = None
 

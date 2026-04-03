@@ -26,7 +26,7 @@ import argparse
 import atexit
 import time
 
-from pyburgers import DNS, LES, Input, Output
+from pyburgers import DNS, LES, Input, Output, __version__
 from pyburgers.exceptions import NamelistError, PyBurgersError
 from pyburgers.utils import (
     get_logger,
@@ -76,22 +76,22 @@ def main() -> None:
     mode: str = args.mode.lower()
     outfile: str | None = args.outfile
 
-    output_obj: Output | None = None
     # Welcome message
     print("#"*100)
     print("#"+(" "*98)+"#")
-    print("#"+(" "*31)+"Welcome to PyBurgers (version 2.1.0)"+(" "*31)+"#")
+    print("#"+f"Welcome to PyBurgers (version {__version__})".center(98)+"#")
     print("#"+(" "*24)+"A toy to study Burgers turbulence with DNS and LES"+(" "*24)+"#")
     print("#"+(" "*40)+"by: Jeremy A Gibbs"+(" "*40)+"#")
     print("#"+(" "*98)+"#")
     print("#"*100)
 
+    output_obj: Output | None = None
+    logger = get_logger("Main")
+
     try:
         # Create Input instance from namelist (configures logging)
         input_obj: Input = Input(args.namelist)
-
-        # Get logger after Input sets up logging
-        logger = get_logger("Main")
+        t_total: float = time.perf_counter()
 
         # Log FFTW configuration
         logger.debug(
@@ -142,31 +142,31 @@ def main() -> None:
 
         # Initialization complete - now start timing the actual simulation
         logger.info("Initialization complete. Starting simulation...")
-        t1: float = time.perf_counter()
+        t_solver: float = time.perf_counter()
 
         # Run the simulation
         burgers.run()
 
         # Report timing
-        t2: float = time.perf_counter()
-        elapsed: float = t2 - t1
-        logger.info("Done! Completed in %.2f seconds", elapsed)
+        t_end: float = time.perf_counter()
+        logger.info("Done! Solver: %06.2f s  |  Total: %06.2f s",
+                    t_end - t_solver, t_end - t_total)
 
     except NamelistError as e:
-        print(f"\nNamelist configuration error: {e}")
-        print("Check namelist.json settings.")
+        logger.error("Namelist configuration error: %s", e)
+        logger.error("Check namelist.json settings.")
         raise SystemExit(1) from e
     except PyBurgersError as e:
-        print(f"\nAn error occurred: {e}")
+        logger.error("An error occurred: %s", e)
         raise SystemExit(1) from e
     except FileNotFoundError as e:
-        print(f"\nFile not found: {e}")
+        logger.error("File not found: %s", e)
         raise SystemExit(1) from e
     finally:
         # Ensure the output file is properly closed, even if an error occurred
         if output_obj is not None:
             output_obj.close()
-    print("#"*100)
+        print("#"*100)
 
 
 if __name__ == "__main__":

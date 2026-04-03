@@ -366,13 +366,13 @@ class Burgers(ABC):
         """
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug(
-                "Running for time %05.2f of %05.2f", t_current, self.t_duration
+                "Running for time %06.2f of %06.2f", t_current, self.t_duration
             )
         elif self.logger.isEnabledFor(logging.INFO):
             if t_current < t_next_print - 1e-14 and t_current < self.t_duration - 1e-14:
                 return
             self.logger.info(
-                "Running for time %05.2f of %05.2f",
+                "Running for time %06.2f of %06.2f",
                 t_current,
                 self.t_duration,
                 extra={"progress": True},

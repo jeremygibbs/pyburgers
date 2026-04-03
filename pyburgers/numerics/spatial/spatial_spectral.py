@@ -17,10 +17,12 @@ the SpatialOperator interface for Fourier collocation.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import numpy as np
 
+from ...utils import get_logger
 from .spatial import SpatialOperator
 
 if TYPE_CHECKING:
@@ -44,6 +46,8 @@ class Spectral(SpatialOperator):
             spectral: SpectralWorkspace whose Derivatives object is reused.
         """
         super().__init__(nx, dx)
+        self.logger: logging.Logger = get_logger("Spatial")
+        self.logger.info("--- using spectral spatial discretization")
         self._der = spectral.derivatives
 
     def compute(
