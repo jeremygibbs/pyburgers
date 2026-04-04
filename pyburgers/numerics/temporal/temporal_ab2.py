@@ -35,21 +35,25 @@ class AB2(TemporalIntegrator):
     The first timestep is bootstrapped with forward Euler since no
     previous RHS is available.
 
-    AB2 has a stability boundary at |λ dt| = 1 for real negative eigenvalues.
-    At that boundary the parasitic root z = -1, so high-k dissipative modes
-    stop decaying. A limit of 0.4 keeps |z_parasitic| well below 1, ensuring
-    effective hyperviscous damping of the highest wavenumber modes without
-    over-constraining the time step below the CFL limit.
+    AB2 has a stability boundary at |λ dt| = 1 for real negative eigenvalues,
+    but its imaginary stability boundary is very small (~0 for purely imaginary).
+    For advection-diffusion problems, the combined eigenvalue λdt = α + iβ
+    must lie inside a kidney-shaped stability region that is much smaller than
+    the real-axis limit of 1.  A limit of 0.2 keeps the viscous dt constraint
+    binding (rather than the CFL) for u_max up to ~0.26, preventing the
+    advective eigenvalue from reaching the unstable π × CFL ≈ 1.26 regime.
 
     Attributes:
-        dissipative_stability_limit: 0.4 — safely within AB2's |λ dt| ≤ 1 bound.
+        dissipative_stability_limit: 0.2 — keeps the viscous dt limit binding
+            so the combined advection-diffusion eigenvalue stays within AB2's
+            stability region for typical DNS velocities.
         _rhs_prev: RHS from the previous timestep, or None before
             the first step (triggers Euler bootstrap).
         _dt_prev: Time step used on the previous timestep, or None before
             the first step.
     """
 
-    dissipative_stability_limit: float = 0.4
+    dissipative_stability_limit: float = 0.2
 
     def __init__(self, nx: int) -> None:
         """Initialize AB2 integrator.

@@ -68,7 +68,8 @@ class SpatialOperator(ABC):
                 3 = Spectral (Fourier collocation)
             nx: Number of grid points.
             dx: Grid spacing.
-            spectral: SpectralWorkspace (used by scheme=3; ignored otherwise).
+            spectral: SpectralWorkspace used for spectral derivatives (scheme=3)
+                and Nyquist zeroing (all schemes).
 
         Returns:
             Instance of the requested SpatialOperator subclass.
@@ -76,11 +77,11 @@ class SpatialOperator(ABC):
         if scheme == 1:
             from .spatial_fd2 import FD2
 
-            return FD2(nx, dx)
+            return FD2(nx, dx, spectral)
         if scheme == 2:
             from .spatial_fd4 import FD4
 
-            return FD4(nx, dx)
+            return FD4(nx, dx, spectral)
         if scheme == 3:
             from .spatial_spectral import Spectral
 

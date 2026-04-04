@@ -103,7 +103,7 @@ flowchart TD
     InitSolver[Initialize Solver<br/>DNS or LES] --> CreateWorkspace[Create SpectralWorkspace<br/>FFT buffers & plans]
     CreateWorkspace --> InitSGS{LES Mode?}
 
-    InitSGS -->|Yes| LoadSGS[Load SGS Model<br/>0-4]
+    InitSGS -->|Yes| LoadSGS[Load SGS Model<br/>1-4]
     InitSGS -->|No| InitIC
     LoadSGS --> InitIC
 
@@ -347,14 +347,12 @@ flowchart TD
     Start([LES Mode]) --> ReadConfig[Read subgrid_model<br/>from namelist]
     ReadConfig --> Factory{Model ID}
 
-    Factory -->|0| NoModel[No SGS Model<br/>τ = 0]
     Factory -->|1| SmagC[Constant Smagorinsky<br/>C_s = 0.16]
     Factory -->|2| SmagD[Dynamic Smagorinsky<br/>C_s computed]
     Factory -->|3| WongL[Wong-Lilly<br/>Dynamic + similarity]
     Factory -->|4| Dear[Deardorff TKE<br/>1.5-order closure]
 
-    NoModel --> Compute[compute method]
-    SmagC --> Compute
+    SmagC --> Compute[compute method]
     SmagD --> Compute
     WongL --> Compute
     Dear --> Compute

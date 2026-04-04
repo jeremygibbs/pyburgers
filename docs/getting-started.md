@@ -280,7 +280,7 @@ Default simulations are crafted following published results and numerical best p
 1. **Adjust grid resolution**: Modify `grid.dns.points` and `grid.les.points`
 2. **Change simulation duration**: Adjust `time.duration` for longer/shorter runs
 3. **Tune time stepping**: Adjust `time.cfl` and `time.max_step` to control adaptive stepping
-4. **Try different SGS models**: Set `physics.subgrid_model` to 0-4 for LES runs
+4. **Try different SGS models**: Set `physics.subgrid_model` to 1-4 for LES runs
 5. **Tune FFTW**: Experiment with planning levels (ESTIMATE, MEASURE, PATIENT, EXHAUSTIVE)
 6. **Control output**: Adjust `output.interval_save` to save more or fewer snapshots
 

@@ -175,13 +175,12 @@ Defines the physical parameters of the Burgers equation.
 
     **Available models:**
 
-    - `0` - No SGS model (DNS or inviscid LES)
     - `1` - Constant-coefficient Smagorinsky
     - `2` - Dynamic Smagorinsky
     - `3` - Dynamic Wong-Lilly
     - `4` - Deardorff 1.5-order TKE
 
-    **Note:** Only affects LES runs (`-m les`). DNS mode ignores this setting. Dynamic models (2-4) are more computationally expensive but generally more accurate.
+    **Note:** Required for LES runs (`-m les`). DNS mode ignores this setting. Dynamic models (2-4) are more computationally expensive but generally more accurate.
 
     **Example:** `2`
 

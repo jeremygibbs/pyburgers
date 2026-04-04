@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import argparse
+import glob as globmod
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -126,6 +127,11 @@ def main() -> int:
         help="Path(s) to NetCDF output file(s).",
     )
     parser.add_argument(
+        "--no-legend",
+        action="store_true",
+        help="Suppress the legend.",
+    )
+    parser.add_argument(
         "-o",
         "--out",
         type=Path,
@@ -156,7 +162,18 @@ def main() -> int:
         help="End time for averaging window (default: use all times).",
     )
     args = parser.parse_args()
-    files = args.files
+
+    # Expand glob patterns (supports quoted wildcards like "local_tests/*_les.nc")
+    files: list[Path] = []
+    for pattern in args.files:
+        expanded = sorted(globmod.glob(str(pattern)))
+        if expanded:
+            files.extend(Path(p) for p in expanded)
+        else:
+            files.append(pattern)  # pass through as-is so error is clear
+
+    if not files:
+        parser.error("No files matched the given pattern(s).")
 
     # Make figure
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -245,7 +262,8 @@ def main() -> int:
     ax.set_xlabel(r"Wavenumber $k$ (m$^{-1}$)")
     ax.set_ylabel(r"PSD $E(k)$ (m$^3$ s$^{-2}$)")
     ax.grid(True, alpha=0.3, which="both")
-    ax.legend()
+    if not args.no_legend:
+        ax.legend()
 
     fig.tight_layout()
 

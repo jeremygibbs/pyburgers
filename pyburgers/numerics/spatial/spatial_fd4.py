@@ -18,11 +18,15 @@ on a uniform periodic grid. Periodicity is handled via numpy.roll.
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from ...utils import get_logger
 from .spatial import SpatialOperator
+
+if TYPE_CHECKING:
+    from ...utils.spectral_workspace import SpectralWorkspace
 
 
 class FD4(SpatialOperator):
@@ -48,10 +52,11 @@ class FD4(SpatialOperator):
     viscous_eigenvalue: float = 16.0 / 3.0
     hyperviscous_eigenvalue: float = 80.0 / 3.0
 
-    def __init__(self, nx: int, dx: float) -> None:
+    def __init__(self, nx: int, dx: float, spectral: SpectralWorkspace) -> None:
         super().__init__(nx, dx)
         self.logger: logging.Logger = get_logger("Spatial")
         self.logger.info("--- using 4th-order finite-difference spatial discretization")
+        self._der = spectral.derivatives
 
     def compute(
         self, u: np.ndarray, orders: list[int | str]
@@ -112,4 +117,18 @@ class FD4(SpatialOperator):
         return result
 
     def zero_nyquist(self, restore_physical: bool = True) -> None:
-        """No-op: finite-difference schemes have no Nyquist mode to zero."""
+        """Zero the Nyquist mode via spectral transform.
+
+        FD stencils have zero advective modified wavenumber at Nyquist,
+        so multistep integrators (AB2) can amplify that mode through
+        the parasitic root. Zeroing it each step prevents this.
+
+        Only acts when restore_physical=True (final integrator stage),
+        since FD derivatives need physical-space u and intermediate
+        stages don't accumulate parasitic growth.
+
+        Args:
+            restore_physical: Whether to transform back to physical space.
+        """
+        if restore_physical:
+            self._der.zero_nyquist(restore_physical=True)

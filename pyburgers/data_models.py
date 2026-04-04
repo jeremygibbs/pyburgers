@@ -120,7 +120,7 @@ class PhysicsConfig:
     Attributes:
         noise: NoiseConfig configuration.
         viscosity: The fluid's kinematic viscosity [m^2/s].
-        subgrid_model: Subgrid-scale model ID (0-4) for LES.
+        subgrid_model: Subgrid-scale model ID (1-4) for LES.
     """
 
     noise: NoiseConfig

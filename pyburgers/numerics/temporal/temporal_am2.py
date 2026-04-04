@@ -44,12 +44,13 @@ class AM2(TemporalIntegrator):
     Stability: The AM2 corrector is A-stable. In PECE mode the effective
     stability region for real negative eigenvalues is slightly wider than AB2
     alone, but the AB2 predictor still constrains the overall stability.
-    A dissipative_stability_limit of 0.4 (matching AB2) is used to keep the
-    parasitic root well-damped for high-k hyperviscous modes.
+    The AM2 corrector's A-stability allows a larger dissipative_stability_limit
+    (0.4) than standalone AB2 (0.1), since the corrector damps the parasitic
+    root from the predictor.
 
     Attributes:
-        dissipative_stability_limit: 0.4 — consistent with AB2 predictor's
-            |λ dt| ≤ 1 stability boundary for real negative eigenvalues.
+        dissipative_stability_limit: 0.4 — the A-stable corrector permits a
+            larger limit than standalone AB2.
         _rhs_prev: RHS from the previous timestep (F^{n-1}), or None before
             the first step (triggers Euler bootstrap).
         _rhs_n: Pre-allocated buffer holding F^n, copied from compute_rhs()
@@ -70,7 +71,7 @@ class AM2(TemporalIntegrator):
         """
         super().__init__(nx)
         self.logger: logging.Logger = get_logger("Temporal")
-        self.logger.info("--- using Adams-Moulton 2nd-order predictor-corrector time integration")
+        self.logger.info("--- using Adams-Moulton 2nd-order time integration")
         self._rhs_prev: np.ndarray | None = None
         self._rhs_n = np.zeros(nx)
         self._u_save = np.zeros(nx)
