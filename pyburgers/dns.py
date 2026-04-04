@@ -42,15 +42,6 @@ class DNS(Burgers):
 
     mode_name = "DNS"
 
-    def __init__(self, input_obj: Input, output_obj: Output) -> None:
-        """Initialize the DNS solver.
-
-        Args:
-            input_obj: Input configuration containing simulation parameters.
-            output_obj: Output handler for writing results to NetCDF.
-        """
-        super().__init__(input_obj, output_obj)
-
     def _get_nx(self) -> int:
         """Return the DNS grid resolution.
 
@@ -85,7 +76,7 @@ class DNS(Burgers):
         FBM noise is initialized as part of the workspace.
         """
         self.logger.info("DNS configuration:")
-        self.logger.info("--- grid length: %f", self.domain_length)
+        self.logger.info("--- grid length: %f m", self.domain_length)
         self.logger.info("--- grid points: %d", self.nx)
 
     def _setup_output_fields(self) -> dict[str, Any]:
