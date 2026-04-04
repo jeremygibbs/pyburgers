@@ -85,7 +85,8 @@ class AB2(TemporalIntegrator):
             u += dt * rhs
             self._rhs_prev = rhs.copy()
         else:
-            assert self._dt_prev is not None
+            if self._dt_prev is None:
+                raise RuntimeError("AB2 missing previous dt on non-bootstrap step")
             # Variable-step AB2: ω = dt_n / dt_{n-1}
             # Use _rhs_prev as scratch (overwritten with rhs at the end).
             omega = dt / self._dt_prev

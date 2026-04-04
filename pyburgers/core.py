@@ -136,7 +136,6 @@ class Burgers(ABC):
         # A beneficial side-effect: the dt stability limit reduces to C/π⁴ for
         # every scheme, so the hyperviscous timestep constraint is
         # scheme-independent.
-        _C = self.integrator.dissipative_stability_limit
         self.hypervisc = (
             self.dx**4 * np.pi**4 / self.gradient_op.hyperviscous_eigenvalue
         )
@@ -304,7 +303,8 @@ class Burgers(ABC):
         Reads step-scoped state (_step_dt, _step_noise) set by run() before
         each integrator.step() call, avoiding closure allocation in the loop.
         """
-        assert self._step_noise is not None
+        if self._step_noise is None:
+            raise RuntimeError("_step_noise not set before _rhs_for_step call")
         derivatives = self._compute_derivatives(False)
         return self._compute_rhs(derivatives, self._step_noise, self._step_dt)
 

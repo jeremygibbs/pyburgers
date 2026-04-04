@@ -34,7 +34,7 @@
     },
     "numerics": {
         "temporal": 3,
-        "spatial": 3,
+        "spatial": 2,
         "cfl": 0.4,
         "max_step": 0.01
     }

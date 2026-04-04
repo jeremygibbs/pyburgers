@@ -102,7 +102,8 @@ class AM2(TemporalIntegrator):
             u += dt * self._rhs_n
             self._rhs_prev = self._rhs_n.copy()
         else:
-            assert self._dt_prev is not None
+            if self._dt_prev is None:
+                raise RuntimeError("AM2 missing previous dt on non-bootstrap step")
             # Save u^n; the predictor modifies u in-place
             self._u_save[:] = u
 
