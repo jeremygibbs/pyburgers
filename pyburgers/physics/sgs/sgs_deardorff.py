@@ -74,8 +74,8 @@ class Deardorff(SGS):
         ce = c.sgs.DEARDORFF_CE  # Dissipation coefficient
         c1 = c.sgs.DEARDORFF_C1  # Eddy viscosity coefficient
 
-        # Strain rate squared (1D), used for production
-        dudx2 = dudx * dudx
+        # Dealiased strain rate |S|*S (1D), used for production
+        dudx2 = self.spectral.dealias.compute(dudx)
 
         # Compute TKE gradients
         derivs_k = self.spectral.derivatives.compute(tke_sgs, [1])
