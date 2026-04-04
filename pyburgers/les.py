@@ -164,21 +164,18 @@ class LES(Burgers):
     def _compute_derivatives(self, is_output_step: bool) -> dict[str, np.ndarray]:
         """Compute spatial derivatives for LES.
 
-        LES needs 1st, 2nd derivatives and du²/dx. At output times,
-        also computes 3rd derivative for enstrophy budget. If hyperviscosity
-        is enabled, also computes 4th derivative.
+        LES needs 1st, 2nd, 4th derivatives and du²/dx. At output times,
+        also computes 3rd derivative for enstrophy budget.
 
         Args:
             is_output_step: Whether this is an output save step.
 
         Returns:
-            Dictionary with '1', '2', 'sq' (and '3' at output times, '4' if hypervisc).
+            Dictionary with '1', '2', '4', 'sq' (and '3' at output times).
         """
-        orders: list[int | str] = [1, 2, "sq"]
+        orders: list[int | str] = [1, 2, 4, "sq"]
         if is_output_step:
             orders.append(3)
-        if self.hypervisc > 0:
-            orders.append(4)
         return self.gradient_op.compute(self.u, orders)
 
     def _compute_noise(self) -> np.ndarray:
@@ -230,17 +227,15 @@ class LES(Burgers):
         sgsder = self.gradient_op.compute(tau, [1])
         dtaudx = sgsder["1"]
 
+        d4udx4 = derivatives["4"]
+
         self.rhs[:] = (
             self.visc * d2udx2
+            - self.hypervisc * d4udx4
             - 0.5 * du2dx
             + self._noise_scale * noise
             - 0.5 * dtaudx
         )
-
-        # Add hyperviscosity term if enabled
-        if self.hypervisc > 0:
-            d4udx4 = derivatives["4"]
-            self.rhs -= self.hypervisc * d4udx4
 
         return self.rhs
 

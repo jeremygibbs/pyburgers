@@ -110,11 +110,9 @@ class DNS(Burgers):
             is_output_step: Whether this is an output save step (unused in DNS).
 
         Returns:
-            Dictionary with '2', 'sq', and optionally '4' derivatives.
+            Dictionary with '2', '4', and 'sq' derivatives.
         """
-        orders: list[int | str] = [2, "sq"]
-        if self.hypervisc > 0:
-            orders.append(4)
+        orders: list[int | str] = [2, 4, "sq"]
         return self.gradient_op.compute(self.u, orders)
 
     def _compute_noise(self) -> np.ndarray:
@@ -123,7 +121,7 @@ class DNS(Burgers):
         Returns:
             Noise array at DNS grid resolution.
         """
-        return self.spectral.noise.compute_noise()
+        return self.spectral.noise.compute_noise().copy()
 
     def _compute_rhs(
         self, derivatives: dict[str, np.ndarray], noise: np.ndarray, dt: float
@@ -147,12 +145,14 @@ class DNS(Burgers):
         d2udx2 = derivatives["2"]
         du2dx = derivatives["sq"]
 
-        self.rhs[:] = self.visc * d2udx2 - 0.5 * du2dx + self._noise_scale * noise
+        d4udx4 = derivatives["4"]
 
-        # Add hyperviscosity term if enabled
-        if self.hypervisc > 0:
-            d4udx4 = derivatives["4"]
-            self.rhs -= self.hypervisc * d4udx4
+        self.rhs[:] = (
+            self.visc * d2udx2
+            - self.hypervisc * d4udx4
+            - 0.5 * du2dx
+            + self._noise_scale * noise
+        )
 
         return self.rhs
 

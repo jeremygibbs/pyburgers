@@ -149,7 +149,7 @@ def main() -> None:
 
         # Report timing
         t_end: float = time.perf_counter()
-        logger.info("Done! Solver: %06.2f s  |  Total: %06.2f s",
+        logger.info("Done! Solver: %6.2f s  |  Total: %6.2f s",
                     t_end - t_solver, t_end - t_total)
 
     except NamelistError as e:
