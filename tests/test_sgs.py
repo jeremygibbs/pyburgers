@@ -54,7 +54,7 @@ class TestSGSFactory:
         """Create spectral workspace for testing."""
         nx = 64
         dx = 2 * np.pi / nx
-        return SpectralWorkspace(nx=nx, dx=dx, fftw_planning="FFTW_ESTIMATE", fftw_threads=1)
+        return SpectralWorkspace(nx=nx, dx=dx, nx2=nx, fftw_planning="FFTW_ESTIMATE", fftw_threads=1)
 
     @pytest.mark.parametrize("model_id", [1, 2, 3, 4])
     def test_get_model_returns_sgs(
@@ -83,7 +83,7 @@ class TestSGSModels:
         """Create spectral workspace for testing."""
         nx = 64
         dx = 2 * np.pi / nx
-        return SpectralWorkspace(nx=nx, dx=dx, fftw_planning="FFTW_ESTIMATE", fftw_threads=1)
+        return SpectralWorkspace(nx=nx, dx=dx, nx2=nx, fftw_planning="FFTW_ESTIMATE", fftw_threads=1)
 
     @pytest.fixture
     def test_field(self) -> tuple[np.ndarray, np.ndarray]:
@@ -233,7 +233,7 @@ class TestSGSPhysics:
         """Create spectral workspace for testing."""
         nx = 64
         dx = 2 * np.pi / nx
-        return SpectralWorkspace(nx=nx, dx=dx, fftw_planning="FFTW_ESTIMATE", fftw_threads=1)
+        return SpectralWorkspace(nx=nx, dx=dx, nx2=nx, fftw_planning="FFTW_ESTIMATE", fftw_threads=1)
 
     def test_smagorinsky_dissipative(self, spectral_workspace: SpectralWorkspace) -> None:
         """Test that Smagorinsky model is dissipative."""
