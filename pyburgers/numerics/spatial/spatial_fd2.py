@@ -12,7 +12,7 @@
 """2nd-order central finite-difference gradient operator for PyBurgers.
 
 Implements SpatialOperator using 2nd-order central difference stencils
-on a uniform periodic grid. Periodicity is handled via numpy.roll.
+on a uniform periodic grid. Periodicity is handled via numpy.pad with wrap mode.
 """
 
 from __future__ import annotations
@@ -72,35 +72,30 @@ class FD2(SpatialOperator):
         """
         result: dict[str, np.ndarray] = {}
         h = self.dx
+        n = self.nx
 
-        up1 = np.roll(u, -1)
-        um1 = np.roll(u, 1)
-        up2: np.ndarray | None = None
-        um2: np.ndarray | None = None
+        # Periodic padding — slices are zero-copy views (no allocation)
+        u_pad = np.pad(u, 2, mode="wrap")
+        um2, um1 = u_pad[0:n], u_pad[1:n+1]
+        u0 = u_pad[2:n+2]
+        up1, up2 = u_pad[3:n+3], u_pad[4:n+4]
 
         for order in orders:
             if order == 1 or order == "1":
                 result["1"] = (up1 - um1) / (2.0 * h)
 
             elif order == 2 or order == "2":
-                result["2"] = (up1 - 2.0 * u + um1) / h**2
+                result["2"] = (up1 - 2.0 * u0 + um1) / h**2
 
             elif order == 3 or order == "3":
-                if up2 is None:
-                    up2 = np.roll(u, -2)
-                    um2 = np.roll(u, 2)
                 result["3"] = (up2 - 2.0 * up1 + 2.0 * um1 - um2) / (2.0 * h**3)
 
             elif order == 4 or order == "4":
-                if up2 is None:
-                    up2 = np.roll(u, -2)
-                    um2 = np.roll(u, 2)
-                result["4"] = (up2 - 4.0 * up1 + 6.0 * u - 4.0 * um1 + um2) / h**4
+                result["4"] = (up2 - 4.0 * up1 + 6.0 * u0 - 4.0 * um1 + um2) / h**4
 
             elif order == "sq":
-                v = u**2
-                vp1 = np.roll(v, -1)
-                vm1 = np.roll(v, 1)
+                v_pad = np.pad(u**2, 1, mode="wrap")
+                vm1, vp1 = v_pad[0:n], v_pad[2:n+2]
                 result["sq"] = (vp1 - vm1) / (2.0 * h)
 
         return result

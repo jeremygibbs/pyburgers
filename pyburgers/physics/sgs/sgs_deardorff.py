@@ -74,15 +74,17 @@ class Deardorff(SGS):
         ce = c.sgs.DEARDORFF_CE  # Dissipation coefficient
         c1 = c.sgs.DEARDORFF_C1  # Eddy viscosity coefficient
 
-        # Dealiased strain rate |S|*S (1D), used for production
-        dudx2 = self.spectral.dealias.compute(dudx)
+        # Snapshot dudx — the caller's array may alias the same
+        # internal buffer that derivatives.compute() overwrites.
+        dudx = dudx.copy()
 
-        # Compute TKE gradients
+        # Compute TKE gradients (copy each result before the next
+        # compute() call overwrites the shared _out_1 buffer)
         derivs_k = self.spectral.derivatives.compute(tke_sgs, [1])
-        dkdx = derivs_k["1"]
+        dkdx = derivs_k["1"].copy()
 
         derivs_ku = self.spectral.derivatives.compute(tke_sgs * u, [1])
-        dkudx = derivs_ku["1"]
+        dkudx = derivs_ku["1"].copy()
 
         # Eddy viscosity and SGS stress
         tke_sgs_safe = np.maximum(tke_sgs, 0.0)
@@ -97,7 +99,7 @@ class Deardorff(SGS):
         # TKE tendency rate: advection + production + diffusion - dissipation
         # The rate is returned without applying dt; the caller advances TKE
         # exactly once per physical timestep (see LES._post_step).
-        prod = Vt * dudx2
+        prod = 2.0 * Vt * dudx**2
         diff = dzzdx
         diss = -ce * (tke_sgs_safe**1.5) / self.dx
         tke_tendency = -dkudx + prod + diff + diss

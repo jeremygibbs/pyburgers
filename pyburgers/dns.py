@@ -106,6 +106,10 @@ class DNS(Burgers):
         orders: list[int | str] = [2, 4, "sq"]
         return self.gradient_op.compute(self.u, orders)
 
+    def _compute_diagnostic_derivatives(self) -> dict[str, np.ndarray]:
+        """DNS diagnostics only need TKE (from u), no spatial derivatives."""
+        return {}
+
     def _compute_noise(self) -> np.ndarray:
         """Generate FBM noise at full resolution.
 

@@ -235,6 +235,18 @@ class Burgers(ABC):
         """
         raise NotImplementedError
 
+    def _compute_diagnostic_derivatives(self) -> dict[str, np.ndarray]:
+        """Compute only the derivatives needed for diagnostics at output time.
+
+        By default falls back to ``_compute_derivatives(True)``. Subclasses
+        can override to avoid recomputing derivatives that are only needed
+        for the RHS (e.g. 4th derivative, du²/dx).
+
+        Returns:
+            Dictionary of derivative arrays for diagnostics.
+        """
+        return self._compute_derivatives(True)
+
     @abstractmethod
     def _compute_noise(self) -> np.ndarray:
         """Generate noise for the current time step.
@@ -363,7 +375,7 @@ class Burgers(ABC):
             # Output at exact save times
             if is_output_step:
                 save_idx += 1
-                derivatives = self._compute_derivatives(True)
+                derivatives = self._compute_diagnostic_derivatives()
                 t_exact = save_idx * self.t_save
                 self._save_diagnostics(derivatives, save_idx, t_exact)
                 t_next_save += self.t_save

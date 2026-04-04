@@ -178,6 +178,15 @@ class LES(Burgers):
             orders.append(3)
         return self.gradient_op.compute(self.u, orders)
 
+    def _compute_diagnostic_derivatives(self) -> dict[str, np.ndarray]:
+        """Compute only the derivatives needed for LES diagnostics.
+
+        Diagnostics need 1st (dissipation), 2nd (enstrophy), and 3rd
+        (enstrophy budget) derivatives. Skips 4th and du²/dx which are
+        only needed for the RHS.
+        """
+        return self.gradient_op.compute(self.u, [1, 2, 3])
+
     def _compute_noise(self) -> np.ndarray:
         """Generate and filter FBM noise from DNS to LES scales.
 
@@ -272,7 +281,10 @@ class LES(Burgers):
         d3udx3 = derivatives.get("3", np.zeros_like(dudx))
         tau = self._last_tau if self._last_tau is not None else np.zeros(self.nx)
 
-        # Compute diagnostics
+        # Compute diagnostics.
+        # The 0.5 factor on τ terms matches the momentum equation RHS
+        # (-0.5 * ∂τ/∂x), where τ = -2νₜ·∂u/∂x carries a factor of 2
+        # that the 0.5 cancels, yielding the physical rates νₜ·(∂u/∂x)².
         self.tke[:] = 0.5 * np.var(self.u)
         self.diss_sgs[:] = np.mean(-0.5 * tau * dudx)
         self.diss_mol[:] = np.mean(self.visc * dudx**2)

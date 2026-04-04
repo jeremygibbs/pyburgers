@@ -12,7 +12,7 @@
 """4th-order central finite-difference gradient operator for PyBurgers.
 
 Implements SpatialOperator using 4th-order central difference stencils
-on a uniform periodic grid. Periodicity is handled via numpy.roll.
+on a uniform periodic grid. Periodicity is handled via numpy.pad with wrap mode.
 """
 
 from __future__ import annotations
@@ -72,13 +72,13 @@ class FD4(SpatialOperator):
         """
         result: dict[str, np.ndarray] = {}
         h = self.dx
+        n = self.nx
 
-        up1 = np.roll(u, -1)
-        um1 = np.roll(u, 1)
-        up2 = np.roll(u, -2)
-        um2 = np.roll(u, 2)
-        up3: np.ndarray | None = None
-        um3: np.ndarray | None = None
+        # Periodic padding — slices are zero-copy views (no allocation)
+        u_pad = np.pad(u, 3, mode="wrap")
+        um3, um2, um1 = u_pad[0:n], u_pad[1:n+1], u_pad[2:n+2]
+        u0 = u_pad[3:n+3]
+        up1, up2, up3 = u_pad[4:n+4], u_pad[5:n+5], u_pad[6:n+6]
 
         for order in orders:
             if order == 1 or order == "1":
@@ -86,32 +86,24 @@ class FD4(SpatialOperator):
 
             elif order == 2 or order == "2":
                 result["2"] = (
-                    -up2 + 16.0 * up1 - 30.0 * u + 16.0 * um1 - um2
+                    -up2 + 16.0 * up1 - 30.0 * u0 + 16.0 * um1 - um2
                 ) / (12.0 * h**2)
 
             elif order == 3 or order == "3":
-                if up3 is None:
-                    up3 = np.roll(u, -3)
-                    um3 = np.roll(u, 3)
                 result["3"] = (
                     up3 - 8.0 * up2 + 13.0 * up1 - 13.0 * um1 + 8.0 * um2 - um3
                 ) / (8.0 * h**3)
 
             elif order == 4 or order == "4":
-                if up3 is None:
-                    up3 = np.roll(u, -3)
-                    um3 = np.roll(u, 3)
                 result["4"] = (
-                    -up3 + 12.0 * up2 - 39.0 * up1 + 56.0 * u
+                    -up3 + 12.0 * up2 - 39.0 * up1 + 56.0 * u0
                     - 39.0 * um1 + 12.0 * um2 - um3
                 ) / (6.0 * h**4)
 
             elif order == "sq":
-                v = u**2
-                vp1 = np.roll(v, -1)
-                vm1 = np.roll(v, 1)
-                vp2 = np.roll(v, -2)
-                vm2 = np.roll(v, 2)
+                v_pad = np.pad(u**2, 2, mode="wrap")
+                vm2, vm1 = v_pad[0:n], v_pad[1:n+1]
+                vp1, vp2 = v_pad[3:n+3], v_pad[4:n+4]
                 result["sq"] = (-vp2 + 8.0 * vp1 - 8.0 * vm1 + vm2) / (12.0 * h)
 
         return result
