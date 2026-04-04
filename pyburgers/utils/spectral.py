@@ -87,6 +87,16 @@ class Derivatives:
         self._out_4 = pyfftw.empty_aligned(nx, np.float64)
         self._out_sq = pyfftw.empty_aligned(nx, np.float64)
 
+        # Separate forward-FFT buffers for external-array derivatives
+        # (e.g., SGS stress tau, subgrid TKE). Avoids save/restore of the
+        # primary velocity buffers (self.u / self.fu).
+        self._ext_u = pyfftw.empty_aligned(nx, np.float64)
+        self._ext_fu = pyfftw.empty_aligned(self.nk, np.complex128)
+        self._ext_fft = pyfftw.FFTW(
+            self._ext_u, self._ext_fu,
+            direction="FFTW_FORWARD", flags=(fftw_planning,), threads=fftw_threads,
+        )
+
         # padded pyfftw arrays for 3/2-rule dealiasing
         nx_padded = 3 * self.nx // 2
         nk_padded = nx_padded // 2 + 1
@@ -134,10 +144,9 @@ class Derivatives:
     def compute(self, u: np.ndarray, orders: list[int | str]) -> dict[str, np.ndarray]:
         """Compute spectral derivatives of the input field.
 
-        When ``u`` is not the internal buffer (``self.u``), the buffer is
-        automatically saved before the computation and restored afterward.
-        This allows callers to compute derivatives of arbitrary arrays
-        (e.g., SGS stress) without corrupting the velocity field.
+        When ``u`` is not the internal velocity buffer (``self.u``),
+        a separate FFT buffer pair is used so the primary velocity
+        state is never touched.
 
         Args:
             u: Input field array (real-valued).
@@ -153,39 +162,39 @@ class Derivatives:
         """
         derivatives = {}
 
-        # If computing derivatives of a non-velocity field, preserve the
-        # primary velocity buffer so callers don't need manual save/restore.
-        external_input = u is not self.u
-        if external_input:
-            u_saved = self.u.copy()
-            fu_saved = self.fu.copy()
-
-        # FFT input to spectral space. Skip if fu is already current for self.u
-        # (set by zero_nyquist when restore_physical=False).
-        if not self._fu_valid or external_input:
-            self.u[:] = u
-            self.fft()
-        self._fu_valid = False
+        # For external arrays (e.g., tau, tke_sgs), use the separate
+        # FFT buffers so the primary velocity state is undisturbed.
+        if u is not self.u:
+            self._ext_u[:] = u
+            self._ext_fft()
+            fu = self._ext_fu
+        else:
+            # Skip FFT if fu is already current (set by zero_nyquist)
+            if not self._fu_valid:
+                self.u[:] = u
+                self.fft()
+            self._fu_valid = False
+            fu = self.fu
 
         # Loop through requested derivative orders
         for key in orders:
             if key == 1:
-                self.fun[:] = 1j * self.k * self.fu
+                self.fun[:] = 1j * self.k * fu
                 self.ifft()
                 np.multiply(self.fac, self.der, out=self._out_1)
                 derivatives["1"] = self._out_1
             elif key == 2:
-                self.fun[:] = -self.k2 * self.fu
+                self.fun[:] = -self.k2 * fu
                 self.ifft()
                 np.multiply(self.fac2, self.der, out=self._out_2)
                 derivatives["2"] = self._out_2
             elif key == 3:
-                self.fun[:] = -1j * self.k3 * self.fu
+                self.fun[:] = -1j * self.k3 * fu
                 self.ifft()
                 np.multiply(self.fac3, self.der, out=self._out_3)
                 derivatives["3"] = self._out_3
             elif key == 4:
-                self.fun[:] = self.k4 * self.fu
+                self.fun[:] = self.k4 * fu
                 self.ifft()
                 np.multiply(self.fac4, self.der, out=self._out_4)
                 derivatives["4"] = self._out_4
@@ -193,7 +202,7 @@ class Derivatives:
                 # Dealiased computation of d(u^2)/dx using 3/2-rule zero-padding
                 # With rfft, only non-negative frequencies are stored
                 self.fup[:] = 0
-                self.fup[0 : self.nk] = self.fu
+                self.fup[0 : self.nk] = fu
                 # Transform to padded physical space
                 self.ifftp()
                 # Correct for 3/2 padding normalization: irfft divides by 3n/2 instead of n
@@ -207,12 +216,6 @@ class Derivatives:
                 self.ifft()
                 np.multiply(self.fac, self.der, out=self._out_sq)
                 derivatives["sq"] = self._out_sq
-
-        # Restore the primary velocity buffer if we were computing on
-        # an external array (e.g., tau, tke_sgs).
-        if external_input:
-            self.u[:] = u_saved
-            self.fu[:] = fu_saved
 
         return derivatives
 
