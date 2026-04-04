@@ -166,5 +166,5 @@ class DNS(Burgers):
             t_out: Output time index.
             t_loop: Current simulation time.
         """
-        self.tke[:] = np.var(self.u)
+        self.tke[:] = 0.5 * np.var(self.u)
         self.output.save(self.output_fields, t_out, t_loop, initial=False)

@@ -278,7 +278,7 @@ class LES(Burgers):
         tau = self._last_tau if self._last_tau is not None else np.zeros(self.nx)
 
         # Compute diagnostics
-        self.tke[:] = np.var(self.u)
+        self.tke[:] = 0.5 * np.var(self.u)
         self.diss_sgs[:] = np.mean(-tau * dudx)
         self.diss_mol[:] = np.mean(self.visc * dudx**2)
         self.ens_prod[:] = np.mean(dudx**3)
