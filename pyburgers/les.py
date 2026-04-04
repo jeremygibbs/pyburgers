@@ -277,7 +277,7 @@ class LES(Burgers):
         self.diss_sgs[:] = np.mean(-0.5 * tau * dudx)
         self.diss_mol[:] = np.mean(self.visc * dudx**2)
         self.ens_prod[:] = np.mean(dudx**3)
-        self.ens_dsgs[:] = np.mean(-tau * d3udx3)
+        self.ens_dsgs[:] = np.mean(-0.5 * tau * d3udx3)
         self.ens_dmol[:] = np.mean(self.visc * d2udx2**2)
         self.C_sgs[:] = self._last_coeff
         if self.sgs_model_id == 4:
