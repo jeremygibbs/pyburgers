@@ -274,7 +274,7 @@ class LES(Burgers):
 
         # Compute diagnostics
         self.tke[:] = 0.5 * np.var(self.u)
-        self.diss_sgs[:] = np.mean(-tau * dudx)
+        self.diss_sgs[:] = np.mean(-0.5 * tau * dudx)
         self.diss_mol[:] = np.mean(self.visc * dudx**2)
         self.ens_prod[:] = np.mean(dudx**3)
         self.ens_dsgs[:] = np.mean(-tau * d3udx3)

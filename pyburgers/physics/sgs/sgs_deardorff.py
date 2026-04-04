@@ -97,7 +97,7 @@ class Deardorff(SGS):
         # TKE tendency rate: advection + production + diffusion - dissipation
         # The rate is returned without applying dt; the caller advances TKE
         # exactly once per physical timestep (see LES._post_step).
-        prod = 2 * Vt * dudx2
+        prod = Vt * dudx2
         diff = dzzdx
         diss = -ce * (tke_sgs_safe**1.5) / self.dx
         tke_tendency = -dkudx + prod + diff + diss
