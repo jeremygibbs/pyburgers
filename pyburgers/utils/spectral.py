@@ -87,9 +87,9 @@ class Derivatives:
         self._out_4 = pyfftw.empty_aligned(nx, np.float64)
         self._out_sq = pyfftw.empty_aligned(nx, np.float64)
 
-        # padded pyfftw arrays for 2x dealiasing
-        nx_padded = 2 * self.nx
-        nk_padded = nx_padded // 2 + 1  # = nx + 1
+        # padded pyfftw arrays for 3/2-rule dealiasing
+        nx_padded = 3 * self.nx // 2
+        nk_padded = nx_padded // 2 + 1
         self.up = pyfftw.empty_aligned(nx_padded, np.float64)
         self.fup = pyfftw.empty_aligned(nk_padded, np.complex128)
 
@@ -190,21 +190,20 @@ class Derivatives:
                 np.multiply(self.fac4, self.der, out=self._out_4)
                 derivatives["4"] = self._out_4
             elif key == "sq":
-                # Dealiased computation of d(u^2)/dx using 2x zero-padding
+                # Dealiased computation of d(u^2)/dx using 3/2-rule zero-padding
                 # With rfft, only non-negative frequencies are stored
-                # Zero-pad: copy all nk values to padded array (nk_padded = nx + 1)
                 self.fup[:] = 0
                 self.fup[0 : self.nk] = self.fu
                 # Transform to padded physical space
                 self.ifftp()
-                # Correct for 2x padding normalization: irfft divides by 2n instead of n
-                self.up *= 2
+                # Correct for 3/2 padding normalization: irfft divides by 3n/2 instead of n
+                self.up *= 1.5
                 # Square in physical space
                 np.square(self.up, out=self.up)
                 # Transform back to spectral space
                 self.fftp()
-                # Compute derivative directly from padded result; self.k zeros Nyquist
-                self.fun[:] = 1j * self.k * (self.fup[0 : self.nk] / 2)
+                # Truncate to original modes and differentiate; self.k zeros Nyquist
+                self.fun[:] = 1j * self.k * (self.fup[0 : self.nk] / 1.5)
                 self.ifft()
                 np.multiply(self.fac, self.der, out=self._out_sq)
                 derivatives["sq"] = self._out_sq
