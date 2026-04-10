@@ -17,15 +17,12 @@ using spectral methods.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import numpy as np
 
 from .core import Burgers
 from .utils.spectral_workspace import SpectralWorkspace
-
-if TYPE_CHECKING:
-    from .utils.io import Input, Output
 
 
 class DNS(Burgers):

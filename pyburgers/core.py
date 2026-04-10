@@ -285,12 +285,14 @@ class Burgers(ABC):
         """
         raise NotImplementedError
 
-    def _post_step(self, dt: float) -> None:
+    def _post_step(self, dt: float) -> None:  # noqa: B027
         """Hook called once after each completed integrator step.
 
         Override in subclasses to advance prognostic quantities (e.g.,
         subgrid TKE) that must be updated exactly once per physical
-        timestep, regardless of the number of integrator stages.
+        timestep, regardless of the number of integrator stages. Default
+        implementation is an intentional no-op so DNS does not need to
+        override it.
 
         Args:
             dt: The physical time step just completed.

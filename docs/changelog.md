@@ -5,19 +5,11 @@ All notable changes to PyBurgers will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.1.0] - 2026-04-13
 
 ### Added
 
 - **Adams-Moulton 2nd-order predictor-corrector (`AM2`)**: New time integration scheme (`numerics.temporal = 2`) pairing the variable-step AB2 predictor with the A-stable AM2 (trapezoidal) corrector in a PECE scheme. Reduces local truncation error compared to AB2 at the cost of one additional RHS evaluation per step.
-
-### Changed
-
-- **Namelist keys renamed**: `numerics.integration` → `numerics.temporal`; `numerics.advection` → `numerics.spatial`. Names now match the `TemporalIntegrator` and `SpatialOperator` class hierarchy.
-- **Scheme IDs reordered (simpler → more capable)**: Temporal: `1`=AB2, `2`=AM2, `3`=RK3 (was `1`=RK3, `2`=AB2). Spatial: `1`=FD2, `2`=FD4, `3`=Spectral (was `1`=Spectral, `2`=FD2, `3`=FD4).
-- **Hyperviscosity is now always active and scheme-normalized**: Previously a user-configurable namelist option, hyperviscosity is now applied automatically to all spatial schemes. The coefficient is normalized as `ν₄ = π⁴·dx⁴/λ_hypervisc`, where `λ_hypervisc` is the scheme's maximum modified wavenumber magnitude. This ensures equal Nyquist damping rate and a scheme-independent hyperviscous timestep limit (`C/π⁴`) across FD2, FD4, and Spectral. The `physics.hyperviscosity` namelist key and `HyperviscosityConfig` dataclass have been removed.
-
-## [2.1.0] - 2026-03-31
 
 ### Fixed
 
@@ -27,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Namelist keys renamed**: `numerics.integration` → `numerics.temporal`; `numerics.advection` → `numerics.spatial`. Names now match the `TemporalIntegrator` and `SpatialOperator` class hierarchy.
+- **Scheme IDs reordered (simpler → more capable)**: Temporal: `1`=AB2, `2`=AM2, `3`=RK3 (was `1`=RK3, `2`=AB2). Spatial: `1`=FD2, `2`=FD4, `3`=Spectral (was `1`=Spectral, `2`=FD2, `3`=FD4).
+- **Hyperviscosity is now always active and scheme-normalized**: Previously a user-configurable namelist option, hyperviscosity is now applied automatically to all spatial schemes. The coefficient is normalized as `ν₄ = π⁴·dx⁴/λ_hypervisc`, where `λ_hypervisc` is the scheme's maximum modified wavenumber magnitude. This ensures equal Nyquist damping rate and a scheme-independent hyperviscous timestep limit (`C/π⁴`) across FD2, FD4, and Spectral. The `physics.hyperviscosity` namelist key and `HyperviscosityConfig` dataclass have been removed.
 - **`Derivatives.compute()` parameter**: Renamed `order` to `orders` for clarity (it accepts a list)
 - **RK3 coefficient variables**: Renamed `A`/`B` to `rk3_a`/`rk3_b` in `core.py` for PEP 8 compliance
 

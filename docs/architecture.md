@@ -23,10 +23,15 @@ flowchart TB
     end
 
     subgraph numerics[Numerical Methods]
-        TI[TimeIntegrator Base]
+        direction TB
+        TI[TemporalIntegrator Base]
         AB2[AB2<br/>Adams-Bashforth 2]
         AM2[AM2<br/>Adams-Moulton 2 PC]
         RK3[RK3<br/>Low-Storage RK3]
+        SO[SpatialOperator Base]
+        FD2[FD2<br/>2nd-Order FD]
+        FD4[FD4<br/>4th-Order FD]
+        Spec[Spectral<br/>Fourier Collocation]
     end
 
     subgraph physics[Physics Models]
@@ -62,6 +67,10 @@ flowchart TB
     TI --> AB2
     TI --> AM2
     TI --> RK3
+    Base --> SO
+    SO --> FD2
+    SO --> FD4
+    SO --> Spec
     SGS --> Smag
     SGS --> Wong
     SGS --> Dear
@@ -80,6 +89,7 @@ flowchart TB
     style LES fill:#e8f5e9
     style Spectral fill:#f3e5f5
     style TI fill:#fce4ec
+    style SO fill:#fce4ec
     style Output fill:#ffe0b2
 ```
 
@@ -176,7 +186,8 @@ classDiagram
     class Burgers {
         <<abstract>>
         +SpectralWorkspace workspace
-        +TimeIntegrator integrator
+        +TemporalIntegrator integrator
+        +SpatialOperator gradient_op
         +Input input_obj
         +Output output
         +run()
@@ -196,7 +207,7 @@ classDiagram
         Override: Includes SGS stress
     }
 
-    class TimeIntegrator {
+    class TemporalIntegrator {
         <<abstract>>
         +step()*
         +get_integrator()$
@@ -250,6 +261,33 @@ classDiagram
         1.5-order TKE equation
     }
 
+    class SpatialOperator {
+        <<abstract>>
+        +viscous_eigenvalue: float
+        +hyperviscous_eigenvalue: float
+        +compute()*
+        +zero_nyquist()*
+        +get_operator()$
+    }
+
+    class FD2 {
+        +compute()
+        +zero_nyquist()
+        2nd-order central FD
+    }
+
+    class FD4 {
+        +compute()
+        +zero_nyquist()
+        4th-order central FD
+    }
+
+    class Spectral {
+        +compute()
+        +zero_nyquist()
+        Fourier collocation
+    }
+
     class SpectralWorkspace {
         +Derivatives deriv
         +Dealias dealias
@@ -260,10 +298,14 @@ classDiagram
     Burgers <|-- DNS
     Burgers <|-- LES
     Burgers *-- SpectralWorkspace
-    Burgers *-- TimeIntegrator
-    TimeIntegrator <|-- AB2
-    TimeIntegrator <|-- AM2
-    TimeIntegrator <|-- RK3
+    Burgers *-- TemporalIntegrator
+    Burgers *-- SpatialOperator
+    TemporalIntegrator <|-- AB2
+    TemporalIntegrator <|-- AM2
+    TemporalIntegrator <|-- RK3
+    SpatialOperator <|-- FD2
+    SpatialOperator <|-- FD4
+    SpatialOperator <|-- Spectral
     LES *-- SGS
     SGS <|-- SmagConstant
     SGS <|-- SmagDynamic
@@ -374,9 +416,10 @@ flowchart TD
 
 ### Factory Pattern
 - `SGS.get_model()` creates appropriate SGS model instance
-- `TimeIntegrator.get_integrator()` creates appropriate time integration scheme
+- `TemporalIntegrator.get_integrator()` creates appropriate time integration scheme
+- `SpatialOperator.get_operator()` creates appropriate spatial discretization scheme
 - Centralizes model/scheme selection logic
-- Easy to add new SGS models or time integrators
+- Easy to add new SGS models, time integrators, or spatial operators
 
 ### Workspace Pattern
 - `SpectralWorkspace` bundles all spectral operations

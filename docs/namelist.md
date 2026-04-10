@@ -25,9 +25,7 @@ Here's a typical configuration for running both DNS and LES:
 ```json
 {
     "time": {
-        "duration": 200.0,
-        "cfl": 0.4,
-        "max_step": 0.01
+        "duration": 200.0
     },
     "grid": {
         "length": 6.283185307179586,
@@ -45,7 +43,7 @@ Here's a typical configuration for running both DNS and LES:
             "exponent": -0.75,
             "amplitude": 1e-6,
             "seed": 1
-        },
+        }
     },
     "output": {
         "interval_save": 0.1,
@@ -61,7 +59,9 @@ Here's a typical configuration for running both DNS and LES:
     },
     "numerics": {
         "temporal": 3,
-        "spatial": 3
+        "spatial": 3,
+        "cfl": 0.4,
+        "max_step": 0.01
     }
 }
 ```
@@ -70,7 +70,7 @@ Here's a typical configuration for running both DNS and LES:
 
 ## Section: time
 
-Controls the simulation duration and adaptive time stepping.
+Controls the simulation duration.
 
 `duration`
 :   **Type:** Number (required)
@@ -81,29 +81,6 @@ Controls the simulation duration and adaptive time stepping.
     The simulation runs until this physical time is reached.
 
     **Example:** `200.0` (200 seconds of simulated time)
-
-`cfl`
-:   **Type:** Number (required)
-    **Default:** None
-    **Valid range:** (0, 0.55)
-
-    Target CFL number for adaptive time stepping.
-
-    The time step is automatically adjusted each iteration to satisfy dt ≤ cfl × dx / |u_max|. Lower values are more conservative but slower. Typical values: 0.3 to 0.5.
-
-    **Example:** `0.4`
-
-`max_step`
-:   **Type:** Number (required)
-    **Default:** None
-
-    Maximum allowed time step in seconds.
-
-    Caps the adaptive time step. Typical values: 0.001 to 0.01.
-
-    **Note:** Stochastic noise is refreshed at `max_step` intervals in both DNS and LES modes. This ensures both simulations consume the same random sequence, making their results directly comparable even though adaptive time stepping may produce different sub-step sizes.
-
-    **Example:** `0.01`
 
 ---
 
@@ -250,7 +227,7 @@ Controls output file writing and progress reporting.
 
 ## Section: numerics
 
-Configures numerical method selections.
+Configures numerical method selections and time stepping parameters.
 
 `temporal`
 :   **Type:** Integer (optional)
@@ -271,7 +248,7 @@ Configures numerical method selections.
 
 `spatial`
 :   **Type:** Integer (optional)
-    **Default:** `1`
+    **Default:** `3`
     **Valid values:** `1`, `2`, `3`
 
     Spatial discretization scheme selector. Controls how all spatial derivatives (advection, viscosity, hyperviscosity) are computed.
@@ -282,9 +259,32 @@ Configures numerical method selections.
     - `2` - 4th-order central finite differences
     - `3` - Spectral (Fourier collocation)
 
-    **Note:** Hyperviscosity is applied automatically only when `spatial: 3`. Finite-difference schemes do not exhibit spectral pile-up and do not need it.
+    **Note:** Hyperviscosity is applied automatically to all spatial schemes. The coefficient is normalized by each scheme's maximum modified wavenumber magnitude, ensuring equal Nyquist damping rate across FD2, FD4, and Spectral. See the [documentation](index.md#hyperviscosity) for details.
 
     **Example:** `3`
+
+`cfl`
+:   **Type:** Number (optional)
+    **Default:** `0.4`
+    **Valid range:** (0, 1.0)
+
+    Target CFL number for adaptive time stepping.
+
+    The time step is automatically adjusted each iteration to satisfy dt ≤ cfl × dx / |u_max|. Lower values are more conservative but slower. Recommended values: 0.4 for RK3+Spectral, up to 0.8 for RK3+FD schemes, 0.3-0.4 for AB2 or AM2.
+
+    **Example:** `0.4`
+
+`max_step`
+:   **Type:** Number (optional)
+    **Default:** `0.01`
+
+    Maximum allowed time step in seconds.
+
+    Caps the adaptive time step. Typical values: 0.001 to 0.01.
+
+    **Note:** Stochastic noise is refreshed at `max_step` intervals in both DNS and LES modes. This ensures both simulations consume the same random sequence, making their results directly comparable even though adaptive time stepping may produce different sub-step sizes.
+
+    **Example:** `0.01`
 
 ---
 
@@ -362,7 +362,7 @@ PyBurgers validates the namelist at startup. Common errors:
 - **Missing required field**: Add the missing key to your namelist
 - **Invalid type**: Ensure numbers aren't quoted as strings
 - **Invalid value**: Check that enums (like `subgrid_model`) use allowed values
-- **Invalid CFL**: The `cfl` value must be in the range (0, 0.55)
+- **Invalid CFL**: The `cfl` value must be in the range (0, 1.0)
 - **Invalid structure**: Ensure nested sections (e.g., `physics.noise`) are properly nested
 
 Error messages will indicate the specific problem and location in the namelist.
@@ -375,8 +375,9 @@ Error messages will indicate the specific problem and location in the namelist.
 
 ```json
 {
-    "time": { "duration": 1.0, "cfl": 0.4, "max_step": 0.01 },
+    "time": { "duration": 1.0 },
     "grid": { "dns": { "points": 512 }, "les": { "points": 128 } },
+    "numerics": { "cfl": 0.4, "max_step": 0.01 },
     "fftw": { "planning": "FFTW_ESTIMATE", "threads": 4 }
 }
 ```
@@ -385,8 +386,9 @@ Error messages will indicate the specific problem and location in the namelist.
 
 ```json
 {
-    "time": { "duration": 500.0, "cfl": 0.4, "max_step": 0.001 },
+    "time": { "duration": 500.0 },
     "grid": { "dns": { "points": 16384 }, "les": { "points": 1024 } },
+    "numerics": { "cfl": 0.4, "max_step": 0.001 },
     "fftw": { "planning": "FFTW_PATIENT", "threads": 8 }
 }
 ```
@@ -395,9 +397,10 @@ Error messages will indicate the specific problem and location in the namelist.
 
 ```json
 {
-    "time": { "duration": 1000.0, "cfl": 0.4, "max_step": 0.01 },
+    "time": { "duration": 1000.0 },
     "grid": { "dns": { "points": 8192 }, "les": { "points": 512 } },
     "physics": { "subgrid_model": 2 },
+    "numerics": { "cfl": 0.4, "max_step": 0.01 },
     "fftw": { "planning": "FFTW_PATIENT", "threads": 8 }
 }
 ```

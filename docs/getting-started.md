@@ -85,9 +85,7 @@ PyBurgers is configured using a JSON namelist file. The repository includes a de
 ```json
 {
     "time": {
-        "duration": 200.0,
-        "cfl": 0.4,
-        "max_step": 0.01
+        "duration": 200.0
     },
     "grid": {
         "length": 6.283185307179586,
@@ -118,6 +116,12 @@ PyBurgers is configured using a JSON namelist file. The repository includes a de
     "fftw": {
         "planning": "FFTW_PATIENT",
         "threads": 8
+    },
+    "numerics": {
+        "temporal": 3,
+        "spatial": 3,
+        "cfl": 0.4,
+        "max_step": 0.01
     }
 }
 ```
@@ -127,13 +131,15 @@ For a quick test run, you might want to reduce the grid size and simulation dura
 ```json
 {
     "time": {
-        "duration": 1.0,
-        "cfl": 0.4,
-        "max_step": 0.01
+        "duration": 1.0
     },
     "grid": {
         "dns": { "points": 512 },
         "les": { "points": 128 }
+    },
+    "numerics": {
+        "cfl": 0.4,
+        "max_step": 0.01
     },
     "fftw": {
         "planning": "FFTW_ESTIMATE",
@@ -279,7 +285,7 @@ Default simulations are crafted following published results and numerical best p
 
 1. **Adjust grid resolution**: Modify `grid.dns.points` and `grid.les.points`
 2. **Change simulation duration**: Adjust `time.duration` for longer/shorter runs
-3. **Tune time stepping**: Adjust `time.cfl` and `time.max_step` to control adaptive stepping
+3. **Tune time stepping**: Adjust `numerics.cfl` and `numerics.max_step` to control adaptive stepping
 4. **Try different SGS models**: Set `physics.subgrid_model` to 1-4 for LES runs
 5. **Tune FFTW**: Experiment with planning levels (ESTIMATE, MEASURE, PATIENT, EXHAUSTIVE)
 6. **Control output**: Adjust `output.interval_save` to save more or fewer snapshots
@@ -330,7 +336,7 @@ Create a test namelist (`test_namelist.json`):
 
 ```json
 {
-    "time": { "duration": 1.0, "cfl": 0.4, "max_step": 0.01 },
+    "time": { "duration": 1.0 },
     "physics": {
         "noise": { "exponent": -0.75, "amplitude": 1e-6 },
         "viscosity": 1e-5,
@@ -340,6 +346,7 @@ Create a test namelist (`test_namelist.json`):
         "dns": { "points": 512 },
         "les": { "points": 128 }
     },
+    "numerics": { "cfl": 0.4, "max_step": 0.01 },
     "output": { "interval_save": 0.1 },
     "logging": { "level": "INFO" },
     "fftw": { "planning": "FFTW_ESTIMATE", "threads": 4 }
@@ -358,6 +365,8 @@ Use the default `namelist.json` with:
 - `grid.dns.points`: 8192 or 16384
 - `fftw.planning`: FFTW_PATIENT
 - `time.duration`: 200 to 500
+- `numerics.cfl`: 0.4 (default)
+- `numerics.max_step`: 0.001 for high resolution
 
 ### Production LES Comparison
 

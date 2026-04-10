@@ -111,14 +111,28 @@ class TestInvalidTimeValues:
         with pytest.raises(NamelistError):
             Input(str(namelist_file))
 
-    def test_cfl_above_limit_raises_error(self, tmp_path: Path) -> None:
-        """Test that CFL >= 0.55 raises NamelistError."""
+    def test_cfl_at_upper_limit_raises_error(self, tmp_path: Path) -> None:
+        """Test that CFL >= 1.0 raises NamelistError (schema exclusiveMaximum)."""
         data = get_valid_namelist()
-        data["numerics"]["cfl"] = 0.55
+        data["numerics"]["cfl"] = 1.0
         namelist_file = create_namelist(tmp_path, data)
 
         with pytest.raises(NamelistError):
             Input(str(namelist_file))
+
+    def test_ab2_high_cfl_warns(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test that CFL > 0.4 with AB2 logs a warning but does not raise."""
+        data = get_valid_namelist()
+        data["numerics"]["cfl"] = 0.45
+        data["numerics"]["temporal"] = 1
+        namelist_file = create_namelist(tmp_path, data)
+
+        input_obj = Input(str(namelist_file))
+        assert input_obj.numerics.cfl == 0.45
+        captured = capsys.readouterr()
+        assert "exceeds the recommended limit" in captured.out
 
     def test_duration_negative_raises_error(self, tmp_path: Path) -> None:
         """Test that negative duration raises NamelistError."""
@@ -276,8 +290,8 @@ class TestValidConfigurations:
         assert input_obj.fftw.threads == 4
 
     def test_all_valid_subgrid_models(self, tmp_path: Path) -> None:
-        """Test that all valid subgrid model values (0-4) are accepted."""
-        for model_id in range(5):
+        """Test that all valid subgrid model values (1-4) are accepted."""
+        for model_id in range(1, 5):
             data = get_valid_namelist()
             data["physics"]["subgrid_model"] = model_id
             namelist_file = create_namelist(tmp_path, data)

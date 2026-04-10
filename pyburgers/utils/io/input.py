@@ -92,7 +92,7 @@ class Input:
         # Numerics configuration
         numerics_data = namelist_data.get("numerics", {})
         self.numerics: NumericsConfig = NumericsConfig(
-            temporal=int(numerics_data.get("temporal", 2)),
+            temporal=int(numerics_data.get("temporal", 3)),
             spatial=int(numerics_data.get("spatial", 3)),
             cfl=float(numerics_data.get("cfl", 0.4)),
             max_step=float(numerics_data.get("max_step", 0.01)),

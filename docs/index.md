@@ -4,7 +4,7 @@ Welcome to the documentation for PyBurgers, a high-performance solver for the 1D
 
 ## What is PyBurgers?
 
-PyBurgers provides both direct numerical simulation (DNS) and large-eddy simulation (LES) capabilities for studying Burgers turbulence. The solver uses Fourier collocation methods in space and Williamson (1980) low-storage RK3 time integration with CFL-based adaptive time stepping. Many settings follow or are inspired by the procedures described in [Basu (2009)](https://doi.org/10.1080/14685240902852719).
+PyBurgers provides both direct numerical simulation (DNS) and large-eddy simulation (LES) capabilities for studying Burgers turbulence. The solver offers pluggable spatial discretization (2nd-order FD, 4th-order FD, or Fourier collocation) and pluggable time integration (Adams-Bashforth 2, Adams-Moulton 2 predictor-corrector, or Williamson 1980 low-storage RK3) with CFL-based adaptive time stepping. Many settings follow or are inspired by the procedures described in [Basu (2009)](https://doi.org/10.1080/14685240902852719).
 
 ## Scientific Background
 
@@ -50,23 +50,23 @@ The 1D SBE provides valuable insights into turbulence without the computational 
 
 ### Spatial Discretization
 
-PyBurgers uses **Fourier collocation** for computing spatial derivatives. Since the velocity field is real-valued, the code uses real FFTs (rfft/irfft) for approximately 2× speedup and 50% memory reduction compared to complex FFTs.
+PyBurgers supports three pluggable spatial discretization schemes, selected via `numerics.spatial` in the namelist:
 
-Key features:
+- **`1` - 2nd-order central finite differences (FD2)**: Simple, robust stencils for all derivative orders
+- **`2` - 4th-order central finite differences (FD4)**: Higher accuracy with wider stencils
+- **`3` - Spectral (Fourier collocation)** (default): Exponential accuracy for smooth solutions
 
-- Spectral accuracy for smooth solutions
-- Efficient computation of derivatives of any order
-- 2× padding for dealiasing nonlinear terms
+All schemes use real FFTs (rfft/irfft) for approximately 2x speedup and 50% memory reduction compared to complex FFTs. Nonlinear terms are dealiased using the 3/2-rule (zero-padding).
 
 ### Time Integration
 
-The solver employs **Williamson (1980) low-storage RK3** time integration with adaptive time stepping:
+PyBurgers supports three pluggable time integration schemes, selected via `numerics.temporal` in the namelist:
 
-- Three-stage explicit Runge-Kutta method with excellent stability properties
-- CFL-based adaptive time stepping automatically adjusts dt based on maximum velocity
-- Viscous stability constraint also enforced ($dt \le 0.2 dx^2/\nu$)
-- Nyquist mode zeroed after each RK stage to prevent aliasing accumulation
-- Output times are hit exactly by clamping dt to reach save intervals
+- **`1` - Adams-Bashforth 2nd order (AB2)**: 2nd-order multistep, 1 RHS evaluation per step, bootstrapped with forward Euler
+- **`2` - Adams-Moulton 2nd order predictor-corrector (AM2)**: 2nd-order PECE scheme (AB2 predictor + trapezoidal corrector), 2 RHS evaluations per step
+- **`3` - Williamson (1980) low-storage RK3** (default): 3rd-order, 3 stages per step, self-starting
+
+All schemes use CFL-based adaptive time stepping that automatically adjusts dt based on the maximum velocity, viscous stability, and hyperviscous stability constraints. Output times are hit exactly by clamping dt to reach save intervals. Nyquist mode is zeroed after each integration stage to prevent aliasing accumulation.
 
 ### Hyperviscosity
 

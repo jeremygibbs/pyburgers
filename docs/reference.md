@@ -15,6 +15,28 @@
 
 ::: pyburgers.les.LES
 
+## Numerical Methods
+
+### Temporal Integrators
+
+::: pyburgers.numerics.temporal.temporal.TemporalIntegrator
+
+::: pyburgers.numerics.temporal.temporal_ab2.AB2
+
+::: pyburgers.numerics.temporal.temporal_am2.AM2
+
+::: pyburgers.numerics.temporal.temporal_rk3.RK3
+
+### Spatial Operators
+
+::: pyburgers.numerics.spatial.spatial.SpatialOperator
+
+::: pyburgers.numerics.spatial.spatial_fd2.FD2
+
+::: pyburgers.numerics.spatial.spatial_fd4.FD4
+
+::: pyburgers.numerics.spatial.spatial_spectral.Spectral
+
 ## Data Models
 
 ::: pyburgers.data_models

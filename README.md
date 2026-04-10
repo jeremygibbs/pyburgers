@@ -10,11 +10,12 @@ A high-performance solver for the 1D Stochastic Burgers Equation with DNS and LE
 
 ## Overview
 
-PyBurgers implements direct numerical simulation (DNS) and large-eddy simulation (LES) for studying Burgers turbulence, following the procedures described in [Basu (2009)](https://doi.org/10.1080/14685240902852719). The solver uses Fourier collocation methods for spatial derivatives and Williamson (1980) low-storage RK3 time integration with CFL-based adaptive time stepping.
+PyBurgers implements direct numerical simulation (DNS) and large-eddy simulation (LES) for studying Burgers turbulence, following the procedures described in [Basu (2009)](https://doi.org/10.1080/14685240902852719). The solver offers pluggable spatial discretization (FD2, FD4, or Spectral) and time integration (AB2, AM2, or RK3) with CFL-based adaptive time stepping.
 
 ## Features
 
 - **Dual Simulation Modes**: DNS for full resolution and LES for coarse-grained modeling
+- **Pluggable Numerics**: Choose from FD2, FD4, or Spectral spatial operators and AB2, AM2, or RK3 temporal integrators
 - **Four SGS Models**: Constant Smagorinsky, Dynamic Smagorinsky, Dynamic Wong-Lilly, and Deardorff 1.5-order TKE
 - **Optimized FFTs**: FFTW with intelligent wisdom caching for fast repeated runs
 - **Fractional Brownian Motion**: Configurable stochastic forcing with spectral control and optional reproducible seeding
