@@ -28,6 +28,7 @@
                 },
                 "dns": {
                     "type": "object",
+                    "default": {},
                     "properties": {
                         "points": {
                             "type": "integer",
@@ -39,6 +40,7 @@
                 },
                 "les": {
                     "type": "object",
+                    "default": {},
                     "properties": {
                         "points": {
                             "type": "integer",
@@ -48,11 +50,7 @@
                         }
                     }
                 }
-            },
-            "anyOf": [
-                { "required": ["dns"] },
-                { "required": ["les"] }
-            ]
+            }
         },
         "physics": {
             "type": "object",
@@ -78,6 +76,7 @@
                 },
                 "noise": {
                     "type": "object",
+                    "default": {},
                     "description": "Stochastic forcing (fractional Brownian motion) parameters.",
                     "properties": {
                         "exponent": {
@@ -103,22 +102,24 @@
         },
         "output": {
             "type": "object",
+            "default": {},
             "description": "Controls output file writing and progress reporting.",
             "properties": {
                 "interval_save": {
                     "type": "number",
                     "exclusiveMinimum": 0,
-                    "description": "Output interval in simulation seconds."
+                    "description": "Output interval in simulation seconds. Defaults to 100*max_step if omitted."
                 },
                 "interval_print": {
                     "type": "number",
                     "exclusiveMinimum": 0,
-                    "description": "Progress reporting interval in simulation seconds."
+                    "description": "Progress reporting interval in simulation seconds. Defaults to 100*max_step if omitted."
                 }
             }
         },
         "logging": {
             "type": "object",
+            "default": {},
             "description": "Configures runtime logging behavior.",
             "properties": {
                 "level": {
@@ -128,13 +129,15 @@
                     "description": "Logging verbosity level."
                 },
                 "file": {
-                    "type": "string",
-                    "description": "Path to log file (optional, logs to console if omitted)."
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Path to log file (null logs to console only)."
                 }
             }
         },
         "fftw": {
             "type": "object",
+            "default": {},
             "description": "Configures FFTW planning and threading.",
             "properties": {
                 "planning": {
@@ -153,6 +156,7 @@
         },
         "numerics": {
             "type": "object",
+            "default": {},
             "description": "Configures numerical method selections and time stepping parameters.",
             "properties": {
                 "temporal": {
@@ -183,11 +187,13 @@
                     "type": "number",
                     "exclusiveMinimum": 0,
                     "exclusiveMaximum": 1.0,
+                    "default": 0.4,
                     "description": "Target CFL number for adaptive time stepping. Recommended: 0.4 (RK3+spectral), 0.8 (RK3+FD2 or RK3+FD4), 0.3–0.4 (AB2 or AM2, any spatial)."
                 },
                 "max_step": {
                     "type": "number",
                     "exclusiveMinimum": 0,
+                    "default": 0.01,
                     "description": "Maximum allowed time step in seconds."
                 }
             },

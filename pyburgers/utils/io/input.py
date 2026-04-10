@@ -19,7 +19,6 @@ access all setup information.
 
 import json
 import logging
-import math
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +38,40 @@ from ...data_models import (
 )
 from ...exceptions import NamelistError
 from ..logging_helper import get_logger, setup_logging
+
+
+def _extend_with_default(validator_class: type) -> type:
+    """Return a jsonschema validator that fills in schema defaults.
+
+    Standard jsonschema validation does not populate missing fields from
+    their schema ``default`` values. This extension walks the schema's
+    ``properties`` keyword and sets defaults on the instance before
+    handing off to the normal ``properties`` validator. Because the
+    validator recurses into nested object subschemas, defaults cascade
+    through the whole tree, letting the schema be the single source of
+    truth for optional configuration.
+
+    Args:
+        validator_class: A jsonschema validator class (e.g., Draft7Validator).
+
+    Returns:
+        A subclass that fills schema defaults as a side effect of validation.
+    """
+    validate_properties = validator_class.VALIDATORS["properties"]
+
+    def set_defaults(
+        validator: Any, properties: dict[str, Any], instance: Any, schema: dict[str, Any]
+    ) -> Any:
+        if isinstance(instance, dict):
+            for prop, subschema in properties.items():
+                if "default" in subschema:
+                    instance.setdefault(prop, subschema["default"])
+        yield from validate_properties(validator, properties, instance, schema)
+
+    return jsonschema.validators.extend(validator_class, {"properties": set_defaults})
+
+
+_DefaultFillingValidator = _extend_with_default(jsonschema.Draft7Validator)
 
 
 class Input:
@@ -73,29 +106,30 @@ class Input:
         self.logger: logging.Logger = get_logger("Input")
         self.logger.info("Reading %s", namelist_path)
 
+        # Validation fills in schema defaults, so all optional keys below
+        # are guaranteed to exist. The only fields accessed without a
+        # schema default are the required ones (time.duration, physics.viscosity).
         namelist_data = self._load_and_validate_namelist(namelist_path)
 
         # Extract and finalize logging config first so we can adjust log level
-        logging_data = namelist_data.get("logging", {})
-        log_level = logging_data.get("level", "INFO")
-        log_file = logging_data.get("file")
-        if log_file == "":
-            log_file = None
-        self.logging: LoggingConfig = LoggingConfig(level=log_level, file=log_file)
-        setup_logging(level=log_level, log_file=log_file)
+        logging_data = namelist_data["logging"]
+        log_file = logging_data["file"] or None  # treat "" as None
+        self.logging: LoggingConfig = LoggingConfig(
+            level=logging_data["level"], file=log_file
+        )
+        setup_logging(level=logging_data["level"], log_file=log_file)
 
         # Time configuration
         time_data = namelist_data["time"]
-        duration = float(time_data["duration"])
-        self.time: TimeConfig = TimeConfig(duration=duration)
+        self.time: TimeConfig = TimeConfig(duration=float(time_data["duration"]))
 
         # Numerics configuration
-        numerics_data = namelist_data.get("numerics", {})
+        numerics_data = namelist_data["numerics"]
         self.numerics: NumericsConfig = NumericsConfig(
-            temporal=int(numerics_data.get("temporal", 3)),
-            spatial=int(numerics_data.get("spatial", 3)),
-            cfl=float(numerics_data.get("cfl", 0.4)),
-            max_step=float(numerics_data.get("max_step", 0.01)),
+            temporal=int(numerics_data["temporal"]),
+            spatial=int(numerics_data["spatial"]),
+            cfl=float(numerics_data["cfl"]),
+            max_step=float(numerics_data["max_step"]),
         )
 
         # AB2 has a limited stability region for hyperbolic terms; warn if CFL
@@ -109,29 +143,28 @@ class Input:
 
         # Grid configuration (DNS and LES)
         grid_data = namelist_data["grid"]
-        dns_data = grid_data.get("dns", {})
-        les_data = grid_data.get("les", {})
         self.grid: GridConfig = GridConfig(
-            length=float(grid_data.get("length", math.tau)),
-            dns=DNSConfig(points=int(dns_data.get("points", 8192))),
-            les=LESConfig(points=int(les_data.get("points", 512))),
+            length=float(grid_data["length"]),
+            dns=DNSConfig(points=int(grid_data["dns"]["points"])),
+            les=LESConfig(points=int(grid_data["les"]["points"])),
         )
 
         # Physics configuration
         physics_data = namelist_data["physics"]
-        noise_data = physics_data.get("noise", {})
+        noise_data = physics_data["noise"]
         self.physics: PhysicsConfig = PhysicsConfig(
             noise=NoiseConfig(
-                exponent=float(noise_data.get("exponent", -0.75)),
-                amplitude=float(noise_data.get("amplitude", 1e-6)),
-                seed=noise_data.get("seed", None),
+                exponent=float(noise_data["exponent"]),
+                amplitude=float(noise_data["amplitude"]),
+                seed=noise_data["seed"],
             ),
             viscosity=float(physics_data["viscosity"]),
-            subgrid_model=int(physics_data.get("subgrid_model", 1)),
+            subgrid_model=int(physics_data["subgrid_model"]),
         )
 
-        # Output configuration
-        output_data = namelist_data.get("output", {})
+        # Output configuration. interval_save and interval_print have no
+        # schema default because the sensible default is tied to max_step.
+        output_data = namelist_data["output"]
         default_interval = 100 * self.numerics.max_step
         self.output: OutputConfig = OutputConfig(
             interval_save=float(output_data.get("interval_save", default_interval)),
@@ -139,10 +172,10 @@ class Input:
         )
 
         # FFTW configuration
-        fftw_data = namelist_data.get("fftw", {})
+        fftw_data = namelist_data["fftw"]
         self.fftw: FFTWConfig = FFTWConfig(
-            planning=str(fftw_data.get("planning", "FFTW_MEASURE")),
-            threads=int(fftw_data.get("threads", 4)),
+            planning=str(fftw_data["planning"]),
+            threads=int(fftw_data["threads"]),
         )
 
         self._log_configuration()
@@ -224,7 +257,11 @@ class Input:
             # Normalize log level to uppercase before validation
             if "logging" in namelist_data and "level" in namelist_data["logging"]:
                 namelist_data["logging"]["level"] = namelist_data["logging"]["level"].upper()
-            jsonschema.validate(instance=namelist_data, schema=schema)
+            # Validate and populate schema defaults in a single pass.
+            validator = _DefaultFillingValidator(schema)
+            errors = sorted(validator.iter_errors(namelist_data), key=lambda e: e.path)
+            if errors:
+                raise errors[0]
             self.logger.debug("Namelist validation successful")
             return namelist_data
         except FileNotFoundError:

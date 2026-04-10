@@ -139,10 +139,10 @@ class NumericsConfig:
         max_step: Maximum allowed time step [s].
     """
 
-    temporal: int = 1
-    spatial: int = 1
-    cfl: float = 0.4
-    max_step: float = 0.01
+    temporal: int
+    spatial: int
+    cfl: float
+    max_step: float
 
 
 @dataclass(frozen=True)

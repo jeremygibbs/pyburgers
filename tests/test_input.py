@@ -289,6 +289,40 @@ class TestValidConfigurations:
         assert input_obj.fftw.planning == "FFTW_MEASURE"
         assert input_obj.fftw.threads == 4
 
+    def test_minimal_namelist_populates_schema_defaults(self, tmp_path: Path) -> None:
+        """Test that omitting all optional sections yields schema defaults."""
+        data = {
+            "time": {"duration": 0.01},
+            "grid": {},
+            "physics": {"viscosity": 0.01},
+        }
+        namelist_file = create_namelist(tmp_path, data)
+
+        input_obj = Input(str(namelist_file))
+
+        # numerics defaults (from schema)
+        assert input_obj.numerics.temporal == 3
+        assert input_obj.numerics.spatial == 3
+        assert input_obj.numerics.cfl == 0.4
+        assert input_obj.numerics.max_step == 0.01
+        # grid defaults (from schema)
+        assert input_obj.grid.length == pytest.approx(6.283185307179586)
+        assert input_obj.grid.dns.points == 8192
+        assert input_obj.grid.les.points == 512
+        # physics defaults (from schema)
+        assert input_obj.physics.subgrid_model == 1
+        assert input_obj.physics.noise.exponent == -0.75
+        assert input_obj.physics.noise.amplitude == 1e-6
+        assert input_obj.physics.noise.seed is None
+        # logging / fftw defaults
+        assert input_obj.logging.level == "INFO"
+        assert input_obj.logging.file is None
+        assert input_obj.fftw.planning == "FFTW_MEASURE"
+        assert input_obj.fftw.threads == 4
+        # output computed default (100 * max_step)
+        assert input_obj.output.interval_save == pytest.approx(1.0)
+        assert input_obj.output.interval_print == pytest.approx(1.0)
+
     def test_all_valid_subgrid_models(self, tmp_path: Path) -> None:
         """Test that all valid subgrid model values (1-4) are accepted."""
         for model_id in range(1, 5):
