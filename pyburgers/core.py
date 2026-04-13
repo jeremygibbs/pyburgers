@@ -305,7 +305,7 @@ class Burgers(ABC):
             Time step size satisfying CFL, viscous, hyperviscous, and max_step limits.
         """
         u_max = np.max(np.abs(self.u))
-        if u_max > 0:
+        if u_max > 0.0:
             dt_adv = self.cfl_target * self.dx / u_max
         else:
             dt_adv = self.max_step
