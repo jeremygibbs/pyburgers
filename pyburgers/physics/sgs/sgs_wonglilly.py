@@ -52,6 +52,12 @@ class WongLilly(SGS):
         self.logger: logging.Logger = get_logger("SGS")
         self.logger.info("--- using the Wong-Lilly model")
 
+        # Pre-allocate scratch arrays to avoid temporaries in the hot loop
+        nx = self.nx
+        self._scratch_a = np.zeros(nx)
+        self._scratch_b = np.zeros(nx)
+        self._scratch_c = np.zeros(nx)
+
     def compute(
         self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float, dt: float
     ) -> dict[str, Any]:
@@ -70,27 +76,32 @@ class WongLilly(SGS):
         # Model constants
         ratio = c.sgs.TEST_FILTER_RATIO
         exponent = c.sgs.WONGLILLY_EXPONENT
+        dx_exp = self.dx**exponent
+        ratio_pow = ratio**exponent
 
-        # Leonard stress L11
+        # Leonard stress L11 = <uu> - <u><u>
+        np.square(u, out=self._scratch_a)                        # u^2
         uf = self.spectral.filter.cutoff(u, ratio)
-        uuf = self.spectral.filter.cutoff(u**2, ratio)
-        L11 = uuf - uf * uf
+        uuf = self.spectral.filter.cutoff(self._scratch_a, ratio)
+        np.square(uf, out=self._scratch_a)                        # uf^2
+        np.subtract(uuf, self._scratch_a, out=self._scratch_a)   # L11
 
         # Model tensor M11 (Wong-Lilly scaling)
         dudxf = self.spectral.filter.cutoff(dudx, ratio)
-        ratio_pow = ratio**exponent
-        M11 = self.dx**exponent * (1 - ratio_pow) * dudxf
+        np.multiply(dx_exp * (1 - ratio_pow), dudxf, out=self._scratch_b)  # M11
 
         # Wong-Lilly coefficient
-        M11_sq_mean = np.mean(M11 * M11)
+        np.square(self._scratch_b, out=self._scratch_c)
+        M11_sq_mean = np.mean(self._scratch_c)
         if M11_sq_mean < 1e-30:
-            cwl = 0
+            cwl = 0.0
         else:
-            cwl = 0.5 * np.mean(L11 * M11) / M11_sq_mean
+            np.multiply(self._scratch_a, self._scratch_b, out=self._scratch_c)
+            cwl = 0.5 * np.mean(self._scratch_c) / M11_sq_mean
             if cwl < 0:
-                cwl = 0
+                cwl = 0.0
 
-        self.result["tau"] = -2 * cwl * (self.dx**exponent) * dudx
+        np.multiply(-2 * cwl * dx_exp, dudx, out=self.result["tau"])
         self.result["coeff"] = cwl
 
         return self.result

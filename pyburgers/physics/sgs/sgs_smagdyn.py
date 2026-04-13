@@ -52,6 +52,12 @@ class SmagDynamic(SGS):
         self.logger: logging.Logger = get_logger("SGS")
         self.logger.info("--- using the Dynamic Smagorinsky model")
 
+        # Pre-allocate scratch arrays to avoid temporaries in the hot loop
+        nx = self.nx
+        self._scratch_a = np.zeros(nx)
+        self._scratch_b = np.zeros(nx)
+        self._scratch_c = np.zeros(nx)
+
     def compute(
         self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float, dt: float
     ) -> dict[str, Any]:
@@ -71,31 +77,42 @@ class SmagDynamic(SGS):
         """
         # Model constants
         ratio = c.sgs.TEST_FILTER_RATIO
+        dx2 = self.dx**2
+        ratio2 = ratio**2
 
         # Leonard stress L11 = <uu> - <u><u>
+        np.square(u, out=self._scratch_a)               # u^2
         uf = self.spectral.filter.cutoff(u, ratio)
-        uuf = self.spectral.filter.cutoff(u**2, ratio)
-        L11 = uuf - uf * uf
+        uuf = self.spectral.filter.cutoff(self._scratch_a, ratio)
+        np.square(uf, out=self._scratch_a)               # uf^2
+        np.subtract(uuf, self._scratch_a, out=self._scratch_a)  # L11
 
         # Model tensor M11
         dudxf = self.spectral.filter.cutoff(dudx, ratio)
-        T = np.abs(dudx) * dudx
-        Tf = self.spectral.filter.cutoff(T, ratio)
-        M11 = (self.dx**2) * ((ratio**2) * np.abs(dudxf) * dudxf - Tf)
+        np.abs(dudx, out=self._scratch_b)
+        np.multiply(self._scratch_b, dudx, out=self._scratch_b)  # |dudx|*dudx
+        Tf = self.spectral.filter.cutoff(self._scratch_b, ratio)
+        np.abs(dudxf, out=self._scratch_b)
+        np.multiply(self._scratch_b, dudxf, out=self._scratch_b)  # |dudxf|*dudxf
+        np.multiply(ratio2, self._scratch_b, out=self._scratch_b)
+        np.subtract(self._scratch_b, Tf, out=self._scratch_b)
+        np.multiply(dx2, self._scratch_b, out=self._scratch_b)    # M11
 
         # Dealiased strain rate
         dudx2 = self.spectral.dealias.compute(dudx)
 
         # Dynamic Smagorinsky coefficient
-        M11_sq_mean = np.mean(M11 * M11)
+        np.multiply(self._scratch_b, self._scratch_b, out=self._scratch_c)
+        M11_sq_mean = np.mean(self._scratch_c)
         if M11_sq_mean < 1e-30:
-            cs2 = 0
+            cs2 = 0.0
         else:
-            cs2 = -0.5 * np.mean(L11 * M11) / M11_sq_mean
+            np.multiply(self._scratch_a, self._scratch_b, out=self._scratch_c)
+            cs2 = -0.5 * np.mean(self._scratch_c) / M11_sq_mean
             if cs2 < 0:
-                cs2 = 0
+                cs2 = 0.0
 
-        self.result["tau"] = -2 * cs2 * (self.dx**2) * dudx2
+        np.multiply(-2 * cs2 * dx2, dudx2, out=self.result["tau"])
         self.result["coeff"] = np.sqrt(cs2)
 
         return self.result
