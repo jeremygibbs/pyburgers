@@ -74,7 +74,7 @@ class FD4(SpatialOperator):
         h = self.dx
         n = self.nx
 
-        # Periodic padding — slices are zero-copy views (no allocation)
+        # Periodic padding — np.pad allocates; slices below are views
         u_pad = np.pad(u, 3, mode="wrap")
         um3, um2, um1 = u_pad[0:n], u_pad[1:n+1], u_pad[2:n+2]
         u0 = u_pad[3:n+3]
