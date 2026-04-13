@@ -91,7 +91,7 @@ class SmagDynamic(SGS):
         if M11_sq_mean < 1e-30:
             cs2 = 0
         else:
-            cs2 = 0.5 * np.mean(L11 * M11) / M11_sq_mean
+            cs2 = -0.5 * np.mean(L11 * M11) / M11_sq_mean
             if cs2 < 0:
                 cs2 = 0
 
