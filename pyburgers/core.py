@@ -245,7 +245,7 @@ class Burgers(ABC):
         Returns:
             Dictionary of derivative arrays for diagnostics.
         """
-        return self._compute_derivatives(True)
+        return self._compute_derivatives(is_output_step=True)
 
     @abstractmethod
     def _compute_noise(self) -> np.ndarray:
@@ -319,7 +319,7 @@ class Burgers(ABC):
         """
         if self._step_noise is None:
             raise RuntimeError("_step_noise not set before _rhs_for_step call")
-        derivatives = self._compute_derivatives(False)
+        derivatives = self._compute_derivatives(is_output_step=False)
         return self._compute_rhs(derivatives, self._step_noise, self._step_dt)
 
     def run(self) -> None:
