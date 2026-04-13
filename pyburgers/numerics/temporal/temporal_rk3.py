@@ -79,5 +79,6 @@ class RK3(TemporalIntegrator):
             self.Q += rhs                  # in-place
             u += self._B[stage] * dt * self.Q
 
-            # Zero Nyquist; restore physical space only on final stage
-            zero_nyquist(restore_physical=(stage == 2))
+            # Zero Nyquist; must restore physical space on all stages so
+            # SGS models see the Nyquist-zeroed u during intermediate stages.
+            zero_nyquist(restore_physical=True)

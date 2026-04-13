@@ -117,9 +117,8 @@ class AM2(TemporalIntegrator):
             self._rhs_prev += c0 * self._rhs_n  # in-place: c0·F^n - c1·F^{n-1}
             u += dt * self._rhs_prev
 
-            # restore_physical=False: skips the IFFT here and sets _fu_valid so the
-            # next compute_rhs() skips its FFT, avoiding a wasted IFFT+FFT round-trip.
-            zero_nyquist(restore_physical=False)
+            # Must restore physical space so SGS models see Nyquist-zeroed u.
+            zero_nyquist(restore_physical=True)
 
             # Evaluate F^* at the predicted u^* (fu already current, FFT skipped)
             rhs_star = compute_rhs()
