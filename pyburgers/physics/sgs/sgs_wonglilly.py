@@ -57,6 +57,8 @@ class WongLilly(SGS):
         self._scratch_a = np.zeros(nx)
         self._scratch_b = np.zeros(nx)
         self._scratch_c = np.zeros(nx)
+        self._filt_a = np.zeros(nx)  # filter.cutoff output buffer
+        self._filt_b = np.zeros(nx)  # filter.cutoff output buffer
 
     def compute(
         self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float, dt: float
@@ -80,15 +82,15 @@ class WongLilly(SGS):
         ratio_pow = ratio**exponent
 
         # Leonard stress L11 = <uu> - <u><u>
-        np.square(u, out=self._scratch_a)                        # u^2
-        uf = self.spectral.filter.cutoff(u, ratio)
-        uuf = self.spectral.filter.cutoff(self._scratch_a, ratio)
-        np.square(uf, out=self._scratch_a)                        # uf^2
-        np.subtract(uuf, self._scratch_a, out=self._scratch_a)   # L11
+        np.square(u, out=self._scratch_a)                                    # u^2
+        self.spectral.filter.cutoff(u, ratio, out=self._filt_a)              # uf
+        self.spectral.filter.cutoff(self._scratch_a, ratio, out=self._filt_b)  # uuf
+        np.square(self._filt_a, out=self._scratch_a)                         # uf^2
+        np.subtract(self._filt_b, self._scratch_a, out=self._scratch_a)      # L11
 
-        # Model tensor M11 (Wong-Lilly scaling)
-        dudxf = self.spectral.filter.cutoff(dudx, ratio)
-        np.multiply(dx_exp * (1 - ratio_pow), dudxf, out=self._scratch_b)  # M11
+        # Model tensor M11 (Wong-Lilly scaling; _filt_a now free for reuse)
+        self.spectral.filter.cutoff(dudx, ratio, out=self._filt_a)           # dudxf
+        np.multiply(dx_exp * (1 - ratio_pow), self._filt_a, out=self._scratch_b)  # M11
 
         # Wong-Lilly coefficient
         np.square(self._scratch_b, out=self._scratch_c)

@@ -420,7 +420,9 @@ class Filter:
                 threads=fftw_threads,
             )
 
-    def cutoff(self, x: np.ndarray, ratio: int) -> np.ndarray:
+    def cutoff(
+        self, x: np.ndarray, ratio: int, out: np.ndarray | None = None
+    ) -> np.ndarray:
         """Apply a spectral cutoff filter.
 
         Removes high-frequency modes above nx/ratio.
@@ -428,6 +430,8 @@ class Filter:
         Args:
             x: Input array to filter (real-valued).
             ratio: Cutoff ratio (keeps modes up to nx/ratio).
+            out: Optional pre-allocated output array. If provided, the
+                result is written here instead of allocating a new array.
 
         Returns:
             Filtered array with high frequencies removed.
@@ -451,9 +455,14 @@ class Filter:
         self.ifft()
 
         # return filtered x
+        if out is not None:
+            out[:] = self.x
+            return out
         return self.x.copy()
 
-    def downscale(self, x: np.ndarray, ratio: int) -> np.ndarray:
+    def downscale(
+        self, x: np.ndarray, ratio: int, out: np.ndarray | None = None
+    ) -> np.ndarray:
         """Downscale a field from DNS to LES resolution.
 
         Uses Fourier filtering to project a high-resolution field
@@ -462,6 +471,8 @@ class Filter:
         Args:
             x: Input array at DNS resolution (real-valued).
             ratio: Downscaling ratio (nx2 / nx).
+            out: Optional pre-allocated output array. If provided, the
+                result is written here instead of allocating a new array.
 
         Returns:
             Downscaled array at LES resolution.
@@ -488,4 +499,8 @@ class Filter:
 
         # return filtered downscaled field
         # Scale by 1/ratio to preserve amplitude when downscaling
-        return (1 / ratio) * self.x.copy()
+        inv_ratio = 1.0 / ratio
+        if out is not None:
+            np.multiply(inv_ratio, self.x, out=out)
+            return out
+        return inv_ratio * self.x.copy()

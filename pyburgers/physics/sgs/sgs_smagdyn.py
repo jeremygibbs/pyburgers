@@ -57,6 +57,8 @@ class SmagDynamic(SGS):
         self._scratch_a = np.zeros(nx)
         self._scratch_b = np.zeros(nx)
         self._scratch_c = np.zeros(nx)
+        self._filt_a = np.zeros(nx)  # filter.cutoff output buffer
+        self._filt_b = np.zeros(nx)  # filter.cutoff output buffer
 
     def compute(
         self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float, dt: float
@@ -81,22 +83,22 @@ class SmagDynamic(SGS):
         ratio2 = ratio**2
 
         # Leonard stress L11 = <uu> - <u><u>
-        np.square(u, out=self._scratch_a)               # u^2
-        uf = self.spectral.filter.cutoff(u, ratio)
-        uuf = self.spectral.filter.cutoff(self._scratch_a, ratio)
-        np.square(uf, out=self._scratch_a)               # uf^2
-        np.subtract(uuf, self._scratch_a, out=self._scratch_a)  # L11
+        np.square(u, out=self._scratch_a)                                    # u^2
+        self.spectral.filter.cutoff(u, ratio, out=self._filt_a)              # uf
+        self.spectral.filter.cutoff(self._scratch_a, ratio, out=self._filt_b)  # uuf
+        np.square(self._filt_a, out=self._scratch_a)                         # uf^2
+        np.subtract(self._filt_b, self._scratch_a, out=self._scratch_a)      # L11
 
-        # Model tensor M11
-        dudxf = self.spectral.filter.cutoff(dudx, ratio)
+        # Model tensor M11 (_filt_a/_filt_b now free for reuse)
+        self.spectral.filter.cutoff(dudx, ratio, out=self._filt_a)           # dudxf
         np.abs(dudx, out=self._scratch_b)
-        np.multiply(self._scratch_b, dudx, out=self._scratch_b)  # |dudx|*dudx
-        Tf = self.spectral.filter.cutoff(self._scratch_b, ratio)
-        np.abs(dudxf, out=self._scratch_b)
-        np.multiply(self._scratch_b, dudxf, out=self._scratch_b)  # |dudxf|*dudxf
+        np.multiply(self._scratch_b, dudx, out=self._scratch_b)             # |dudx|*dudx
+        self.spectral.filter.cutoff(self._scratch_b, ratio, out=self._filt_b)  # Tf
+        np.abs(self._filt_a, out=self._scratch_b)
+        np.multiply(self._scratch_b, self._filt_a, out=self._scratch_b)     # |dudxf|*dudxf
         np.multiply(ratio2, self._scratch_b, out=self._scratch_b)
-        np.subtract(self._scratch_b, Tf, out=self._scratch_b)
-        np.multiply(dx2, self._scratch_b, out=self._scratch_b)    # M11
+        np.subtract(self._scratch_b, self._filt_b, out=self._scratch_b)
+        np.multiply(dx2, self._scratch_b, out=self._scratch_b)              # M11
 
         # Dealiased strain rate
         dudx2 = self.spectral.dealias.compute(dudx)
