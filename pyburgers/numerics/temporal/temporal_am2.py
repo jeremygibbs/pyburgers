@@ -123,10 +123,13 @@ class AM2(TemporalIntegrator):
             # Evaluate F^* at the predicted u^* (fu already current, FFT skipped)
             rhs_star = compute_rhs()
 
-            # AM2 corrector: u^{n+1} = u^n + dt/2 · (F^* + F^n)
+            # Zero-allocation AM2 corrector: u^{n+1} = u^n + dt/2 · (F^* + F^n)
+            # Reuse _rhs_prev as scratch (consumed by predictor, overwritten below).
             u[:] = self._u_save
-            u += 0.5 * dt * rhs_star
-            u += 0.5 * dt * self._rhs_n
+            self._rhs_prev[:] = rhs_star
+            self._rhs_prev += self._rhs_n
+            self._rhs_prev *= 0.5 * dt
+            u += self._rhs_prev
 
             # Store F^n as F^{n-1} for the next step's AB2 predictor
             self._rhs_prev[:] = self._rhs_n
