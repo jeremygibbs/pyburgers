@@ -72,7 +72,10 @@ class RK3(TemporalIntegrator):
         """
         for stage in range(3):
             rhs = compute_rhs()
-            self.Q *= self._A[stage]       # in-place; stage 0: _A[0]=0 zeros Q
+            if stage == 0:
+                self.Q.fill(0.0)           # avoid 0.0 * NaN poisoning
+            else:
+                self.Q *= self._A[stage]
             self.Q += rhs                  # in-place
             u += self._B[stage] * dt * self.Q
 
