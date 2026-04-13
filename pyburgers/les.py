@@ -33,7 +33,7 @@ class LES(Burgers):
     """Large-eddy simulation solver for the Burgers equation.
 
     Solves the filtered 1D stochastic Burgers equation using Fourier
-    collocation for spatial derivatives, RK3 time integration,
+    collocation for spatial derivatives, pluggable time integration,
     and subgrid-scale models for unresolved turbulence.
 
     This class inherits common functionality from Burgers and implements
@@ -111,6 +111,7 @@ class LES(Burgers):
         # Initialize subgrid TKE for Deardorff model
         if self.sgs_model_id == 4:
             self.tke_sgs: np.ndarray | float = np.ones(self.nx)
+            self._last_tke_tendency: np.ndarray | None = None
             self.tke_sgs_mean = np.zeros(1)
             self.tke_sgs_prod = np.zeros(1)
             self.tke_sgs_diff = np.zeros(1)
@@ -163,22 +164,28 @@ class LES(Burgers):
     def _compute_derivatives(self, is_output_step: bool) -> dict[str, np.ndarray]:
         """Compute spatial derivatives for LES.
 
-        LES needs 1st, 2nd derivatives and du²/dx. At output times,
-        also computes 3rd derivative for enstrophy budget. If hyperviscosity
-        is enabled, also computes 4th derivative.
+        LES needs 1st, 2nd, 4th derivatives and du²/dx. At output times,
+        also computes 3rd derivative for enstrophy budget.
 
         Args:
             is_output_step: Whether this is an output save step.
 
         Returns:
-            Dictionary with '1', '2', 'sq' (and '3' at output times, '4' if hypervisc).
+            Dictionary with '1', '2', '4', 'sq' (and '3' at output times).
         """
-        orders: list[int | str] = [1, 2, "sq"]
+        orders: list[int | str] = [1, 2, 4, "sq"]
         if is_output_step:
             orders.append(3)
-        if self.hypervisc > 0:
-            orders.append(4)
-        return self.spectral.derivatives.compute(self.u, orders)
+        return self.gradient_op.compute(self.u, orders)
+
+    def _compute_diagnostic_derivatives(self) -> dict[str, np.ndarray]:
+        """Compute only the derivatives needed for LES diagnostics.
+
+        Diagnostics need 1st (dissipation), 2nd (enstrophy), and 3rd
+        (enstrophy budget) derivatives. Skips 4th and du²/dx which are
+        only needed for the RHS.
+        """
+        return self.gradient_op.compute(self.u, [1, 2, 3])
 
     def _compute_noise(self) -> np.ndarray:
         """Generate and filter FBM noise from DNS to LES scales.
@@ -218,38 +225,43 @@ class LES(Burgers):
         self._last_tau = tau
         self._last_coeff = sgs["coeff"]
 
-        # Update subgrid TKE for Deardorff model
+        # Store Deardorff TKE tendency (applied once per step in _post_step)
         if self.sgs_model_id == 4:
-            tke_sgs_new = sgs["tke_sgs"]
-            if isinstance(self.tke_sgs, np.ndarray):
-                self.tke_sgs[:] = tke_sgs_new
-            else:
-                self.tke_sgs = tke_sgs_new
+            self._last_tke_tendency = sgs["tke_tendency"]
             self._last_tke_prod = sgs.get("tke_prod", 0.0)
             self._last_tke_diff = sgs.get("tke_diff", 0.0)
             self._last_tke_diss = sgs.get("tke_diss", 0.0)
 
         # Compute SGS stress divergence
-        # Save u because compute() overwrites the internal buffer
-        u_saved = self.u.copy()
-        sgsder = self.spectral.derivatives.compute(tau, [1])
+        sgsder = self.gradient_op.compute(tau, [1])
         dtaudx = sgsder["1"]
-        # Restore u
-        self.u[:] = u_saved
+
+        d4udx4 = derivatives["4"]
 
         self.rhs[:] = (
             self.visc * d2udx2
+            - self.hypervisc * d4udx4
             - 0.5 * du2dx
             + self._noise_scale * noise
             - 0.5 * dtaudx
         )
 
-        # Add hyperviscosity term if enabled
-        if self.hypervisc > 0:
-            d4udx4 = derivatives["4"]
-            self.rhs -= self.hypervisc * d4udx4
-
         return self.rhs
+
+    def _post_step(self, dt: float) -> None:
+        """Advance prognostic subgrid TKE once per physical timestep.
+
+        Called by the base class after the integrator step completes,
+        ensuring TKE is updated exactly once regardless of how many
+        stages the integrator uses.
+
+        Args:
+            dt: The physical time step just completed.
+        """
+        if self.sgs_model_id == 4 and self._last_tke_tendency is not None:
+            self.tke_sgs[:] = np.maximum(
+                self.tke_sgs + self._last_tke_tendency * dt, 0.0
+            )
 
     def _save_diagnostics(
         self, derivatives: dict[str, np.ndarray], t_out: int, t_loop: float
@@ -269,12 +281,15 @@ class LES(Burgers):
         d3udx3 = derivatives.get("3", np.zeros_like(dudx))
         tau = self._last_tau if self._last_tau is not None else np.zeros(self.nx)
 
-        # Compute diagnostics
-        self.tke[:] = np.var(self.u)
-        self.diss_sgs[:] = np.mean(-tau * dudx)
+        # Compute diagnostics.
+        # The 0.5 factor on τ terms matches the momentum equation RHS
+        # (-0.5 * ∂τ/∂x), where τ = -2νₜ·∂u/∂x carries a factor of 2
+        # that the 0.5 cancels, yielding the physical rates νₜ·(∂u/∂x)².
+        self.tke[:] = 0.5 * np.var(self.u)
+        self.diss_sgs[:] = np.mean(-0.5 * tau * dudx)
         self.diss_mol[:] = np.mean(self.visc * dudx**2)
         self.ens_prod[:] = np.mean(dudx**3)
-        self.ens_dsgs[:] = np.mean(-tau * d3udx3)
+        self.ens_dsgs[:] = np.mean(-0.5 * tau * d3udx3)
         self.ens_dmol[:] = np.mean(self.visc * d2udx2**2)
         self.C_sgs[:] = self._last_coeff
         if self.sgs_model_id == 4:

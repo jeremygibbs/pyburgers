@@ -87,7 +87,7 @@ class TestInputLogging:
         namelist_file = tmp_path / "test_namelist.json"
         namelist_content = """
         {
-            "time": {"duration": 0.01, "cfl": 0.4, "max_step": 0.001},
+            "time": {"duration": 0.01},
             "grid": {"length": 6.283185307179586, "dns": {"points": 64}, "les": {"points": 32}},
             "physics": {
                 "noise": {"exponent": -0.75, "amplitude": 0.1},
@@ -109,7 +109,7 @@ class TestInputLogging:
         namelist_file = tmp_path / "test_namelist.json"
         namelist_content = """
         {
-            "time": {"duration": 0.01, "cfl": 0.4, "max_step": 0.001},
+            "time": {"duration": 0.01},
             "grid": {"length": 6.283185307179586, "dns": {"points": 64}, "les": {"points": 32}},
             "physics": {
                 "noise": {"exponent": -0.75, "amplitude": 0.1},
@@ -131,7 +131,7 @@ class TestInputLogging:
         namelist_file = tmp_path / "test_namelist.json"
         namelist_content = """
         {
-            "time": {"duration": 0.01, "cfl": 0.4, "max_step": 0.001},
+            "time": {"duration": 0.01},
             "grid": {"length": 6.283185307179586, "dns": {"points": 64}, "les": {"points": 32}},
             "physics": {
                 "noise": {"exponent": -0.75, "amplitude": 0.1},
@@ -146,8 +146,8 @@ class TestInputLogging:
         namelist_file.write_text(namelist_content)
 
         input_obj = Input(str(namelist_file))
-        # Level is stored as-is, setup_logging will handle normalization
-        assert input_obj.log_level == "debug"
+        # Level is normalized to uppercase during validation
+        assert input_obj.log_level == "DEBUG"
 
 
 class TestLoggingLevels:

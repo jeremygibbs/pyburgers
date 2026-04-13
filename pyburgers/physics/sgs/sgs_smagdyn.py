@@ -50,7 +50,15 @@ class SmagDynamic(SGS):
         """
         super().__init__(input_obj, spectral)
         self.logger: logging.Logger = get_logger("SGS")
-        self.logger.info("--- Using the Dynamic Smagorinsky model")
+        self.logger.info("--- using the Dynamic Smagorinsky model")
+
+        # Pre-allocate scratch arrays to avoid temporaries in the hot loop
+        nx = self.nx
+        self._scratch_a = np.zeros(nx)
+        self._scratch_b = np.zeros(nx)
+        self._scratch_c = np.zeros(nx)
+        self._filt_a = np.zeros(nx)  # filter.cutoff output buffer
+        self._filt_b = np.zeros(nx)  # filter.cutoff output buffer
 
     def compute(
         self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float, dt: float
@@ -64,36 +72,49 @@ class SmagDynamic(SGS):
             u: Velocity field array.
             dudx: Velocity gradient array.
             tke_sgs: Subgrid TKE (unused in this model).
+            dt: Current time step size (unused in this model).
 
         Returns:
             Dictionary with 'tau' (SGS stress) and 'coeff' (Cs).
         """
         # Model constants
         ratio = c.sgs.TEST_FILTER_RATIO
+        dx2 = self.dx**2
+        ratio2 = ratio**2
 
         # Leonard stress L11 = <uu> - <u><u>
-        uf = self.spectral.filter.cutoff(u, ratio)
-        uuf = self.spectral.filter.cutoff(u**2, ratio)
-        L11 = uuf - uf * uf
+        np.square(u, out=self._scratch_a)                                    # u^2
+        self.spectral.filter.cutoff(u, ratio, out=self._filt_a)              # uf
+        self.spectral.filter.cutoff(self._scratch_a, ratio, out=self._filt_b)  # uuf
+        np.square(self._filt_a, out=self._scratch_a)                         # uf^2
+        np.subtract(self._filt_b, self._scratch_a, out=self._scratch_a)      # L11
 
-        # Model tensor M11
-        dudxf = self.spectral.filter.cutoff(dudx, ratio)
-        T = np.abs(dudx) * dudx
-        Tf = self.spectral.filter.cutoff(T, ratio)
-        M11 = (self.dx**2) * ((ratio**2) * np.abs(dudxf) * dudxf - Tf)
+        # Model tensor M11 (_filt_a/_filt_b now free for reuse)
+        self.spectral.filter.cutoff(dudx, ratio, out=self._filt_a)           # dudxf
+        np.abs(dudx, out=self._scratch_b)
+        np.multiply(self._scratch_b, dudx, out=self._scratch_b)             # |dudx|*dudx
+        self.spectral.filter.cutoff(self._scratch_b, ratio, out=self._filt_b)  # Tf
+        np.abs(self._filt_a, out=self._scratch_b)
+        np.multiply(self._scratch_b, self._filt_a, out=self._scratch_b)     # |dudxf|*dudxf
+        np.multiply(ratio2, self._scratch_b, out=self._scratch_b)
+        np.subtract(self._scratch_b, self._filt_b, out=self._scratch_b)
+        np.multiply(dx2, self._scratch_b, out=self._scratch_b)              # M11
 
         # Dealiased strain rate
         dudx2 = self.spectral.dealias.compute(dudx)
 
         # Dynamic Smagorinsky coefficient
-        if np.mean(M11 * M11) == 0:
-            cs2 = 0
+        np.multiply(self._scratch_b, self._scratch_b, out=self._scratch_c)
+        M11_sq_mean = np.mean(self._scratch_c)
+        if M11_sq_mean < 1e-30:
+            cs2 = 0.0
         else:
-            cs2 = 0.5 * np.mean(L11 * M11) / np.mean(M11 * M11)
+            np.multiply(self._scratch_a, self._scratch_b, out=self._scratch_c)
+            cs2 = -0.5 * np.mean(self._scratch_c) / M11_sq_mean
             if cs2 < 0:
-                cs2 = 0
+                cs2 = 0.0
 
-        self.result["tau"] = -2 * cs2 * (self.dx**2) * dudx2
+        np.multiply(-2 * cs2 * dx2, dudx2, out=self.result["tau"])
         self.result["coeff"] = np.sqrt(cs2)
 
         return self.result

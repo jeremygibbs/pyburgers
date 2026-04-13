@@ -17,22 +17,19 @@ using spectral methods.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import numpy as np
 
 from .core import Burgers
 from .utils.spectral_workspace import SpectralWorkspace
 
-if TYPE_CHECKING:
-    from .utils.io import Input, Output
-
 
 class DNS(Burgers):
     """Direct numerical simulation solver for the Burgers equation.
 
     Solves the 1D stochastic Burgers equation at full resolution using
-    Fourier collocation for spatial derivatives and RK3 time integration.
+    Fourier collocation for spatial derivatives and pluggable time integration.
 
     This class inherits common functionality from Burgers and implements
     DNS-specific behavior for noise generation and diagnostics. Uses a
@@ -41,15 +38,6 @@ class DNS(Burgers):
     """
 
     mode_name = "DNS"
-
-    def __init__(self, input_obj: Input, output_obj: Output) -> None:
-        """Initialize the DNS solver.
-
-        Args:
-            input_obj: Input configuration containing simulation parameters.
-            output_obj: Output handler for writing results to NetCDF.
-        """
-        super().__init__(input_obj, output_obj)
 
     def _get_nx(self) -> int:
         """Return the DNS grid resolution.
@@ -85,7 +73,7 @@ class DNS(Burgers):
         FBM noise is initialized as part of the workspace.
         """
         self.logger.info("DNS configuration:")
-        self.logger.info("--- grid length: %f", self.domain_length)
+        self.logger.info("--- grid length: %f m", self.domain_length)
         self.logger.info("--- grid points: %d", self.nx)
 
     def _setup_output_fields(self) -> dict[str, Any]:
@@ -110,12 +98,14 @@ class DNS(Burgers):
             is_output_step: Whether this is an output save step (unused in DNS).
 
         Returns:
-            Dictionary with '2', 'sq', and optionally '4' derivatives.
+            Dictionary with '2', '4', and 'sq' derivatives.
         """
-        orders: list[int | str] = [2, "sq"]
-        if self.hypervisc > 0:
-            orders.append(4)
-        return self.spectral.derivatives.compute(self.u, orders)
+        orders: list[int | str] = [2, 4, "sq"]
+        return self.gradient_op.compute(self.u, orders)
+
+    def _compute_diagnostic_derivatives(self) -> dict[str, np.ndarray]:
+        """DNS diagnostics only need TKE (from u), no spatial derivatives."""
+        return {}
 
     def _compute_noise(self) -> np.ndarray:
         """Generate FBM noise at full resolution.
@@ -123,7 +113,7 @@ class DNS(Burgers):
         Returns:
             Noise array at DNS grid resolution.
         """
-        return self.spectral.noise.compute_noise()
+        return self.spectral.noise.compute_noise().copy()
 
     def _compute_rhs(
         self, derivatives: dict[str, np.ndarray], noise: np.ndarray, dt: float
@@ -147,12 +137,14 @@ class DNS(Burgers):
         d2udx2 = derivatives["2"]
         du2dx = derivatives["sq"]
 
-        self.rhs[:] = self.visc * d2udx2 - 0.5 * du2dx + self._noise_scale * noise
+        d4udx4 = derivatives["4"]
 
-        # Add hyperviscosity term if enabled
-        if self.hypervisc > 0:
-            d4udx4 = derivatives["4"]
-            self.rhs -= self.hypervisc * d4udx4
+        self.rhs[:] = (
+            self.visc * d2udx2
+            - self.hypervisc * d4udx4
+            - 0.5 * du2dx
+            + self._noise_scale * noise
+        )
 
         return self.rhs
 
@@ -166,5 +158,5 @@ class DNS(Burgers):
             t_out: Output time index.
             t_loop: Current simulation time.
         """
-        self.tke[:] = np.var(self.u)
+        self.tke[:] = 0.5 * np.var(self.u)
         self.output.save(self.output_fields, t_out, t_loop, initial=False)

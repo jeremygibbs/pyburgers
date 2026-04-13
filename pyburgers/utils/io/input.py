@@ -19,23 +19,59 @@ access all setup information.
 
 import json
 import logging
-import math
+from pathlib import Path
 from typing import Any
+
+import jsonschema
 
 from ...data_models import (
     DNSConfig,
     FFTWConfig,
     GridConfig,
-    HyperviscosityConfig,
     LESConfig,
     LoggingConfig,
     NoiseConfig,
+    NumericsConfig,
     OutputConfig,
     PhysicsConfig,
     TimeConfig,
 )
 from ...exceptions import NamelistError
 from ..logging_helper import get_logger, setup_logging
+
+
+def _extend_with_default(validator_class: type) -> type:
+    """Return a jsonschema validator that fills in schema defaults.
+
+    Standard jsonschema validation does not populate missing fields from
+    their schema ``default`` values. This extension walks the schema's
+    ``properties`` keyword and sets defaults on the instance before
+    handing off to the normal ``properties`` validator. Because the
+    validator recurses into nested object subschemas, defaults cascade
+    through the whole tree, letting the schema be the single source of
+    truth for optional configuration.
+
+    Args:
+        validator_class: A jsonschema validator class (e.g., Draft7Validator).
+
+    Returns:
+        A subclass that fills schema defaults as a side effect of validation.
+    """
+    validate_properties = validator_class.VALIDATORS["properties"]
+
+    def set_defaults(
+        validator: Any, properties: dict[str, Any], instance: Any, schema: dict[str, Any]
+    ) -> Any:
+        if isinstance(instance, dict):
+            for prop, subschema in properties.items():
+                if "default" in subschema:
+                    instance.setdefault(prop, subschema["default"])
+        yield from validate_properties(validator, properties, instance, schema)
+
+    return jsonschema.validators.extend(validator_class, {"properties": set_defaults})
+
+
+_DefaultFillingValidator = _extend_with_default(jsonschema.Draft7Validator)
 
 
 class Input:
@@ -45,9 +81,10 @@ class Input:
     validated and organized into the appropriate dataclasses.
 
     Attributes:
-        time: Dataclass with time-related parameters (duration, cfl, max_step).
+        time: Dataclass with time-related parameters (duration).
         physics: Dataclass with physics parameters (noise, viscosity).
         grid: Dataclass with grid configuration (length, DNS, LES).
+        numerics: Dataclass with numerical method selections (integration, cfl, max_step).
         output: Dataclass with output file configuration.
         logging: Dataclass with logging settings.
         fftw: Dataclass with FFTW configuration.
@@ -69,65 +106,84 @@ class Input:
         self.logger: logging.Logger = get_logger("Input")
         self.logger.info("Reading %s", namelist_path)
 
-        namelist_data = self._load_namelist(namelist_path)
-        self._validate_namelist(namelist_data)
+        # Validation fills in schema defaults, so all optional keys below
+        # are guaranteed to exist. The only fields accessed without a
+        # schema default are the required ones (time.duration, physics.viscosity).
+        namelist_data = self._load_and_validate_namelist(namelist_path)
 
         # Extract and finalize logging config first so we can adjust log level
-        logging_data = namelist_data.get("logging", {})
-        log_level = logging_data.get("level", "INFO")
-        log_file = logging_data.get("file")
-        if log_file == "":
-            log_file = None
-        self.logging: LoggingConfig = LoggingConfig(level=log_level, file=log_file)
-        setup_logging(level=log_level, log_file=log_file)
+        logging_data = namelist_data["logging"]
+        log_file = logging_data["file"] or None  # treat "" as None
+        self.logging: LoggingConfig = LoggingConfig(
+            level=logging_data["level"], file=log_file
+        )
+        setup_logging(level=logging_data["level"], log_file=log_file)
 
         # Time configuration
         time_data = namelist_data["time"]
-        duration = float(time_data["duration"])
-        cfl = float(time_data["cfl"])
-        max_step = float(time_data["max_step"])
-        self.time: TimeConfig = TimeConfig(duration=duration, cfl=cfl, max_step=max_step)
+        self.time: TimeConfig = TimeConfig(duration=float(time_data["duration"]))
+
+        # Numerics configuration
+        numerics_data = namelist_data["numerics"]
+        self.numerics: NumericsConfig = NumericsConfig(
+            temporal=int(numerics_data["temporal"]),
+            spatial=int(numerics_data["spatial"]),
+            cfl=float(numerics_data["cfl"]),
+            max_step=float(numerics_data["max_step"]),
+        )
+
+        # AB2 has a limited stability region for hyperbolic terms; warn if CFL
+        # is set higher than the recommended limit for that scheme.
+        if self.numerics.temporal == 1 and self.numerics.cfl > 0.4:
+            self.logger.warning(
+                "CFL target %.2f exceeds the recommended limit of 0.4 for AB2 "
+                "(temporal=1). Consider reducing cfl or switching to RK3 (temporal=3).",
+                self.numerics.cfl,
+            )
 
         # Grid configuration (DNS and LES)
         grid_data = namelist_data["grid"]
-        dns_data = grid_data.get("dns", {})
-        les_data = grid_data.get("les", {})
         self.grid: GridConfig = GridConfig(
-            length=float(grid_data.get("length", math.tau)),
-            dns=DNSConfig(points=int(dns_data.get("points", 8192))),
-            les=LESConfig(points=int(les_data.get("points", 512))),
+            length=float(grid_data["length"]),
+            dns=DNSConfig(points=int(grid_data["dns"]["points"])),
+            les=LESConfig(points=int(grid_data["les"]["points"])),
         )
+
+        dns_pts = self.grid.dns.points
+        les_pts = self.grid.les.points
+        if dns_pts % les_pts != 0:
+            raise NamelistError(
+                f"grid.dns.points ({dns_pts}) must be divisible by "
+                f"grid.les.points ({les_pts})"
+            )
 
         # Physics configuration
         physics_data = namelist_data["physics"]
-        noise_data = physics_data.get("noise", {})
-        hypervisc_data = physics_data.get("hyperviscosity", {})
+        noise_data = physics_data["noise"]
         self.physics: PhysicsConfig = PhysicsConfig(
             noise=NoiseConfig(
-                exponent=float(noise_data.get("exponent", 0.75)),
-                amplitude=float(noise_data.get("amplitude", 1e-6)),
-                seed=noise_data.get("seed", None),
+                exponent=float(noise_data["exponent"]),
+                amplitude=float(noise_data["amplitude"]),
+                seed=int(noise_data["seed"]) if noise_data["seed"] is not None else None,
             ),
             viscosity=float(physics_data["viscosity"]),
-            subgrid_model=int(physics_data.get("subgrid_model", 1)),
-            hyperviscosity=HyperviscosityConfig(
-                enabled=bool(hypervisc_data.get("enabled", False)),
-            ),
+            subgrid_model=int(physics_data["subgrid_model"]),
         )
 
-        # Output configuration
-        output_data = namelist_data.get("output", {})
-        default_interval = 100 * max_step
+        # Output configuration. interval_save and interval_print have no
+        # schema default because the sensible default is tied to max_step.
+        output_data = namelist_data["output"]
+        default_interval = 100 * self.numerics.max_step
         self.output: OutputConfig = OutputConfig(
             interval_save=float(output_data.get("interval_save", default_interval)),
             interval_print=float(output_data.get("interval_print", default_interval)),
         )
 
         # FFTW configuration
-        fftw_data = namelist_data.get("fftw", {})
+        fftw_data = namelist_data["fftw"]
         self.fftw: FFTWConfig = FFTWConfig(
-            planning=str(fftw_data.get("planning", "FFTW_MEASURE")),
-            threads=int(fftw_data.get("threads", 4)),
+            planning=str(fftw_data["planning"]),
+            threads=int(fftw_data["threads"]),
         )
 
         self._log_configuration()
@@ -153,12 +209,12 @@ class Input:
     @property
     def cfl_target(self) -> float:
         """Target CFL number for adaptive time stepping."""
-        return self.time.cfl
+        return self.numerics.cfl
 
     @property
     def max_step(self) -> float:
         """Maximum allowed time step."""
-        return self.time.max_step
+        return self.numerics.max_step
 
     @property
     def domain_length(self) -> float:
@@ -171,11 +227,6 @@ class Input:
         return self.physics.viscosity
 
     @property
-    def hyperviscosity_enabled(self) -> bool:
-        """Convenience accessor for hyperviscosity enabled flag."""
-        return self.physics.hyperviscosity.enabled
-
-    @property
     def t_save(self) -> float:
         """Save interval in seconds."""
         return self.output.interval_save
@@ -185,135 +236,64 @@ class Input:
         """Print interval in seconds."""
         return self.output.interval_print
 
-    def _load_namelist(self, namelist_path: str) -> dict[str, Any]:
-        """Load the JSON namelist file.
+    @property
+    def temporal(self) -> int:
+        """Time integration scheme identifier."""
+        return self.numerics.temporal
+
+    def _load_and_validate_namelist(self, namelist_path: str) -> dict[str, Any]:
+        """Load and validate the JSON namelist file against the schema.
 
         Args:
             namelist_path: The path to the JSON namelist file.
 
         Returns:
-            A dictionary containing the namelist data.
+            A dictionary containing the validated namelist data.
 
         Raises:
             FileNotFoundError: If the namelist file cannot be found.
             json.JSONDecodeError: If the namelist is not valid JSON.
+            NamelistError: If the namelist fails schema validation.
         """
+        schema_path = str(Path(__file__).parent / "schema_namelist.json")
+
         try:
+            with open(schema_path, encoding="utf-8") as f:
+                schema = json.load(f)
             with open(namelist_path, encoding="utf-8") as f:
-                return json.load(f)
+                namelist_data = json.load(f)
+            # Normalize log level to uppercase before validation
+            if "logging" in namelist_data and "level" in namelist_data["logging"]:
+                namelist_data["logging"]["level"] = namelist_data["logging"]["level"].upper()
+            # Validate and populate schema defaults in a single pass.
+            validator = _DefaultFillingValidator(schema)
+            errors = sorted(validator.iter_errors(namelist_data), key=lambda e: e.path)
+            if errors:
+                raise errors[0]
+            self.logger.debug("Namelist validation successful")
+            return namelist_data
         except FileNotFoundError:
-            self.logger.error("Namelist file not found: %s", namelist_path)
+            self.logger.error("File not found: %s", namelist_path)
             raise
         except json.JSONDecodeError as e:
             self.logger.error("Invalid JSON in namelist: %s", e)
             raise
-
-    def _validate_namelist(self, data: dict[str, Any]) -> None:
-        """Validate required namelist sections and values.
-
-        Args:
-            data: The namelist dictionary to validate.
-
-        Raises:
-            NamelistError: If required sections or values are missing.
-        """
-        required_sections = ["time", "physics", "grid"]
-        for section in required_sections:
-            if section not in data:
-                raise NamelistError(f"Missing required section: '{section}'")
-
-        # Validate time section
-        time_data = data["time"]
-        if "duration" not in time_data:
-            raise NamelistError("Missing 'duration' in time section")
-        if "cfl" not in time_data:
-            raise NamelistError("Missing 'cfl' in time section")
-        if "max_step" not in time_data:
-            raise NamelistError("Missing 'max_step' in time section")
-        cfl_val = float(time_data["cfl"])
-        if cfl_val <= 0 or cfl_val >= 0.55:
-            raise NamelistError("time 'cfl' must be in (0, 0.55)")
-        if float(time_data["max_step"]) <= 0:
-            raise NamelistError("time 'max_step' must be positive")
-        if float(time_data["duration"]) <= 0:
-            raise NamelistError("time 'duration' must be positive")
-
-        # Validate grid section
-        grid_data = data["grid"]
-        if "length" in grid_data and float(grid_data["length"]) <= 0:
-            raise NamelistError("grid 'length' must be positive")
-
-        # Validate physics section
-        physics_data = data["physics"]
-        if "viscosity" not in physics_data:
-            raise NamelistError("Missing 'viscosity' in physics section")
-        if float(physics_data["viscosity"]) <= 0:
-            raise NamelistError("'viscosity' must be positive")
-
-        if "dns" not in grid_data and "les" not in grid_data:
-            raise NamelistError("At least one of 'dns' or 'les' must be in grid section")
-
-        # Validate DNS config if present
-        if "dns" in grid_data:
-            dns_data = grid_data["dns"]
-            if "points" in dns_data and int(dns_data["points"]) <= 0:
-                raise NamelistError("dns 'points' must be positive")
-
-        # Validate LES config if present
-        if "les" in grid_data:
-            les_data = grid_data["les"]
-            if "points" in les_data and int(les_data["points"]) <= 0:
-                raise NamelistError("les 'points' must be positive")
-
-        if "subgrid_model" in physics_data:
-            sgs = int(physics_data["subgrid_model"])
-            if sgs < 0 or sgs > 4:
-                raise NamelistError(f"physics 'subgrid_model' must be 0-4, got {sgs}")
-
-        # Validate hyperviscosity config if present
-        if "hyperviscosity" in physics_data:
-            hypervisc_data = physics_data["hyperviscosity"]
-            valid_keys = {"enabled"}
-            invalid_keys = set(hypervisc_data.keys()) - valid_keys
-            if invalid_keys:
-                raise NamelistError(
-                    f"Invalid hyperviscosity key(s): {invalid_keys}. Valid keys: {valid_keys}"
-                )
-            if "enabled" in hypervisc_data:
-                enabled = hypervisc_data["enabled"]
-                if not isinstance(enabled, bool):
-                    raise NamelistError(
-                        f"hyperviscosity 'enabled' must be true or false, got {enabled}"
-                    )
-
-        # Validate output config if present
-        if "output" in data:
-            output_data = data["output"]
-            if "interval_save" in output_data and float(output_data["interval_save"]) <= 0:
-                raise NamelistError("output 'interval_save' must be positive")
-            if "interval_print" in output_data and float(output_data["interval_print"]) <= 0:
-                raise NamelistError("output 'interval_print' must be positive")
-
-        # Validate FFTW config if present
-        if "fftw" in data:
-            fftw_data = data["fftw"]
-            valid_planning = ["FFTW_ESTIMATE", "FFTW_MEASURE", "FFTW_PATIENT", "FFTW_EXHAUSTIVE"]
-            planning = fftw_data.get("planning", "FFTW_MEASURE")
-            if planning not in valid_planning:
-                raise NamelistError(
-                    f"Invalid FFTW planning: '{planning}'. Valid options: {valid_planning}"
-                )
-            threads = fftw_data.get("threads", 4)
-            if int(threads) < 1:
-                raise NamelistError("FFTW 'threads' must be at least 1")
+        except jsonschema.ValidationError as e:
+            self.logger.error("Namelist validation error: %s", e.message)
+            raise NamelistError(e.message) from e
 
     def _log_configuration(self) -> None:
         """Log the loaded configuration for debugging."""
         self.logger.debug(
-            "Time: duration=%g, cfl=%g, max_step=%g",
+            "Time: duration=%g",
             self.time.duration,
-            self.time.cfl,
-            self.time.max_step,
+        )
+        self.logger.debug(
+            "Numerics: temporal=%d, spatial=%d, cfl=%g, max_step=%g",
+            self.numerics.temporal,
+            self.numerics.spatial,
+            self.numerics.cfl,
+            self.numerics.max_step,
         )
         self.logger.debug(
             "Physics: viscosity=%g, noise(exponent=%g, amplitude=%g)",
@@ -348,8 +328,9 @@ class Input:
         """
         return {
             "nx": self.grid.dns.points,
-            "cfl": self.time.cfl,
-            "max_step": self.time.max_step,
+            "cfl": self.numerics.cfl,
+            "max_step": self.numerics.max_step,
+            "temporal": self.numerics.temporal,
             "viscosity": self.physics.viscosity,
             "noise_beta": self.physics.noise.exponent,
             "noise_amplitude": self.physics.noise.amplitude,
@@ -366,8 +347,9 @@ class Input:
         return {
             "nx": self.grid.les.points,
             "sgs_model": self.physics.subgrid_model,
-            "cfl": self.time.cfl,
-            "max_step": self.time.max_step,
+            "cfl": self.numerics.cfl,
+            "max_step": self.numerics.max_step,
+            "temporal": self.numerics.temporal,
             "viscosity": self.physics.viscosity,
             "noise_beta": self.physics.noise.exponent,
             "noise_amplitude": self.physics.noise.amplitude,

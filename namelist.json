@@ -1,8 +1,6 @@
 {
     "time": {
-        "duration": 200.0,
-        "cfl": 0.4,
-        "max_step": 0.01
+        "duration": 200.0
     },
     "grid": {
         "length": 6.283185307179586,
@@ -15,14 +13,11 @@
     },
     "physics": {
         "viscosity": 1e-05,
-        "subgrid_model": 4,
+        "subgrid_model": 2,
         "noise": {
             "exponent": -0.75,
             "amplitude": 1e-06,
             "seed": 1
-        },
-        "hyperviscosity": {
-            "enabled": true
         }
     },
     "output": {
@@ -36,5 +31,11 @@
     "fftw": {
         "planning": "FFTW_PATIENT",
         "threads": 1
+    },
+    "numerics": {
+        "temporal": 3,
+        "spatial": 3,
+        "cfl": 0.4,
+        "max_step": 0.01
     }
 }

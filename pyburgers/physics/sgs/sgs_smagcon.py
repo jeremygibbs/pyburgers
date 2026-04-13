@@ -50,7 +50,7 @@ class SmagConstant(SGS):
         """
         super().__init__(input_obj, spectral)
         self.logger: logging.Logger = get_logger("SGS")
-        self.logger.info("--- Using the Smagorinsky model")
+        self.logger.info("--- using the Smagorinsky model")
 
     def compute(
         self, u: np.ndarray, dudx: np.ndarray, tke_sgs: np.ndarray | float, dt: float
@@ -61,6 +61,7 @@ class SmagConstant(SGS):
             u: Velocity field array (unused).
             dudx: Velocity gradient array.
             tke_sgs: Subgrid TKE (unused in this model).
+            dt: Current time step size (unused in this model).
 
         Returns:
             Dictionary with 'tau' (SGS stress) and 'coeff' (Cs).
@@ -71,7 +72,7 @@ class SmagConstant(SGS):
 
         dudx2 = self.spectral.dealias.compute(dudx)
 
-        self.result["tau"] = -2 * cs2 * (self.dx**2) * dudx2
-        self.result["coeff"] = np.sqrt(cs2)
+        np.multiply(-2.0 * cs2 * self.dx**2, dudx2, out=self.result["tau"])
+        self.result["coeff"] = cs
 
         return self.result

@@ -6,15 +6,16 @@ A high-performance solver for the 1D Stochastic Burgers Equation with DNS and LE
 
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://docs.gibbs.science/pyburgers)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![DOI](https://zenodo.org/badge/104835582.svg)](https://doi.org/10.5281/zenodo.18444178)
+[![DOI](https://zenodo.org/badge/104835582.svg)](https://zenodo.org/badge/latestdoi/104835582)
 
 ## Overview
 
-PyBurgers implements direct numerical simulation (DNS) and large-eddy simulation (LES) for studying Burgers turbulence, following the procedures described in [Basu (2009)](https://doi.org/10.1080/14685240902852719). The solver uses Fourier collocation methods for spatial derivatives and Williamson (1980) low-storage RK3 time integration with CFL-based adaptive time stepping.
+PyBurgers implements direct numerical simulation (DNS) and large-eddy simulation (LES) for studying Burgers turbulence, following the procedures described in [Basu (2009)](https://doi.org/10.1080/14685240902852719). The solver offers pluggable spatial discretization (FD2, FD4, or Spectral) and time integration (AB2, AM2, or RK3) with CFL-based adaptive time stepping.
 
 ## Features
 
 - **Dual Simulation Modes**: DNS for full resolution and LES for coarse-grained modeling
+- **Pluggable Numerics**: Choose from FD2, FD4, or Spectral spatial operators and AB2, AM2, or RK3 temporal integrators
 - **Four SGS Models**: Constant Smagorinsky, Dynamic Smagorinsky, Dynamic Wong-Lilly, and Deardorff 1.5-order TKE
 - **Optimized FFTs**: FFTW with intelligent wisdom caching for fast repeated runs
 - **Fractional Brownian Motion**: Configurable stochastic forcing with spectral control and optional reproducible seeding
@@ -76,7 +77,7 @@ Full documentation is available at: **https://docs.gibbs.science/pyburgers**
 
 ## Performance
 
-PyBurgers v2.0.1 delivers dramatic performance improvements through real FFTs, optimized FFTW planning, and efficient buffer management.
+PyBurgers v2.1 delivers dramatic performance improvements through real FFTs, optimized FFTW planning, and efficient buffer management.
 
 **Benchmark: Default namelist (8192 DNS / 512 LES grid points, 200s duration)**
 
@@ -84,9 +85,39 @@ PyBurgers v2.0.1 delivers dramatic performance improvements through real FFTs, o
 |---------|-----|-----|
 | Original Matlab | ~35 min | ~16 min |
 | PyBurgers v1.0 | ~43 min | ~23 min |
-| **PyBurgers v2.0.1** | **~34 sec** | **~7 sec** |
+| **PyBurgers v2.1** | **~28 sec** | **~5 sec** |
 
 *Tested on a late 2023 MacBook Pro (M3 Max). Performance varies by system; results illustrate relative gains.*
+
+**Test suite timings by scheme combination (default namelist, M3 Max MacBook Pro)**
+
+DNS:
+
+| Time Scheme | Spatial Scheme | Time (s) |
+|:-----------:|:--------------:|:--------:|
+| AB2         | FD2            | 10.5     |
+| AB2         | FD4            | 12.8     |
+| AB2         | Spectral       | 33.7     |
+| AM2         | FD2            | 10.6     |
+| AM2         | FD4            | 12.5     |
+| AM2         | Spectral       | 34.1     |
+| RK3         | FD2            | 13.6     |
+| RK3         | FD4            | 15.1     |
+| RK3         | Spectral       | 27.5     |
+
+LES:
+
+| Time Scheme | Spatial Scheme | Smagorinsky | Dynamic Smag | Wong-Lilly | Deardorff |
+|:-----------:|:--------------:|:-----------:|:------------:|:----------:|:---------:|
+| AB2         | FD2            | 6.2         | 8.4          | 6.9        | 8.7       |
+| AB2         | FD4            | 7.0         | 9.2          | 7.5        | 9.7       |
+| AB2         | Spectral       | 7.2         | 9.4          | 7.9        | 9.5       |
+| AM2         | FD2            | 6.2         | 8.4          | 7.2        | 8.6       |
+| AM2         | FD4            | 6.7         | 8.8          | 7.4        | 9.3       |
+| AM2         | Spectral       | 6.9         | 9.0          | 7.6        | 9.3       |
+| RK3         | FD2            | 4.8         | 6.1          | 5.2        | 6.5       |
+| RK3         | FD4            | 5.1         | 6.5          | 5.7        | 6.8       |
+| RK3         | Spectral       | 5.3         | 6.6          | 5.6        | 7.7       |
 
 ## Requirements
 
@@ -106,7 +137,7 @@ If you use PyBurgers in your research, please cite:
   title = {PyBurgers: 1D Stochastic Burgers Equation Solver},
   year = {2026},
   url = {https://github.com/jeremygibbs/pyburgers},
-  version = {2.0.1}
+  version = {2.1.0}
 }
 ```
 

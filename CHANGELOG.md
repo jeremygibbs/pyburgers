@@ -5,6 +5,70 @@ All notable changes to PyBurgers will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-04-13
+
+### Added
+
+- **Pluggable spatial discretization (`SpatialOperator`)**: New abstract base class with `get_operator(scheme_id, nx)` factory method decouples spatial differentiation from the solvers. The scheme is selected via `numerics.spatial` in the namelist (`1`=FD2, `2`=FD4, `3`=Spectral). Both DNS and LES use the same pluggable interface.
+- **2nd-order central finite differences (`FD2`)**: New spatial scheme (`numerics.spatial = 1`) using 2nd-order central stencils for all derivative orders (1st, 2nd, 3rd, 4th, and squared). Periodic boundary conditions applied via circular padding.
+- **4th-order central finite differences (`FD4`)**: New spatial scheme (`numerics.spatial = 2`) using 4th-order central stencils for 1st and 2nd derivatives (3rd and 4th derivatives fall back to 2nd-order wide stencils). Higher accuracy than FD2 with slightly larger stencil footprint.
+- **Pluggable time integration (`TemporalIntegrator`)**: New abstract base class with `get_integrator(scheme_id, nx)` factory method decouples time advancement from the step loop. The scheme is selected via `numerics.temporal` in the namelist (`1`=AB2, `2`=AM2, `3`=RK3).
+- **Adams-Bashforth 2nd order (`AB2`)**: New time integration scheme (`numerics.temporal = 1`). Variable-step 2nd-order multistep method bootstrapped with forward Euler on the first step; 1 RHS evaluation per step.
+- **Adams-Moulton 2nd-order predictor-corrector (`AM2`)**: New time integration scheme (`numerics.temporal = 2`) pairing the variable-step AB2 predictor with the A-stable AM2 (trapezoidal) corrector in a PECE scheme. Reduces local truncation error compared to AB2 at the cost of one additional RHS evaluation per step.
+- **jsonschema validation**: `Input` now uses the `jsonschema` library for schema-driven namelist validation, replacing the previous manual validation logic. Provides clearer error messages and schema-first extensibility.
+- **`cfl` and `max_step` moved to `numerics` section**: These time-stepping controls are now under `numerics.cfl` and `numerics.max_step` in the namelist, co-located with the scheme selection keys they govern.
+
+### Fixed
+
+- **Energy conservation bug**: Corrected an error in RHS assembly for LES/FD operators that produced non-physical energy growth
+- **Enstrophy computation bug**: Fixed incorrect enstrophy diagnostic that accumulated error over long runs
+- **Aliasing bug in Deardorff SGS**: Corrected nonlinear term handling in the TKE equation that introduced aliasing artifacts
+- **TKE computation bug**: Fixed an error in the subgrid TKE prognostic equation that caused incorrect TKE levels
+- **Deardorff SGS advancing TKE every substep**: The TKE equation is now advanced once per full timestep rather than once per RK3 substep, matching the correct PECE/RK3 integration semantics
+- **Sign error in Dynamic Smagorinsky**: Corrected a coefficient sign in `SmagDynamic` that could produce negative eddy-viscosity artifacts under certain flow conditions
+- **NaN protection in RK3**: Added guards against NaN propagation in the RK3 substep loop when velocity magnitudes approach machine limits
+- **AB2 stability for DNS**: Lowered `dissipative_stability_limit` to 0.2 and added Nyquist-mode zeroing after each FD operator call to maintain stability at DNS resolution
+- **Energy budget violations in LES/FD mode**: Fixed operator ordering issue that produced spurious energy injection in LES runs with FD2/FD4 spatial schemes
+- **Divide-by-zero in CFL stability computation**: Added protection for the case where maximum velocity or wavenumber is zero at startup
+- **Buffer mutation in `Derivatives.compute()`**: External inputs (SGS stress, TKE) no longer corrupt the velocity buffer; auto-save/restore eliminates error-prone manual copies in LES and Deardorff SGS
+- **Float equality in dynamic SGS models**: Replaced exact `== 0` comparison with tolerance (`< 1e-30`) in `SmagDynamic` and `WongLilly` coefficient computation to avoid division-by-zero edge cases
+- **Default noise exponent sign**: Changed default from `0.75` to `-0.75` in `Input` to match namelist convention and prevent silent sign error when the exponent is omitted
+- **`SmagConstant` tau buffer allocation**: `compute()` now writes in-place via `np.multiply(..., out=self.result["tau"])` instead of reassigning the dict entry with a fresh array each call, matching all other SGS models
+- **DNS/LES filter ratio validation**: `Input` now raises `NamelistError` if `grid.dns.points` is not divisible by `grid.les.points`; previously the filter width was silently wrong for non-divisible configurations
+- **`Derivatives` dealiasing rule**: Fixed `Derivatives` to use the 3/2-rule (correct zero-padding factor) instead of 2× padding for the nonlinear squared term
+- **FBM buffer protection**: Added guard against out-of-bounds write in the fractional Brownian motion noise generator for edge-case grid sizes
+- **Delayed mode validation**: `Input` now validates `numerics.temporal` and `numerics.spatial` scheme IDs immediately on parse rather than at first use
+
+### Changed
+
+- **Namelist keys renamed**: `numerics.integration` → `numerics.temporal`; `numerics.advection` → `numerics.spatial`. Names now match the `TemporalIntegrator` and `SpatialOperator` class hierarchy.
+- **Scheme IDs reordered (simpler → more capable)**: Temporal: `1`=AB2, `2`=AM2, `3`=RK3 (was `1`=RK3, `2`=AB2). Spatial: `1`=FD2, `2`=FD4, `3`=Spectral (was `1`=Spectral, `2`=FD2, `3`=FD4).
+- **Hyperviscosity is now always active and scheme-normalized**: Previously a user-configurable namelist option, hyperviscosity is now applied automatically to all spatial schemes. The coefficient is normalized as `ν₄ = π⁴·dx⁴/λ_hypervisc`, where `λ_hypervisc` is the scheme's maximum modified wavenumber magnitude. This ensures equal Nyquist damping rate and a scheme-independent hyperviscous timestep limit (`C/π⁴`) across FD2, FD4, and Spectral. The `physics.hyperviscosity` namelist key and `HyperviscosityConfig` dataclass have been removed.
+- **`Derivatives.compute()` parameter**: Renamed `order` to `orders` for clarity (it accepts a list)
+- **RK3 coefficient variables**: Renamed `A`/`B` to `rk3_a`/`rk3_b` in `core.py` for PEP 8 compliance
+- **Schema enforces even grid point counts**: `grid.dns.points` and `grid.les.points` now require `"multipleOf": 2`; odd sizes produce incorrect rfft output
+- **Schema rejects unknown namelist keys**: `"additionalProperties": false` added to all object sections; typos in optional keys (e.g. `"amplitde"`) now raise a validation error instead of silently falling back to defaults
+- **`Derivatives.zero_nyquist` simplified**: Always restores physical space; the `restore_physical=False` path and `_fu_valid` optimization flag have been removed as they were never exercised in production
+- **`Dealias` not instantiated in DNS mode**: `SpectralWorkspace` no longer allocates a `Dealias` object when running DNS, saving memory and FFTW plan overhead
+
+### Improved
+
+- **`FD2`/`FD4` buffer allocation**: Spatial operators now pre-allocate the padded buffer and all output arrays in `__init__`, eliminating one `np.pad` allocation and five result-array allocations per `compute()` call
+- **Shared padded FFT plans in LES mode**: `Dealias` now reuses the padded FFT buffers and plans from `Derivatives` when constructed via `SpectralWorkspace`, halving the number of padded FFTW plans created
+- **LES efficiency**: Eliminated unnecessary intermediate array copies throughout the LES RHS evaluation path
+- **Spectral performance**: Replaced `up**2` with `np.square(self.up, out=self.up)` for in-place squaring; eliminated unnecessary `.copy()` in `Dealias.compute()` return
+- **`Derivatives.compute()` dispatch**: Changed `if`/`if`/`if` chain to `elif` for mutually exclusive derivative keys, avoiding redundant comparisons
+- **Google style guide compliance**: Added `Raises:` sections to all factory-method docstrings (`get_operator`, `get_integrator`, `get_model`); added docstrings to private logging filter/handler methods; fixed imperative mood and `is not None` checks in `SpectralWorkspace`; explicit `int()` cast for `noise.seed` in `Input`
+
+### Removed
+
+- Dead `TYPE_CHECKING` block in `spectral_workspace.py`
+- Dead `self.mp` attribute from `Burgers` base class (`core.py`)
+- Dead `_fu_valid` flag and `restore_physical=False` branch from `Derivatives.zero_nyquist`
+- `physics.hyperviscosity` namelist key and `HyperviscosityConfig` dataclass (hyperviscosity now always active and auto-configured)
+
+---
+
 ## [2.0.1] - 2026-03-27
 
 ### Added

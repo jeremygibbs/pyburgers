@@ -4,7 +4,7 @@ Welcome to the documentation for PyBurgers, a high-performance solver for the 1D
 
 ## What is PyBurgers?
 
-PyBurgers provides both direct numerical simulation (DNS) and large-eddy simulation (LES) capabilities for studying Burgers turbulence. The solver uses Fourier collocation methods in space and Williamson (1980) low-storage RK3 time integration with CFL-based adaptive time stepping. Many settings follow or are inspired by the procedures described in [Basu (2009)](https://doi.org/10.1080/14685240902852719).
+PyBurgers provides both direct numerical simulation (DNS) and large-eddy simulation (LES) capabilities for studying Burgers turbulence. The solver offers pluggable spatial discretization (2nd-order FD, 4th-order FD, or Fourier collocation) and pluggable time integration (Adams-Bashforth 2, Adams-Moulton 2 predictor-corrector, or Williamson 1980 low-storage RK3) with CFL-based adaptive time stepping. Many settings follow or are inspired by the procedures described in [Basu (2009)](https://doi.org/10.1080/14685240902852719).
 
 ## Scientific Background
 
@@ -50,41 +50,49 @@ The 1D SBE provides valuable insights into turbulence without the computational 
 
 ### Spatial Discretization
 
-PyBurgers uses **Fourier collocation** for computing spatial derivatives. Since the velocity field is real-valued, the code uses real FFTs (rfft/irfft) for approximately 2× speedup and 50% memory reduction compared to complex FFTs.
+PyBurgers supports three pluggable spatial discretization schemes, selected via `numerics.spatial` in the namelist:
 
-Key features:
+- **`1` - 2nd-order central finite differences (FD2)**: Simple, robust stencils for all derivative orders
+- **`2` - 4th-order central finite differences (FD4)**: Higher accuracy with wider stencils
+- **`3` - Spectral (Fourier collocation)** (default): Exponential accuracy for smooth solutions
 
-- Spectral accuracy for smooth solutions
-- Efficient computation of derivatives of any order
-- 2× padding for dealiasing nonlinear terms
+All schemes use real FFTs (rfft/irfft) for approximately 2x speedup and 50% memory reduction compared to complex FFTs. Nonlinear terms are dealiased using the 3/2-rule (zero-padding).
 
 ### Time Integration
 
-The solver employs **Williamson (1980) low-storage RK3** time integration with adaptive time stepping:
+PyBurgers supports three pluggable time integration schemes, selected via `numerics.temporal` in the namelist:
 
-- Three-stage explicit Runge-Kutta method with excellent stability properties
-- CFL-based adaptive time stepping automatically adjusts dt based on maximum velocity
-- Viscous stability constraint also enforced ($dt \le 0.2 dx^2/\nu$)
-- Nyquist mode zeroed after each RK stage to prevent aliasing accumulation
-- Output times are hit exactly by clamping dt to reach save intervals
+- **`1` - Adams-Bashforth 2nd order (AB2)**: 2nd-order multistep, 1 RHS evaluation per step, bootstrapped with forward Euler
+- **`2` - Adams-Moulton 2nd order predictor-corrector (AM2)**: 2nd-order PECE scheme (AB2 predictor + trapezoidal corrector), 2 RHS evaluations per step
+- **`3` - Williamson (1980) low-storage RK3** (default): 3rd-order, 3 stages per step, self-starting
+
+All schemes use CFL-based adaptive time stepping that automatically adjusts dt based on the maximum velocity, viscous stability, and hyperviscous stability constraints. Output times are hit exactly by clamping dt to reach save intervals. Nyquist mode is zeroed after each integration stage to prevent aliasing accumulation.
 
 ### Hyperviscosity
 
-Spectral methods can exhibit energy pile-up near the Nyquist frequency, where energy accumulates at the highest resolved wavenumbers instead of being properly dissipated. PyBurgers provides optional **hyperviscosity** to address this:
+Spectral methods can exhibit energy pile-up near the Nyquist frequency, where energy accumulates at the highest resolved wavenumbers instead of being properly dissipated. PyBurgers automatically applies **hyperviscosity** to all spatial schemes:
 
 $$\frac{\partial u}{\partial t} = \ldots - \nu_4 \frac{\partial^4 u}{\partial x^4}$$
 
-The hyperviscosity term provides $k^4$ dissipation that strongly damps high-wavenumber modes while leaving large scales essentially unaffected. When enabled, the coefficient is **automatically computed** as:
+The hyperviscosity term provides $k^4$ dissipation that strongly damps high-wavenumber modes while leaving large scales essentially unaffected. The coefficient is **automatically computed** and **normalized per scheme** so that the Nyquist damping rate is equal across all spatial discretizations:
 
-$$\nu_4 = \Delta x^4$$
+$$\nu_4 = \frac{\pi^4 \Delta x^4}{\lambda_\text{hypervisc}}$$
 
-This scaling ensures:
+where $\lambda_\text{hypervisc}$ is the scheme's maximum modified wavenumber magnitude $\max|\tilde{k}^4| \cdot \Delta x^4$:
 
-- **Resolution-independent behavior**: The damping effect is consistent across different grid resolutions
-- **No timestep penalty**: The stability limit $dt \le 0.1 \Delta x^4 / \nu_4 = 0.1$ is always satisfied
-- **Appropriate strength**: Empirically tuned to eliminate spectral pile-up without over-damping resolved scales
+| Scheme | $\lambda_\text{hypervisc}$ | $\nu_4$ |
+|--------|--------------------------|---------|
+| FD2 (`spatial: 1`) | 16 | $\approx 6.09\,\Delta x^4$ |
+| FD4 (`spatial: 2`) | 80/3 | $\approx 3.65\,\Delta x^4$ |
+| Spectral (`spatial: 3`) | $\pi^4$ | $\Delta x^4$ |
 
-Users simply enable hyperviscosity in the namelist (`"enabled": true`) without needing to specify a coefficient. The computed coefficient is logged at startup for reference.
+This normalization ensures:
+
+- **Equal Nyquist damping rate**: Every scheme damps its highest resolved mode at the same rate
+- **Scheme-independent timestep limit**: The hyperviscous stability constraint reduces to $dt \le C/\pi^4$ for all schemes
+- **Resolution-independent behavior**: Scaling with $\Delta x^4$ is consistent across grid resolutions
+
+The active coefficient is logged at startup for reference.
 
 ### Stochastic Forcing
 
@@ -147,6 +155,38 @@ Planning levels (set via `fftw.planning` in namelist):
 ### Multithreading
 
 FFT operations can use multiple threads (set via `fftw.threads` in namelist). Optimal thread count depends on grid size and CPU architecture. Note, for smaller problems, threading overhead can cause a degradation in performance. Users should tune to their respective systems.
+
+### Test Suite Timings
+
+Timings by scheme combination using default namelist settings on a late 2023 MacBook Pro (M3 Max).
+
+DNS:
+
+| Time Scheme | Spatial Scheme | Time (s) |
+|:-----------:|:--------------:|:--------:|
+| AB2         | FD2            | 10.5     |
+| AB2         | FD4            | 12.8     |
+| AB2         | Spectral       | 33.7     |
+| AM2         | FD2            | 10.6     |
+| AM2         | FD4            | 12.5     |
+| AM2         | Spectral       | 34.1     |
+| RK3         | FD2            | 13.6     |
+| RK3         | FD4            | 15.1     |
+| RK3         | Spectral       | 27.5     |
+
+LES:
+
+| Time Scheme | Spatial Scheme | Smagorinsky | Dynamic Smag | Wong-Lilly | Deardorff |
+|:-----------:|:--------------:|:-----------:|:------------:|:----------:|:---------:|
+| AB2         | FD2            | 6.2         | 8.4          | 6.9        | 8.7       |
+| AB2         | FD4            | 7.0         | 9.2          | 7.5        | 9.7       |
+| AB2         | Spectral       | 7.2         | 9.4          | 7.9        | 9.5       |
+| AM2         | FD2            | 6.2         | 8.4          | 7.2        | 8.6       |
+| AM2         | FD4            | 6.7         | 8.8          | 7.4        | 9.3       |
+| AM2         | Spectral       | 6.9         | 9.0          | 7.6        | 9.3       |
+| RK3         | FD2            | 4.8         | 6.1          | 5.2        | 6.5       |
+| RK3         | FD4            | 5.1         | 6.5          | 5.7        | 6.8       |
+| RK3         | Spectral       | 5.3         | 6.6          | 5.6        | 7.7       |
 
 ## Output
 

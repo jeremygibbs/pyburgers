@@ -86,24 +86,6 @@ class LoggingConfig:
 
 
 @dataclass(frozen=True)
-class HyperviscosityConfig:
-    """Hyperviscosity parameters for high-k damping.
-
-    Adds a -ν₄∇⁴u term that provides k⁴ dissipation at high wavenumbers
-    to prevent spectral pile-up near the Nyquist frequency.
-
-    When enabled, the coefficient is auto-computed as ν₄ = dx⁴ to provide
-    appropriate damping that scales correctly with grid resolution and
-    does not limit the simulation timestep.
-
-    Attributes:
-        enabled: Whether hyperviscosity is enabled.
-    """
-
-    enabled: bool = False
-
-
-@dataclass(frozen=True)
 class NoiseConfig:
     """Noise method parameters.
 
@@ -138,14 +120,29 @@ class PhysicsConfig:
     Attributes:
         noise: NoiseConfig configuration.
         viscosity: The fluid's kinematic viscosity [m^2/s].
-        subgrid_model: Subgrid-scale model ID (0-4) for LES.
-        hyperviscosity: HyperviscosityConfig for high-k damping.
+        subgrid_model: Subgrid-scale model ID (1-4) for LES.
     """
 
     noise: NoiseConfig
     viscosity: float
     subgrid_model: int
-    hyperviscosity: HyperviscosityConfig = HyperviscosityConfig()
+
+
+@dataclass(frozen=True)
+class NumericsConfig:
+    """Numerical method selections and time stepping parameters.
+
+    Attributes:
+        temporal: Time integration scheme ID (1=AB2, 2=AM2, 3=RK3).
+        spatial: Spatial discretization scheme ID (1=FD2, 2=FD4, 3=Spectral).
+        cfl: Target CFL number for adaptive time stepping.
+        max_step: Maximum allowed time step [s].
+    """
+
+    temporal: int
+    spatial: int
+    cfl: float
+    max_step: float
 
 
 @dataclass(frozen=True)
@@ -154,10 +151,6 @@ class TimeConfig:
 
     Attributes:
         duration: Total simulation time [s].
-        cfl: Target CFL number for adaptive time stepping.
-        max_step: Maximum allowed time step [s].
     """
 
     duration: float
-    cfl: float
-    max_step: float

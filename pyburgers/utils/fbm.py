@@ -68,6 +68,9 @@ class FBM:
         wavenumber = np.fft.rfftfreq(n_pts, d=1 / n_pts)
         wavenumber[0] = 1  # Avoid /0; DC component is 0 in compute_noise()
 
+        # Precompute scaling factor for white noise generation
+        self._sqrt_n = np.sqrt(n_pts)
+
         # Precompute spectral coloring coefficients (k^(beta/2))
         # This avoids redundant power computation in compute_noise()
         self._coloring = wavenumber ** (0.5 * beta)
@@ -109,8 +112,9 @@ class FBM:
             on the next call to compute_noise(). If you need to preserve the
             values, make a copy: ``noise.copy()``.
         """
-        # Generate white noise input (faster than inverse CDF)
-        self.x[:] = np.sqrt(self.n_pts) * self.rng.standard_normal(self.n_pts)
+        # Generate white noise directly into the aligned buffer, then scale
+        self.rng.standard_normal(out=self.x)
+        self.x *= self._sqrt_n
 
         # Transform to spectral space
         self.fft()

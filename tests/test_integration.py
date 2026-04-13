@@ -50,8 +50,13 @@ class MockInput:
         seed: int | None = None,
     ) -> None:
         class Time:
-            def __init__(self, duration, cfl, max_step):
+            def __init__(self, duration):
                 self.duration = duration
+
+        class Numerics:
+            def __init__(self, cfl, max_step):
+                self.temporal = 3
+                self.spatial = 3
                 self.cfl = cfl
                 self.max_step = max_step
 
@@ -61,16 +66,11 @@ class MockInput:
                 self.amplitude = amplitude
                 self.seed = seed
 
-        class Hyperviscosity:
-            def __init__(self, enabled=False):
-                self.enabled = enabled
-
         class Physics:
             def __init__(self, viscosity, noise, subgrid_model):
                 self.viscosity = viscosity
                 self.noise = noise
                 self.subgrid_model = subgrid_model
-                self.hyperviscosity = Hyperviscosity()
 
         class DNS:
             def __init__(self, points):
@@ -85,7 +85,8 @@ class MockInput:
                 self.dns = DNS(nx_dns)
                 self.les = LES(nx_les)
 
-        self.time = Time(duration, cfl, max_step)
+        self.time = Time(duration)
+        self.numerics = Numerics(cfl=cfl, max_step=max_step)
         self.physics = Physics(visc, Noise(namp, seed), subgrid_model=sgs_model)
         self.grid = Grid(nx_dns, nx_les)
         self.domain_length = domain_length
@@ -96,19 +97,15 @@ class MockInput:
 
     @property
     def cfl_target(self) -> float:
-        return self.time.cfl
+        return self.numerics.cfl
 
     @property
     def max_step(self) -> float:
-        return self.time.max_step
+        return self.numerics.max_step
 
     @property
     def viscosity(self) -> float:
         return self.physics.viscosity
-
-    @property
-    def hyperviscosity_enabled(self) -> bool:
-        return self.physics.hyperviscosity.enabled
 
     @property
     def t_save(self) -> float:

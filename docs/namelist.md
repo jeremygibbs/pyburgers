@@ -4,7 +4,7 @@ PyBurgers is configured using a JSON namelist file (default: `namelist.json`). T
 
 ## Quick Reference
 
-A complete namelist has six sections:
+A complete namelist has seven sections:
 
 ```json
 {
@@ -12,6 +12,7 @@ A complete namelist has six sections:
     "grid": { ... },
     "physics": { ... },
     "output": { ... },
+    "numerics": { ... },
     "logging": { ... },
     "fftw": { ... }
 }
@@ -24,9 +25,7 @@ Here's a typical configuration for running both DNS and LES:
 ```json
 {
     "time": {
-        "duration": 200.0,
-        "cfl": 0.4,
-        "max_step": 0.01
+        "duration": 200.0
     },
     "grid": {
         "length": 6.283185307179586,
@@ -44,9 +43,6 @@ Here's a typical configuration for running both DNS and LES:
             "exponent": -0.75,
             "amplitude": 1e-6,
             "seed": 1
-        },
-        "hyperviscosity": {
-            "enabled": true
         }
     },
     "output": {
@@ -60,6 +56,12 @@ Here's a typical configuration for running both DNS and LES:
     "fftw": {
         "planning": "FFTW_PATIENT",
         "threads": 1
+    },
+    "numerics": {
+        "temporal": 3,
+        "spatial": 3,
+        "cfl": 0.4,
+        "max_step": 0.01
     }
 }
 ```
@@ -68,7 +70,7 @@ Here's a typical configuration for running both DNS and LES:
 
 ## Section: time
 
-Controls the simulation duration and adaptive time stepping.
+Controls the simulation duration.
 
 `duration`
 :   **Type:** Number (required)
@@ -79,29 +81,6 @@ Controls the simulation duration and adaptive time stepping.
     The simulation runs until this physical time is reached.
 
     **Example:** `200.0` (200 seconds of simulated time)
-
-`cfl`
-:   **Type:** Number (required)
-    **Default:** None
-    **Valid range:** (0, 0.55)
-
-    Target CFL number for adaptive time stepping.
-
-    The time step is automatically adjusted each iteration to satisfy dt ≤ cfl × dx / |u_max|. Lower values are more conservative but slower. Typical values: 0.3 to 0.5.
-
-    **Example:** `0.4`
-
-`max_step`
-:   **Type:** Number (required)
-    **Default:** None
-
-    Maximum allowed time step in seconds.
-
-    Caps the adaptive time step. Typical values: 0.001 to 0.01.
-
-    **Note:** Stochastic noise is refreshed at `max_step` intervals in both DNS and LES modes. This ensures both simulations consume the same random sequence, making their results directly comparable even though adaptive time stepping may produce different sub-step sizes.
-
-    **Example:** `0.01`
 
 ---
 
@@ -173,13 +152,12 @@ Defines the physical parameters of the Burgers equation.
 
     **Available models:**
 
-    - `0` - No SGS model (DNS or inviscid LES)
     - `1` - Constant-coefficient Smagorinsky
     - `2` - Dynamic Smagorinsky
     - `3` - Dynamic Wong-Lilly
     - `4` - Deardorff 1.5-order TKE
 
-    **Note:** Only affects LES runs (`-m les`). DNS mode ignores this setting. Dynamic models (2-4) are more computationally expensive but generally more accurate.
+    **Note:** Required for LES runs (`-m les`). DNS mode ignores this setting. Dynamic models (2-4) are more computationally expensive but generally more accurate.
 
     **Example:** `2`
 
@@ -189,13 +167,13 @@ Configures the stochastic forcing term (fractional Brownian motion).
 
 `exponent`
 :   **Type:** Number (optional)
-    **Default:** `0.75`
+    **Default:** `-0.75`
 
     Spectral exponent for fractional Brownian motion.
 
-    Controls the correlation structure of the noise. Values typically range from 0.5 to 1.5. A value of 0.75 produces realistic turbulent forcing.
+    Controls the correlation structure of the noise. Negative values produce red noise (energy concentrated at low wavenumbers), which is physically appropriate for turbulent forcing. A value of -0.75 produces realistic turbulent forcing following Basu (2009).
 
-    **Example:** `0.75`
+    **Example:** `-0.75`
 
 `amplitude`
 :   **Type:** Number (optional)
@@ -218,34 +196,6 @@ Configures the stochastic forcing term (fractional Brownian motion).
     Uses NumPy's `default_rng` (PCG64 generator). Note that seeds are not portable across NumPy versions.
 
     **Example:** `1`
-
-### Subsection: physics.hyperviscosity
-
-Configures optional hyperviscosity for damping high-wavenumber energy pile-up.
-
-`enabled`
-:   **Type:** Boolean (optional)
-    **Default:** `false`
-
-    Whether to enable hyperviscosity.
-
-    When enabled, adds a $-\nu_4 \partial^4 u / \partial x^4$ term that provides $k^4$ dissipation at high wavenumbers. This prevents spectral pile-up (energy accumulation near the Nyquist frequency) that can occur in spectral methods.
-
-    The coefficient $\nu_4$ is **automatically computed** as $\Delta x^4$, which:
-
-    - Scales correctly with grid resolution
-    - Has negligible impact on the timestep
-    - Provides appropriate damping strength
-
-    The computed coefficient is logged at startup.
-
-    **Example:** `true`
-
-    ```json
-    "hyperviscosity": {
-        "enabled": true
-    }
-    ```
 
 ---
 
@@ -272,6 +222,69 @@ Controls output file writing and progress reporting.
     Progress messages are printed to the console every `interval_print` seconds of simulated time. This is independent of `interval_save`, allowing you to monitor progress more frequently without increasing file output.
 
     **Example:** `0.1`
+
+---
+
+## Section: numerics
+
+Configures numerical method selections and time stepping parameters.
+
+`temporal`
+:   **Type:** Integer (optional)
+    **Default:** `3`
+    **Valid values:** `1`, `2`, `3`
+
+    Time integration scheme selector.
+
+    **Available schemes:**
+
+    - `1` - Adams-Bashforth 2nd order (2nd-order, 1 evaluation per step, bootstrapped with forward Euler)
+    - `2` - Adams-Moulton 2nd order predictor-corrector (2nd-order, 2 evaluations per step: AB2 predictor + AM2 corrector, bootstrapped with forward Euler)
+    - `3` - Williamson (1980) low-storage RK3 (3rd-order, 3 stages per step)
+
+    **Note:** AB2 and AM2 are multistep methods that use the variable-step formula to maintain 2nd-order accuracy under CFL-based adaptive time stepping. AM2 uses AB2 as its predictor and applies the trapezoidal corrector, reducing the local truncation error at the cost of one additional RHS evaluation per step. RK3 is higher-order and self-starting (no bootstrap required), making it the recommended default for accuracy-critical simulations.
+
+    **Example:** `3`
+
+`spatial`
+:   **Type:** Integer (optional)
+    **Default:** `3`
+    **Valid values:** `1`, `2`, `3`
+
+    Spatial discretization scheme selector. Controls how all spatial derivatives (advection, viscosity, hyperviscosity) are computed.
+
+    **Available schemes:**
+
+    - `1` - 2nd-order central finite differences
+    - `2` - 4th-order central finite differences
+    - `3` - Spectral (Fourier collocation)
+
+    **Note:** Hyperviscosity is applied automatically to all spatial schemes. The coefficient is normalized by each scheme's maximum modified wavenumber magnitude, ensuring equal Nyquist damping rate across FD2, FD4, and Spectral. See the [documentation](index.md#hyperviscosity) for details.
+
+    **Example:** `3`
+
+`cfl`
+:   **Type:** Number (optional)
+    **Default:** `0.4`
+    **Valid range:** (0, 1.0)
+
+    Target CFL number for adaptive time stepping.
+
+    The time step is automatically adjusted each iteration to satisfy dt ≤ cfl × dx / |u_max|. Lower values are more conservative but slower. Recommended values: 0.4 for RK3+Spectral, up to 0.8 for RK3+FD schemes, 0.3-0.4 for AB2 or AM2.
+
+    **Example:** `0.4`
+
+`max_step`
+:   **Type:** Number (optional)
+    **Default:** `0.01`
+
+    Maximum allowed time step in seconds.
+
+    Caps the adaptive time step. Typical values: 0.001 to 0.01.
+
+    **Note:** Stochastic noise is refreshed at `max_step` intervals in both DNS and LES modes. This ensures both simulations consume the same random sequence, making their results directly comparable even though adaptive time stepping may produce different sub-step sizes.
+
+    **Example:** `0.01`
 
 ---
 
@@ -349,7 +362,7 @@ PyBurgers validates the namelist at startup. Common errors:
 - **Missing required field**: Add the missing key to your namelist
 - **Invalid type**: Ensure numbers aren't quoted as strings
 - **Invalid value**: Check that enums (like `subgrid_model`) use allowed values
-- **Invalid CFL**: The `cfl` value must be in the range (0, 0.55)
+- **Invalid CFL**: The `cfl` value must be in the range (0, 1.0)
 - **Invalid structure**: Ensure nested sections (e.g., `physics.noise`) are properly nested
 
 Error messages will indicate the specific problem and location in the namelist.
@@ -362,8 +375,9 @@ Error messages will indicate the specific problem and location in the namelist.
 
 ```json
 {
-    "time": { "duration": 1.0, "cfl": 0.4, "max_step": 0.01 },
+    "time": { "duration": 1.0 },
     "grid": { "dns": { "points": 512 }, "les": { "points": 128 } },
+    "numerics": { "cfl": 0.4, "max_step": 0.01 },
     "fftw": { "planning": "FFTW_ESTIMATE", "threads": 4 }
 }
 ```
@@ -372,8 +386,9 @@ Error messages will indicate the specific problem and location in the namelist.
 
 ```json
 {
-    "time": { "duration": 500.0, "cfl": 0.4, "max_step": 0.001 },
+    "time": { "duration": 500.0 },
     "grid": { "dns": { "points": 16384 }, "les": { "points": 1024 } },
+    "numerics": { "cfl": 0.4, "max_step": 0.001 },
     "fftw": { "planning": "FFTW_PATIENT", "threads": 8 }
 }
 ```
@@ -382,9 +397,10 @@ Error messages will indicate the specific problem and location in the namelist.
 
 ```json
 {
-    "time": { "duration": 1000.0, "cfl": 0.4, "max_step": 0.01 },
+    "time": { "duration": 1000.0 },
     "grid": { "dns": { "points": 8192 }, "les": { "points": 512 } },
     "physics": { "subgrid_model": 2 },
+    "numerics": { "cfl": 0.4, "max_step": 0.01 },
     "fftw": { "planning": "FFTW_PATIENT", "threads": 8 }
 }
 ```

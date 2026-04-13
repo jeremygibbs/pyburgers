@@ -47,7 +47,6 @@ class SGS:
 
         Args:
             model: SGS model type identifier.
-                0 = No model (base SGS)
                 1 = Constant-coefficient Smagorinsky
                 2 = Dynamic Smagorinsky
                 3 = Dynamic Wong-Lilly
@@ -58,9 +57,10 @@ class SGS:
 
         Returns:
             Instance of the requested SGS model subclass.
+
+        Raises:
+            ValueError: If model is not a valid option (1-4).
         """
-        if model == 0:
-            return SGS(input_obj, spectral)
         if model == 1:
             from .sgs_smagcon import SmagConstant
 
@@ -77,7 +77,7 @@ class SGS:
             from .sgs_deardorff import Deardorff
 
             return Deardorff(input_obj, spectral)
-        raise ValueError(f"--- Unknown SGS model ID: {model}. Valid options: 0-4.")
+        raise ValueError(f"--- unknown SGS model ID: {model}. Valid options: 1-4.")
 
     def __init__(self, input_obj: Input, spectral: SpectralWorkspace) -> None:
         """Initialize the SGS model.

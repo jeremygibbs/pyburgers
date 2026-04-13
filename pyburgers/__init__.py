@@ -15,7 +15,8 @@
 A tool for studying Burgers turbulence using DNS and LES.
 """
 
-# Core data structures from the namelist file
+__version__: str = "2.1.0"
+
 # Core and simulation classes
 from .core import Burgers
 from .data_models import (
@@ -25,6 +26,7 @@ from .data_models import (
     LESConfig,
     LoggingConfig,
     NoiseConfig,
+    NumericsConfig,
     OutputConfig,
     PhysicsConfig,
     TimeConfig,
@@ -39,6 +41,7 @@ from .les import LES
 from .utils.io import Input, Output
 
 __all__ = [
+    "__version__",
     # Data models
     "DNSConfig",
     "FFTWConfig",
@@ -46,6 +49,7 @@ __all__ = [
     "LESConfig",
     "LoggingConfig",
     "NoiseConfig",
+    "NumericsConfig",
     "OutputConfig",
     "PhysicsConfig",
     "TimeConfig",

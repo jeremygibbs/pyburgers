@@ -1,6 +1,6 @@
 [project]
 name = "pyburgers"
-version = "2.0.1"
+version = "2.1.0"
 description = "1D Stochastic Burgers Equation Solver using DNS and LES"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -9,6 +9,7 @@ dependencies = [
     "pyfftw>=0.15",
     "netCDF4>=1.7",
     "filelock>=3.12",
+    "jsonschema>=4.0",
 ]
 
 [project.optional-dependencies]

@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import argparse
+import glob as globmod
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -56,6 +57,11 @@ def main() -> int:
         help="Path(s) to NetCDF output file(s).",
     )
     parser.add_argument(
+        "--no-legend",
+        action="store_true",
+        help="Suppress the legend.",
+    )
+    parser.add_argument(
         "-o",
         "--out",
         type=Path,
@@ -63,7 +69,18 @@ def main() -> int:
         help="Optional output image path (PNG/SVG/etc). If omitted, shows plot.",
     )
     args = parser.parse_args()
-    files = args.files
+
+    # Expand glob patterns (supports quoted wildcards like "local_tests/*_les.nc")
+    files: list[Path] = []
+    for pattern in args.files:
+        expanded = sorted(globmod.glob(str(pattern)))
+        if expanded:
+            files.extend(Path(p) for p in expanded)
+        else:
+            files.append(pattern)  # pass through as-is so error is clear
+
+    if not files:
+        parser.error("No files matched the given pattern(s).")
 
     # Make figure
     fig, ax = plt.subplots(figsize=(8, 4.5))
@@ -78,7 +95,8 @@ def main() -> int:
     ax.set_xlabel("time (s)")
     ax.set_ylabel("TKE (m^2 s^-2)")
     ax.grid(True, alpha=0.3)
-    ax.legend()
+    if not args.no_legend:
+        ax.legend()
     fig.tight_layout()
 
     # Save or display figure

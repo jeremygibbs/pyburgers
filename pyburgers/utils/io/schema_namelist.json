@@ -1,0 +1,216 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "PyBurgers Namelist Configuration",
+    "description": "Schema to validate the configuration namelist for PyBurgers v2.1.",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+        "time": {
+            "type": "object",
+            "description": "Controls simulation duration.",
+            "additionalProperties": false,
+            "properties": {
+                "duration": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Total simulation time in seconds."
+                }
+            },
+            "required": ["duration"]
+        },
+        "grid": {
+            "type": "object",
+            "description": "Defines the computational domain and spatial resolution.",
+            "additionalProperties": false,
+            "properties": {
+                "length": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "default": 6.283185307179586,
+                    "description": "Length of the periodic domain in meters (default: 2π)."
+                },
+                "dns": {
+                    "type": "object",
+                    "default": {},
+                    "additionalProperties": false,
+                    "properties": {
+                        "points": {
+                            "type": "integer",
+                            "minimum": 2,
+                            "multipleOf": 2,
+                            "default": 8192,
+                            "description": "Number of grid points for DNS resolution (must be even)."
+                        }
+                    }
+                },
+                "les": {
+                    "type": "object",
+                    "default": {},
+                    "additionalProperties": false,
+                    "properties": {
+                        "points": {
+                            "type": "integer",
+                            "minimum": 2,
+                            "multipleOf": 2,
+                            "default": 512,
+                            "description": "Number of grid points for LES resolution (must be even)."
+                        }
+                    }
+                }
+            }
+        },
+        "physics": {
+            "type": "object",
+            "description": "Defines the physical parameters of the Burgers equation.",
+            "additionalProperties": false,
+            "properties": {
+                "viscosity": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Kinematic viscosity [m^2/s]."
+                },
+                "subgrid_model": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4,
+                    "default": 1,
+                    "description": "Subgrid-scale model selector (LES only). Required: 1-4.",
+                    "oneOf": [
+                        { "const": 1, "description": "Constant Smagorinsky" },
+                        { "const": 2, "description": "Dynamic Smagorinsky" },
+                        { "const": 3, "description": "Dynamic Wong-Lilly" },
+                        { "const": 4, "description": "Deardorff 1.5-order TKE" }
+                    ]
+                },
+                "noise": {
+                    "type": "object",
+                    "default": {},
+                    "description": "Stochastic forcing (fractional Brownian motion) parameters.",
+                    "additionalProperties": false,
+                    "properties": {
+                        "exponent": {
+                            "type": "number",
+                            "default": -0.75,
+                            "description": "FBM spectral exponent controlling noise correlation structure."
+                        },
+                        "amplitude": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "default": 1e-6,
+                            "description": "Amplitude of the stochastic forcing."
+                        },
+                        "seed": {
+                            "type": ["integer", "null"],
+                            "default": null,
+                            "description": "RNG seed for reproducibility. Null means random each run."
+                        }
+                    }
+                }
+            },
+            "required": ["viscosity"]
+        },
+        "output": {
+            "type": "object",
+            "default": {},
+            "description": "Controls output file writing and progress reporting.",
+            "additionalProperties": false,
+            "properties": {
+                "interval_save": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Output interval in simulation seconds. Defaults to 100*max_step if omitted."
+                },
+                "interval_print": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Progress reporting interval in simulation seconds. Defaults to 100*max_step if omitted."
+                }
+            }
+        },
+        "logging": {
+            "type": "object",
+            "default": {},
+            "description": "Configures runtime logging behavior.",
+            "additionalProperties": false,
+            "properties": {
+                "level": {
+                    "type": "string",
+                    "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                    "default": "INFO",
+                    "description": "Logging verbosity level."
+                },
+                "file": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Path to log file (null logs to console only)."
+                }
+            }
+        },
+        "fftw": {
+            "type": "object",
+            "default": {},
+            "description": "Configures FFTW planning and threading.",
+            "additionalProperties": false,
+            "properties": {
+                "planning": {
+                    "type": "string",
+                    "enum": ["FFTW_ESTIMATE", "FFTW_MEASURE", "FFTW_PATIENT", "FFTW_EXHAUSTIVE"],
+                    "default": "FFTW_MEASURE",
+                    "description": "FFTW planning strategy."
+                },
+                "threads": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 4,
+                    "description": "Number of threads for FFT operations."
+                }
+            }
+        },
+        "numerics": {
+            "type": "object",
+            "default": {},
+            "description": "Configures numerical method selections and time stepping parameters.",
+            "properties": {
+                "temporal": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 3,
+                    "default": 3,
+                    "description": "Time integration scheme: 1 = Adams-Bashforth 2nd order, 2 = Adams-Moulton 2nd order predictor-corrector, 3 = Williamson low-storage RK3.",
+                    "oneOf": [
+                        { "const": 1, "description": "Adams-Bashforth 2nd order" },
+                        { "const": 2, "description": "Adams-Moulton 2nd order predictor-corrector" },
+                        { "const": 3, "description": "Williamson low-storage RK3" }
+                    ]
+                },
+                "spatial": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 3,
+                    "default": 3,
+                    "description": "Spatial discretization scheme: 1 = 2nd-order finite differences, 2 = 4th-order finite differences, 3 = Spectral (Fourier collocation).",
+                    "oneOf": [
+                        { "const": 1, "description": "2nd-order central finite differences" },
+                        { "const": 2, "description": "4th-order central finite differences" },
+                        { "const": 3, "description": "Spectral (Fourier collocation)" }
+                    ]
+                },
+                "cfl": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "exclusiveMaximum": 1.0,
+                    "default": 0.4,
+                    "description": "Target CFL number for adaptive time stepping. Recommended: 0.4 (RK3+spectral), 0.8 (RK3+FD2 or RK3+FD4), 0.3–0.4 (AB2 or AM2, any spatial)."
+                },
+                "max_step": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "default": 0.01,
+                    "description": "Maximum allowed time step in seconds."
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "required": ["time", "physics", "grid"]
+}

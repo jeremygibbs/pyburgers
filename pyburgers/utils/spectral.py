@@ -87,9 +87,19 @@ class Derivatives:
         self._out_4 = pyfftw.empty_aligned(nx, np.float64)
         self._out_sq = pyfftw.empty_aligned(nx, np.float64)
 
-        # padded pyfftw arrays for 2x dealiasing
-        nx_padded = 2 * self.nx
-        nk_padded = nx_padded // 2 + 1  # = nx + 1
+        # Separate forward-FFT buffers for external-array derivatives
+        # (e.g., SGS stress tau, subgrid TKE). Avoids save/restore of the
+        # primary velocity buffers (self.u / self.fu).
+        self._ext_u = pyfftw.empty_aligned(nx, np.float64)
+        self._ext_fu = pyfftw.empty_aligned(self.nk, np.complex128)
+        self._ext_fft = pyfftw.FFTW(
+            self._ext_u, self._ext_fu,
+            direction="FFTW_FORWARD", flags=(fftw_planning,), threads=fftw_threads,
+        )
+
+        # padded pyfftw arrays for 3/2-rule dealiasing
+        nx_padded = 3 * self.nx // 2
+        nk_padded = nx_padded // 2 + 1
         self.up = pyfftw.empty_aligned(nx_padded, np.float64)
         self.fup = pyfftw.empty_aligned(nk_padded, np.complex128)
 
@@ -128,71 +138,79 @@ class Derivatives:
             threads=fftw_threads,
         )
 
-        # Flag indicating self.fu is current for self.u (skip redundant FFT)
-        self._fu_valid = False
-
-    def compute(self, u: np.ndarray, order: list[int | str]) -> dict[str, np.ndarray]:
+    def compute(self, u: np.ndarray, orders: list[int | str]) -> dict[str, np.ndarray]:
         """Compute spectral derivatives of the input field.
 
+        When ``u`` is not the internal velocity buffer (``self.u``),
+        a separate FFT buffer pair is used so the primary velocity
+        state is never touched.
+
         Args:
-            u: Input velocity field array (real-valued).
-            order: List of derivative orders to compute. Can include
-                integers (1, 2, 3) for standard derivatives or 'sq'
+            u: Input field array (real-valued).
+            orders: List of derivative orders to compute. Can include
+                integers (1, 2, 3, 4) for standard derivatives or 'sq'
                 for the dealiased derivative of u^2.
 
         Returns:
-            Dictionary mapping order keys ('1', '2', '3', 'sq') to
+            Dictionary mapping order keys ('1', '2', '3', '4', 'sq') to
             the corresponding derivative arrays. Arrays are reused
             internally, so callers should consume values before the
             next compute() call.
         """
         derivatives = {}
 
-        # FFT input to spectral space. Skip if fu is already current for self.u
-        # (set by zero_nyquist when restore_physical=False).
-        if not self._fu_valid or u is not self.u:
+        # For external arrays (e.g., tau, tke_sgs), use the separate
+        # FFT buffers so the primary velocity state is undisturbed.
+        if u is not self.u:
+            self._ext_u[:] = u
+            self._ext_fft()
+            fu = self._ext_fu
+        else:
             self.u[:] = u
             self.fft()
-        self._fu_valid = False
+            fu = self.fu
 
-        # loop through order of derivative from user
-        for key in order:
-            if key == 1:
-                self.fun[:] = 1j * self.k * self.fu
+        # Loop through requested derivative orders
+        for key in orders:
+            if key == 1 or key == "1":
+                np.multiply(self.k, fu, out=self.fun)
+                self.fun *= 1j
                 self.ifft()
                 np.multiply(self.fac, self.der, out=self._out_1)
                 derivatives["1"] = self._out_1
-            if key == 2:
-                self.fun[:] = -self.k2 * self.fu
+            elif key == 2 or key == "2":
+                np.multiply(self.k2, fu, out=self.fun)
+                self.fun *= -1
                 self.ifft()
                 np.multiply(self.fac2, self.der, out=self._out_2)
                 derivatives["2"] = self._out_2
-            if key == 3:
-                self.fun[:] = -1j * self.k3 * self.fu
+            elif key == 3 or key == "3":
+                np.multiply(self.k3, fu, out=self.fun)
+                self.fun *= -1j
                 self.ifft()
                 np.multiply(self.fac3, self.der, out=self._out_3)
                 derivatives["3"] = self._out_3
-            if key == 4:
-                self.fun[:] = self.k4 * self.fu
+            elif key == 4 or key == "4":
+                np.multiply(self.k4, fu, out=self.fun)
                 self.ifft()
                 np.multiply(self.fac4, self.der, out=self._out_4)
                 derivatives["4"] = self._out_4
-            if key == "sq":
-                # Dealiased computation of d(u^2)/dx using 2x zero-padding
+            elif key == "sq":
+                # Dealiased computation of d(u^2)/dx using 3/2-rule zero-padding
                 # With rfft, only non-negative frequencies are stored
-                # Zero-pad: copy all nk values to padded array (nk_padded = nx + 1)
                 self.fup[:] = 0
-                self.fup[0 : self.nk] = self.fu
+                self.fup[0 : self.nk] = fu
                 # Transform to padded physical space
                 self.ifftp()
-                # Correct for 2x padding normalization: irfft divides by 2n instead of n
-                self.up[:] *= 2
+                # Correct for 3/2 padding normalization: irfft divides by 3n/2 instead of n
+                self.up *= 1.5
                 # Square in physical space
-                self.up[:] = self.up**2
+                np.square(self.up, out=self.up)
                 # Transform back to spectral space
                 self.fftp()
-                # Compute derivative directly from padded result; self.k zeros Nyquist
-                self.fun[:] = 1j * self.k * (self.fup[0 : self.nk] / 2)
+                # Truncate to original modes and differentiate; self.k zeros Nyquist
+                np.multiply(self.k, self.fup[0 : self.nk], out=self.fun)
+                self.fun *= (1j / 1.5)
                 self.ifft()
                 np.multiply(self.fac, self.der, out=self._out_sq)
                 derivatives["sq"] = self._out_sq
@@ -200,22 +218,18 @@ class Derivatives:
         return derivatives
 
     def zero_nyquist(self, restore_physical: bool = True) -> None:
-        """FFT self.u, zero the Nyquist mode, and optionally restore physical space.
+        """FFT self.u, zero the Nyquist mode, and restore physical space.
 
-        Called at the end of each RK3 stage to enforce the Nyquist constraint.
+        Called after each integration stage to enforce the Nyquist constraint.
+        Performs FFT, zeros the Nyquist mode, and IFFTs back to physical space.
 
         Args:
-            restore_physical: If True (default), IFFT back so self.u reflects
-                the Nyquist-zeroed velocity. If False, skip the IFFT and mark
-                self.fu as valid so the next compute() call skips the redundant
-                FFT. Use False for intermediate RK stages, True for the final stage.
+            restore_physical: Ignored; always restores physical space after
+                zeroing. Retained for interface compatibility with SpatialOperator.
         """
         self.fft()
         self.fu[self.m] = 0
-        if restore_physical:
-            self.ifft_nyquist()
-        else:
-            self._fu_valid = True
+        self.ifft_nyquist()
 
 
 class Dealias:
@@ -233,13 +247,25 @@ class Dealias:
         m: Nyquist mode index (nx/2).
     """
 
-    def __init__(self, nx: int, fftw_planning: str = "FFTW_MEASURE", fftw_threads: int = 1) -> None:
+    def __init__(
+        self,
+        nx: int,
+        fftw_planning: str = "FFTW_MEASURE",
+        fftw_threads: int = 1,
+        *,
+        shared_der: Derivatives | None = None,
+    ) -> None:
         """Initialize the Dealias calculator.
 
         Args:
             nx: Number of grid points.
             fftw_planning: FFTW planning strategy.
             fftw_threads: Number of threads for FFTW.
+            shared_der: Optional Derivatives instance whose padded FFT plans
+                and buffers are reused instead of allocating new ones. When
+                provided, the padded-forward and padded-inverse plans are
+                shared. Callers must ensure Dealias.compute() and
+                Derivatives.compute('sq') are not called concurrently.
         """
         self.nx = nx
         self.m = self.nx // 2
@@ -253,10 +279,8 @@ class Dealias:
         self.x = pyfftw.empty_aligned(self.nx, np.float64)
         self.fx = pyfftw.empty_aligned(self.nk, np.complex128)
 
-        # padded pyfftw arrays
-        self.xp = pyfftw.empty_aligned(nx_padded, np.float64)
+        # temp is Dealias-private scratch space — always allocated
         self.temp = pyfftw.empty_aligned(nx_padded, np.float64)
-        self.fxp = pyfftw.empty_aligned(nk_padded, np.complex128)
 
         # pyfftw functions (auto-detects real<->complex from dtypes)
         self.fft = pyfftw.FFTW(
@@ -267,21 +291,32 @@ class Dealias:
             self.fx, self.x, direction="FFTW_BACKWARD", flags=(fftw_planning,), threads=fftw_threads
         )
 
-        self.fftp = pyfftw.FFTW(
-            self.xp,
-            self.fxp,
-            direction="FFTW_FORWARD",
-            flags=(fftw_planning,),
-            threads=fftw_threads,
-        )
+        if shared_der is not None:
+            # Reuse padded buffers and plans from the Derivatives instance
+            self.xp = shared_der.up
+            self.fxp = shared_der.fup
+            self.fftp = shared_der.fftp
+            self.ifftp = shared_der.ifftp
+        else:
+            # Allocate own padded buffers and plans
+            self.xp = pyfftw.empty_aligned(nx_padded, np.float64)
+            self.fxp = pyfftw.empty_aligned(nk_padded, np.complex128)
 
-        self.ifftp = pyfftw.FFTW(
-            self.fxp,
-            self.xp,
-            direction="FFTW_BACKWARD",
-            flags=(fftw_planning,),
-            threads=fftw_threads,
-        )
+            self.fftp = pyfftw.FFTW(
+                self.xp,
+                self.fxp,
+                direction="FFTW_FORWARD",
+                flags=(fftw_planning,),
+                threads=fftw_threads,
+            )
+
+            self.ifftp = pyfftw.FFTW(
+                self.fxp,
+                self.xp,
+                direction="FFTW_BACKWARD",
+                flags=(fftw_planning,),
+                threads=fftw_threads,
+            )
 
     def compute(self, x: np.ndarray) -> np.ndarray:
         """Compute the dealiased product |x| * x.
@@ -290,54 +325,40 @@ class Dealias:
             x: Input array (real-valued).
 
         Returns:
-            Dealiased result of |x| * x.
+            Dealiased result of |x| * x. The returned array is an
+            internal buffer; copy it if you need to preserve the values
+            across calls.
         """
-        # constants
         scale = c.spectral.DEALIAS_SCALE
 
-        # copy input array
         self.x[:] = x
-
-        # compute rfft of x
         self.fft()
 
-        # zero-pad fx (simpler with rfft - just copy to beginning)
+        # Zero-pad fx
         self.fxp[:] = 0
         self.fxp[0 : self.nk] = self.fx
-
-        # compute irfft of fxp
         self.ifftp()
 
-        # store xp in temp
+        # Store padded x in temp
         self.temp[:] = self.xp
 
-        # change x to abs(x)
-        self.x[:] = np.abs(x)
-
-        # compute rfft of x
+        # Compute padded |x|
+        np.abs(x, out=self.x)
         self.fft()
-
-        # zero-pad fx
         self.fxp[:] = 0
         self.fxp[0 : self.nk] = self.fx
-
-        # compute irfft of fxp
         self.ifftp()
 
-        # multiply xp[x] with xp[abs(x)]
-        self.xp[:] = self.xp * self.temp
+        # Multiply x * |x| in padded space
+        np.multiply(self.xp, self.temp, out=self.xp)
 
-        # compute rfft of xp
+        # Transform back and de-alias
         self.fftp()
-
-        # de-alias fxp (simpler with rfft - just take first nk values)
         self.fx[:] = self.fxp[0 : self.nk]
-
-        # compute irfft of fx
         self.ifft()
 
-        # return de-aliased input
-        return scale * self.x.copy()
+        self.x *= scale
+        return self.x
 
 
 class Filter:
@@ -410,7 +431,9 @@ class Filter:
                 threads=fftw_threads,
             )
 
-    def cutoff(self, x: np.ndarray, ratio: int) -> np.ndarray:
+    def cutoff(
+        self, x: np.ndarray, ratio: int, out: np.ndarray | None = None
+    ) -> np.ndarray:
         """Apply a spectral cutoff filter.
 
         Removes high-frequency modes above nx/ratio.
@@ -418,6 +441,8 @@ class Filter:
         Args:
             x: Input array to filter (real-valued).
             ratio: Cutoff ratio (keeps modes up to nx/ratio).
+            out: Optional pre-allocated output array. If provided, the
+                result is written here instead of allocating a new array.
 
         Returns:
             Filtered array with high frequencies removed.
@@ -441,9 +466,14 @@ class Filter:
         self.ifft()
 
         # return filtered x
+        if out is not None:
+            out[:] = self.x
+            return out
         return self.x.copy()
 
-    def downscale(self, x: np.ndarray, ratio: int) -> np.ndarray:
+    def downscale(
+        self, x: np.ndarray, ratio: int, out: np.ndarray | None = None
+    ) -> np.ndarray:
         """Downscale a field from DNS to LES resolution.
 
         Uses Fourier filtering to project a high-resolution field
@@ -452,6 +482,8 @@ class Filter:
         Args:
             x: Input array at DNS resolution (real-valued).
             ratio: Downscaling ratio (nx2 / nx).
+            out: Optional pre-allocated output array. If provided, the
+                result is written here instead of allocating a new array.
 
         Returns:
             Downscaled array at LES resolution.
@@ -478,4 +510,8 @@ class Filter:
 
         # return filtered downscaled field
         # Scale by 1/ratio to preserve amplitude when downscaling
-        return (1 / ratio) * self.x.copy()
+        inv_ratio = 1.0 / ratio
+        if out is not None:
+            np.multiply(inv_ratio, self.x, out=out)
+            return out
+        return inv_ratio * self.x.copy()

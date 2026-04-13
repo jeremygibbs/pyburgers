@@ -22,6 +22,18 @@ flowchart TB
         LES[LES Class<br/>Large-Eddy Simulation]
     end
 
+    subgraph numerics[Numerical Methods]
+        direction TB
+        TI[TemporalIntegrator Base]
+        AB2[AB2<br/>Adams-Bashforth 2]
+        AM2[AM2<br/>Adams-Moulton 2 PC]
+        RK3[RK3<br/>Low-Storage RK3]
+        SO[SpatialOperator Base]
+        FD2[FD2<br/>2nd-Order FD]
+        FD4[FD4<br/>4th-Order FD]
+        Spec[Spectral<br/>Fourier Collocation]
+    end
+
     subgraph physics[Physics Models]
         SGS[SGS Base Class]
         Smag[Smagorinsky Models]
@@ -51,6 +63,14 @@ flowchart TB
     DNS --> Base
     LES --> Base
     LES --> SGS
+    Base --> TI
+    TI --> AB2
+    TI --> AM2
+    TI --> RK3
+    Base --> SO
+    SO --> FD2
+    SO --> FD4
+    SO --> Spec
     SGS --> Smag
     SGS --> Wong
     SGS --> Dear
@@ -68,6 +88,8 @@ flowchart TB
     style DNS fill:#e8f5e9
     style LES fill:#e8f5e9
     style Spectral fill:#f3e5f5
+    style TI fill:#fce4ec
+    style SO fill:#fce4ec
     style Output fill:#ffe0b2
 ```
 
@@ -91,18 +113,25 @@ flowchart TD
     InitSolver[Initialize Solver<br/>DNS or LES] --> CreateWorkspace[Create SpectralWorkspace<br/>FFT buffers & plans]
     CreateWorkspace --> InitSGS{LES Mode?}
 
-    InitSGS -->|Yes| LoadSGS[Load SGS Model<br/>0-4]
+    InitSGS -->|Yes| LoadSGS[Load SGS Model<br/>1-4]
     InitSGS -->|No| InitIC
     LoadSGS --> InitIC
 
     InitIC[Initialize Velocity Field<br/>Random + low-k energy] --> CreateOutput[Create NetCDF Output]
-    CreateOutput --> TimeLoop{t < duration?}
+    CreateOutput --> SelectIntegrator{Integrator}
 
-    TimeLoop -->|Yes| RK3Step[RK3 Time Step]
-    RK3Step --> Stage1[Stage 1:<br/>Compute RHS, Update u]
-    Stage1 --> Stage2[Stage 2:<br/>Compute RHS, Update u]
-    Stage2 --> Stage3[Stage 3:<br/>Compute RHS, Update u]
-    Stage3 --> ComputeCFL[Compute CFL<br/>Adaptive Δt]
+    SelectIntegrator -->|1| UseAB2[AB2 Integrator]
+    SelectIntegrator -->|2| UseAM2[AM2 Integrator]
+    SelectIntegrator -->|3| UseRK3[RK3 Integrator]
+
+    UseAB2 --> TimeLoop
+    UseAM2 --> TimeLoop
+    UseRK3 --> TimeLoop
+
+    TimeLoop{t < duration?}
+
+    TimeLoop -->|Yes| TimeStep[Time Step<br/>via Integrator]
+    TimeStep --> ComputeCFL[Compute CFL<br/>Adaptive Δt]
     ComputeCFL --> CheckSave{Time to<br/>save?}
 
     CheckSave -->|Yes| WriteNC[Write to NetCDF]
@@ -118,12 +147,13 @@ flowchart TD
 
     style Start fill:#e1f5ff
     style End fill:#e1f5ff
-    style RK3Step fill:#fff4e1
+    style TimeStep fill:#fff4e1
+    style SelectIntegrator fill:#fce4ec
     style WriteNC fill:#e8f5e9
     style InitSolver fill:#f3e5f5
 ```
 
-## RK3 Stage Details
+## RK3 Stage Details (Integrator ID 3)
 
 Each Runge-Kutta stage computes the right-hand side (RHS) of the Burgers equation:
 
@@ -156,12 +186,14 @@ classDiagram
     class Burgers {
         <<abstract>>
         +SpectralWorkspace workspace
+        +TemporalIntegrator integrator
+        +SpatialOperator gradient_op
         +Input input_obj
         +Output output
         +run()
         +_compute_rhs()*
         +_initialize_velocity()
-        +_compute_cfl()
+        +_compute_dt()
     }
 
     class DNS {
@@ -173,6 +205,32 @@ classDiagram
         +SGS sgs_model
         +_compute_rhs()
         Override: Includes SGS stress
+    }
+
+    class TemporalIntegrator {
+        <<abstract>>
+        +step()*
+        +get_integrator()$
+    }
+
+    class RK3 {
+        +Q: array
+        +step()
+        3-stage low-storage
+    }
+
+    class AB2 {
+        +rhs_prev: array
+        +step()
+        2nd-order multistep
+    }
+
+    class AM2 {
+        +rhs_prev: array
+        +rhs_n: array
+        +u_save: array
+        +step()
+        2nd-order predictor-corrector
     }
 
     class SGS {
@@ -203,6 +261,33 @@ classDiagram
         1.5-order TKE equation
     }
 
+    class SpatialOperator {
+        <<abstract>>
+        +viscous_eigenvalue: float
+        +hyperviscous_eigenvalue: float
+        +compute()*
+        +zero_nyquist()*
+        +get_operator()$
+    }
+
+    class FD2 {
+        +compute()
+        +zero_nyquist()
+        2nd-order central FD
+    }
+
+    class FD4 {
+        +compute()
+        +zero_nyquist()
+        4th-order central FD
+    }
+
+    class Spectral {
+        +compute()
+        +zero_nyquist()
+        Fourier collocation
+    }
+
     class SpectralWorkspace {
         +Derivatives deriv
         +Dealias dealias
@@ -213,6 +298,14 @@ classDiagram
     Burgers <|-- DNS
     Burgers <|-- LES
     Burgers *-- SpectralWorkspace
+    Burgers *-- TemporalIntegrator
+    Burgers *-- SpatialOperator
+    TemporalIntegrator <|-- AB2
+    TemporalIntegrator <|-- AM2
+    TemporalIntegrator <|-- RK3
+    SpatialOperator <|-- FD2
+    SpatialOperator <|-- FD4
+    SpatialOperator <|-- Spectral
     LES *-- SGS
     SGS <|-- SmagConstant
     SGS <|-- SmagDynamic
@@ -273,35 +366,14 @@ flowchart TD
     Start([Initialization]) --> CheckFile{Wisdom file<br/>exists?}
 
     CheckFile -->|No| Warmup[Run Warmup:<br/>Create all plans]
-    CheckFile -->|Yes| Lock[Acquire Read Lock]
+    CheckFile -->|Yes| Lock[Acquire File Lock]
 
-    Lock --> Load[Load Wisdom File]
-    Load --> CheckMeta{Metadata<br/>matches?}
+    Lock --> Load[Load & Import Wisdom]
+    Load --> Import[Reuse Cached Plans<br/>Missing sizes planned on-demand]
 
-    CheckMeta -->|nx_dns matches?| CheckLES
-    CheckMeta -->|No| Invalid1[Mark Invalid]
+    Import --> Continue([Continue])
 
-    CheckLES -->|nx_les matches?| CheckBeta
-    CheckLES -->|No| Invalid2[Mark Invalid]
-
-    CheckBeta -->|noise_beta matches?| CheckPlan
-    CheckBeta -->|No| Invalid3[Mark Invalid]
-
-    CheckPlan -->|FFTW planning matches?| CheckThreads
-    CheckPlan -->|No| Invalid4[Mark Invalid]
-
-    CheckThreads -->|Threads match?| Import
-    CheckThreads -->|No| Invalid5[Mark Invalid]
-
-    Invalid1 --> Warmup
-    Invalid2 --> Warmup
-    Invalid3 --> Warmup
-    Invalid4 --> Warmup
-    Invalid5 --> Warmup
-
-    Import[Import Wisdom<br/>Fast startup] --> Continue([Continue])
-
-    Warmup --> Save[Save Wisdom<br/>with metadata]
+    Warmup --> Save[Save Wisdom<br/>cumulative across runs]
     Save --> Continue
 
     style CheckFile fill:#e1f5ff
@@ -317,14 +389,12 @@ flowchart TD
     Start([LES Mode]) --> ReadConfig[Read subgrid_model<br/>from namelist]
     ReadConfig --> Factory{Model ID}
 
-    Factory -->|0| NoModel[No SGS Model<br/>τ = 0]
-    Factory -->|1| SmagC[Constant Smagorinsky<br/>C_s = 0.18]
+    Factory -->|1| SmagC[Constant Smagorinsky<br/>C_s = 0.16]
     Factory -->|2| SmagD[Dynamic Smagorinsky<br/>C_s computed]
     Factory -->|3| WongL[Wong-Lilly<br/>Dynamic + similarity]
     Factory -->|4| Dear[Deardorff TKE<br/>1.5-order closure]
 
-    NoModel --> Compute[compute method]
-    SmagC --> Compute
+    SmagC --> Compute[compute method]
     SmagD --> Compute
     WongL --> Compute
     Dear --> Compute
@@ -346,8 +416,10 @@ flowchart TD
 
 ### Factory Pattern
 - `SGS.get_model()` creates appropriate SGS model instance
-- Centralizes model selection logic
-- Easy to add new SGS models
+- `TemporalIntegrator.get_integrator()` creates appropriate time integration scheme
+- `SpatialOperator.get_operator()` creates appropriate spatial discretization scheme
+- Centralizes model/scheme selection logic
+- Easy to add new SGS models, time integrators, or spatial operators
 
 ### Workspace Pattern
 - `SpectralWorkspace` bundles all spectral operations
@@ -355,6 +427,6 @@ flowchart TD
 - Provides clean interface to complex FFT operations
 
 ### Caching Pattern
-- FFTW wisdom stored with metadata validation
+- FFTW wisdom is cumulative across runs and configurations
 - First run: slow planning, subsequent runs: instant
-- Automatic invalidation on parameter changes
+- File locking prevents concurrent access conflicts
