@@ -51,6 +51,9 @@ class Deardorff(SGS):
         self.logger: logging.Logger = get_logger("SGS")
         self.logger.info("--- using the Deardorff TKE model")
 
+        # Precompute reciprocal for hot-loop multiplication instead of division
+        self._inv_dx = 1.0 / self.dx
+
         # Pre-allocate scratch arrays to avoid temporaries in the hot loop
         nx = self.nx
         self._dudx_snap = np.zeros(nx)
@@ -121,7 +124,7 @@ class Deardorff(SGS):
 
         # Dissipation: -ce * tke_safe^1.5 / dx
         np.power(self._tke_safe, 1.5, out=self._scratch_b)
-        np.multiply(-ce / dx, self._scratch_b, out=self._scratch_b)  # diss
+        np.multiply(-ce * self._inv_dx, self._scratch_b, out=self._scratch_b)  # diss
         diss_mean = float(np.mean(self._scratch_b))
 
         # Assemble tendency: -dkudx + prod + diff + diss

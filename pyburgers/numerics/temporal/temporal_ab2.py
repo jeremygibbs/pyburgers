@@ -35,6 +35,12 @@ class AB2(TemporalIntegrator):
     The first timestep is bootstrapped with forward Euler since no
     previous RHS is available.
 
+    Note: variable-step AB2 is weakly unstable when the step-size ratio
+    ω = dt_n / dt_{n-1} varies rapidly between steps.  In practice the
+    CFL controller changes dt smoothly (ω ≈ 1), so the instability does
+    not manifest, but users should be aware of this known limitation if
+    adapting the scheme to more aggressive step-size controllers.
+
     AB2 has a stability boundary at |λ dt| = 1 for real negative eigenvalues,
     but its imaginary stability boundary is very small (~0 for purely imaginary).
     For advection-diffusion problems, the combined eigenvalue λdt = α + iβ
