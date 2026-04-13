@@ -118,7 +118,7 @@ class Burgers(ABC):
         # Use the integrator's dissipative_stability_limit (same coefficient used
         # for hyperviscosity) so the limit is consistent with the chosen scheme.
         _C = self.integrator.dissipative_stability_limit
-        self._dt_visc = (
+        self._dt_visc = float('inf') if self.visc == 0 else (
             _C * self.dx**2
             / (self.visc * self.gradient_op.viscous_eigenvalue)
         )
