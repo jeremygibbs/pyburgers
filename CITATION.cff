@@ -34,7 +34,7 @@ keywords:
   - stochastic forcing
 license: MIT
 version: 2.1.0
-date-released: '2026-03-31'
+date-released: '2026-04-13'
 references:
   - type: article
     authors:
@@ -52,11 +52,20 @@ references:
   - type: article
     authors:
       - family-names: Williamson
-        given-names: J.H.
+        given-names: J. H.
     title: Low-storage Runge-Kutta schemes
     journal: Journal of Computational Physics
     volume: 35
     issue: 1
     year: 1980
     doi: 10.1016/0021-9991(80)90033-9
-    pages: 48-56
+    pages: '48-56'
+  - type: book
+    authors:
+      - family-names: Durran
+        given-names: Dale R.
+    title: 'Numerical Methods for Fluid Dynamics: With Applications to Geophysics'
+    edition: '2nd'
+    year: 2010
+    publisher: Springer
+    doi: 10.1007/978-1-4419-6412-0

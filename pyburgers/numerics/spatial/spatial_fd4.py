@@ -58,6 +58,17 @@ class FD4(SpatialOperator):
         self.logger.info("--- using 4th-order finite-difference spatial discretization")
         self._der = spectral.derivatives
 
+        # Pre-allocated padded buffer (pad=3 on each side) and output arrays
+        self._u_pad = np.empty(nx + 6, dtype=np.float64)
+        self._v_sq = np.empty(nx, dtype=np.float64)
+        self._v_pad = np.empty(nx + 4, dtype=np.float64)
+        self._tmp = np.empty(nx, dtype=np.float64)
+        self._out_1 = np.empty(nx, dtype=np.float64)
+        self._out_2 = np.empty(nx, dtype=np.float64)
+        self._out_3 = np.empty(nx, dtype=np.float64)
+        self._out_4 = np.empty(nx, dtype=np.float64)
+        self._out_sq = np.empty(nx, dtype=np.float64)
+
     def compute(
         self, u: np.ndarray, orders: list[int | str]
     ) -> dict[str, np.ndarray]:
@@ -74,37 +85,79 @@ class FD4(SpatialOperator):
         h = self.dx
         n = self.nx
 
-        # Periodic padding — np.pad allocates; slices below are views
-        u_pad = np.pad(u, 3, mode="wrap")
-        um3, um2, um1 = u_pad[0:n], u_pad[1:n+1], u_pad[2:n+2]
-        u0 = u_pad[3:n+3]
-        up1, up2, up3 = u_pad[4:n+4], u_pad[5:n+5], u_pad[6:n+6]
+        # Fill pre-allocated padded buffer (periodic wrap, pad=3)
+        u_pad = self._u_pad
+        u_pad[3:n + 3] = u
+        u_pad[0:3] = u[-3:]
+        u_pad[n + 3:n + 6] = u[:3]
+
+        um3, um2, um1 = u_pad[0:n], u_pad[1:n + 1], u_pad[2:n + 2]
+        u0 = u_pad[3:n + 3]
+        up1, up2, up3 = u_pad[4:n + 4], u_pad[5:n + 5], u_pad[6:n + 6]
 
         for order in orders:
             if order == 1 or order == "1":
-                result["1"] = (-up2 + 8.0 * up1 - 8.0 * um1 + um2) / (12.0 * h)
+                # 8*(up1 - um1) - (up2 - um2), divided by 12h
+                np.subtract(up1, um1, out=self._out_1)
+                self._out_1 *= 8.0
+                np.subtract(up2, um2, out=self._tmp)
+                self._out_1 -= self._tmp
+                self._out_1 /= 12.0 * h
+                result["1"] = self._out_1
 
             elif order == 2 or order == "2":
-                result["2"] = (
-                    -up2 + 16.0 * up1 - 30.0 * u0 + 16.0 * um1 - um2
-                ) / (12.0 * h**2)
+                # 16*(up1 + um1) - (up2 + um2) - 30*u0, divided by 12h²
+                np.add(up1, um1, out=self._out_2)
+                self._out_2 *= 16.0
+                np.add(up2, um2, out=self._tmp)
+                self._out_2 -= self._tmp
+                np.multiply(30.0, u0, out=self._tmp)
+                self._out_2 -= self._tmp
+                self._out_2 /= 12.0 * h**2
+                result["2"] = self._out_2
 
             elif order == 3 or order == "3":
-                result["3"] = (
-                    up3 - 8.0 * up2 + 13.0 * up1 - 13.0 * um1 + 8.0 * um2 - um3
-                ) / (8.0 * h**3)
+                # 13*(up1 - um1) - 8*(up2 - um2) + (up3 - um3), divided by 8h³
+                np.subtract(up1, um1, out=self._out_3)
+                self._out_3 *= 13.0
+                np.subtract(up2, um2, out=self._tmp)
+                self._tmp *= 8.0
+                self._out_3 -= self._tmp
+                np.subtract(up3, um3, out=self._tmp)
+                self._out_3 += self._tmp
+                self._out_3 /= 8.0 * h**3
+                result["3"] = self._out_3
 
             elif order == 4 or order == "4":
-                result["4"] = (
-                    -up3 + 12.0 * up2 - 39.0 * up1 + 56.0 * u0
-                    - 39.0 * um1 + 12.0 * um2 - um3
-                ) / (6.0 * h**4)
+                # 12*(up2 + um2) - 39*(up1 + um1) - (up3 + um3) + 56*u0, divided by 6h⁴
+                np.add(up2, um2, out=self._out_4)
+                self._out_4 *= 12.0
+                np.add(up1, um1, out=self._tmp)
+                self._tmp *= 39.0
+                self._out_4 -= self._tmp
+                np.add(up3, um3, out=self._tmp)
+                self._out_4 -= self._tmp
+                np.multiply(56.0, u0, out=self._tmp)
+                self._out_4 += self._tmp
+                self._out_4 /= 6.0 * h**4
+                result["4"] = self._out_4
 
             elif order == "sq":
-                v_pad = np.pad(u**2, 2, mode="wrap")
-                vm2, vm1 = v_pad[0:n], v_pad[1:n+1]
-                vp1, vp2 = v_pad[3:n+3], v_pad[4:n+4]
-                result["sq"] = (-vp2 + 8.0 * vp1 - 8.0 * vm1 + vm2) / (12.0 * h)
+                # d(u²)/dx via 4th-order FD on pre-allocated padded v=u² buffer
+                np.multiply(u, u, out=self._v_sq)
+                v_pad = self._v_pad
+                v_pad[2:n + 2] = self._v_sq
+                v_pad[0:2] = self._v_sq[-2:]
+                v_pad[n + 2:n + 4] = self._v_sq[:2]
+                vm2, vm1 = v_pad[0:n], v_pad[1:n + 1]
+                vp1, vp2 = v_pad[3:n + 3], v_pad[4:n + 4]
+                # 8*(vp1 - vm1) - (vp2 - vm2), divided by 12h
+                np.subtract(vp1, vm1, out=self._out_sq)
+                self._out_sq *= 8.0
+                np.subtract(vp2, vm2, out=self._tmp)
+                self._out_sq -= self._tmp
+                self._out_sq /= 12.0 * h
+                result["sq"] = self._out_sq
 
         return result
 

@@ -53,6 +53,9 @@ class TemporalIntegrator(ABC):
 
         Returns:
             Instance of the requested TemporalIntegrator subclass.
+
+        Raises:
+            ValueError: If scheme is not a valid option (1-3).
         """
         if scheme == 1:
             from .temporal_ab2 import AB2

@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Buffer mutation in `Derivatives.compute()`**: External inputs (SGS stress, TKE) no longer corrupt the velocity buffer; auto-save/restore eliminates error-prone manual copies in LES and Deardorff SGS
 - **Float equality in dynamic SGS models**: Replaced exact `== 0` comparison with tolerance (`< 1e-30`) in `SmagDynamic` and `WongLilly` coefficient computation to avoid division-by-zero edge cases
 - **Default noise exponent sign**: Changed default from `0.75` to `-0.75` in `Input` to match namelist convention and prevent silent sign error when the exponent is omitted
+- **`SmagConstant` tau buffer allocation**: `compute()` now writes in-place via `np.multiply(..., out=self.result["tau"])` instead of reassigning the dict entry with a fresh array each call, matching all other SGS models
+- **DNS/LES filter ratio validation**: `Input` now raises `NamelistError` if `grid.dns.points` is not divisible by `grid.les.points`; previously the filter width was silently wrong for non-divisible configurations
 
 ### Changed
 
@@ -24,16 +26,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Hyperviscosity is now always active and scheme-normalized**: Previously a user-configurable namelist option, hyperviscosity is now applied automatically to all spatial schemes. The coefficient is normalized as `ν₄ = π⁴·dx⁴/λ_hypervisc`, where `λ_hypervisc` is the scheme's maximum modified wavenumber magnitude. This ensures equal Nyquist damping rate and a scheme-independent hyperviscous timestep limit (`C/π⁴`) across FD2, FD4, and Spectral. The `physics.hyperviscosity` namelist key and `HyperviscosityConfig` dataclass have been removed.
 - **`Derivatives.compute()` parameter**: Renamed `order` to `orders` for clarity (it accepts a list)
 - **RK3 coefficient variables**: Renamed `A`/`B` to `rk3_a`/`rk3_b` in `core.py` for PEP 8 compliance
+- **Schema enforces even grid point counts**: `grid.dns.points` and `grid.les.points` now require `"multipleOf": 2`; odd sizes produce incorrect rfft output
+- **Schema rejects unknown namelist keys**: `"additionalProperties": false` added to all object sections; typos in optional keys (e.g. `"amplitde"`) now raise a validation error instead of silently falling back to defaults
+- **`Derivatives.zero_nyquist` simplified**: Always restores physical space; the `restore_physical=False` path and `_fu_valid` optimization flag have been removed as they were never exercised in production
 
 ### Improved
 
 - **Spectral performance**: Replaced `up**2` with `np.square(self.up, out=self.up)` for in-place squaring; eliminated unnecessary `.copy()` in `Dealias.compute()` return
 - **`Derivatives.compute()` dispatch**: Changed `if`/`if`/`if` chain to `elif` for mutually exclusive derivative keys, avoiding redundant comparisons
-- **Google style guide compliance**: Added missing docstrings, fixed parameter documentation in SGS models, and corrected casing inconsistencies
+- **`FD2`/`FD4` buffer allocation**: Spatial operators now pre-allocate the padded buffer and all output arrays in `__init__`, eliminating one `np.pad` allocation and five result-array allocations per `compute()` call
+- **Shared padded FFT plans in LES mode**: `Dealias` now reuses the padded FFT buffers and plans from `Derivatives` when constructed via `SpectralWorkspace`, halving the number of padded FFTW plans created
+- **Google style guide compliance**: Added `Raises:` sections to all factory-method docstrings (`get_operator`, `get_integrator`, `get_model`); added docstrings to private logging filter/handler methods; fixed imperative mood and `is not None` checks in `SpectralWorkspace`; explicit `int()` cast for `noise.seed` in `Input`
 
 ### Removed
 
 - Dead `TYPE_CHECKING` block in `spectral_workspace.py`
+- Dead `self.mp` attribute from `Burgers` base class (`core.py`)
+- Dead `_fu_valid` flag and `restore_physical=False` branch from `Derivatives.zero_nyquist`
 
 ---
 

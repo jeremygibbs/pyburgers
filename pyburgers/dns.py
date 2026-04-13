@@ -29,7 +29,7 @@ class DNS(Burgers):
     """Direct numerical simulation solver for the Burgers equation.
 
     Solves the 1D stochastic Burgers equation at full resolution using
-    Fourier collocation for spatial derivatives and RK3 time integration.
+    Fourier collocation for spatial derivatives and pluggable time integration.
 
     This class inherits common functionality from Burgers and implements
     DNS-specific behavior for noise generation and diagnostics. Uses a

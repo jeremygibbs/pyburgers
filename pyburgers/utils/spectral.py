@@ -138,9 +138,6 @@ class Derivatives:
             threads=fftw_threads,
         )
 
-        # Flag indicating self.fu is current for self.u (skip redundant FFT)
-        self._fu_valid = False
-
     def compute(self, u: np.ndarray, orders: list[int | str]) -> dict[str, np.ndarray]:
         """Compute spectral derivatives of the input field.
 
@@ -169,11 +166,8 @@ class Derivatives:
             self._ext_fft()
             fu = self._ext_fu
         else:
-            # Skip FFT if fu is already current (set by zero_nyquist)
-            if not self._fu_valid:
-                self.u[:] = u
-                self.fft()
-            self._fu_valid = False
+            self.u[:] = u
+            self.fft()
             fu = self.fu
 
         # Loop through requested derivative orders
@@ -224,22 +218,18 @@ class Derivatives:
         return derivatives
 
     def zero_nyquist(self, restore_physical: bool = True) -> None:
-        """FFT self.u, zero the Nyquist mode, and optionally restore physical space.
+        """FFT self.u, zero the Nyquist mode, and restore physical space.
 
-        Called at the end of each RK3 stage to enforce the Nyquist constraint.
+        Called after each integration stage to enforce the Nyquist constraint.
+        Performs FFT, zeros the Nyquist mode, and IFFTs back to physical space.
 
         Args:
-            restore_physical: If True (default), IFFT back so self.u reflects
-                the Nyquist-zeroed velocity. If False, skip the IFFT and mark
-                self.fu as valid so the next compute() call skips the redundant
-                FFT. Use False for intermediate RK stages, True for the final stage.
+            restore_physical: Ignored; always restores physical space after
+                zeroing. Retained for interface compatibility with SpatialOperator.
         """
         self.fft()
         self.fu[self.m] = 0
-        if restore_physical:
-            self.ifft_nyquist()
-        else:
-            self._fu_valid = True
+        self.ifft_nyquist()
 
 
 class Dealias:
@@ -257,13 +247,25 @@ class Dealias:
         m: Nyquist mode index (nx/2).
     """
 
-    def __init__(self, nx: int, fftw_planning: str = "FFTW_MEASURE", fftw_threads: int = 1) -> None:
+    def __init__(
+        self,
+        nx: int,
+        fftw_planning: str = "FFTW_MEASURE",
+        fftw_threads: int = 1,
+        *,
+        shared_der: Derivatives | None = None,
+    ) -> None:
         """Initialize the Dealias calculator.
 
         Args:
             nx: Number of grid points.
             fftw_planning: FFTW planning strategy.
             fftw_threads: Number of threads for FFTW.
+            shared_der: Optional Derivatives instance whose padded FFT plans
+                and buffers are reused instead of allocating new ones. When
+                provided, the padded-forward and padded-inverse plans are
+                shared. Callers must ensure Dealias.compute() and
+                Derivatives.compute('sq') are not called concurrently.
         """
         self.nx = nx
         self.m = self.nx // 2
@@ -277,10 +279,8 @@ class Dealias:
         self.x = pyfftw.empty_aligned(self.nx, np.float64)
         self.fx = pyfftw.empty_aligned(self.nk, np.complex128)
 
-        # padded pyfftw arrays
-        self.xp = pyfftw.empty_aligned(nx_padded, np.float64)
+        # temp is Dealias-private scratch space — always allocated
         self.temp = pyfftw.empty_aligned(nx_padded, np.float64)
-        self.fxp = pyfftw.empty_aligned(nk_padded, np.complex128)
 
         # pyfftw functions (auto-detects real<->complex from dtypes)
         self.fft = pyfftw.FFTW(
@@ -291,21 +291,32 @@ class Dealias:
             self.fx, self.x, direction="FFTW_BACKWARD", flags=(fftw_planning,), threads=fftw_threads
         )
 
-        self.fftp = pyfftw.FFTW(
-            self.xp,
-            self.fxp,
-            direction="FFTW_FORWARD",
-            flags=(fftw_planning,),
-            threads=fftw_threads,
-        )
+        if shared_der is not None:
+            # Reuse padded buffers and plans from the Derivatives instance
+            self.xp = shared_der.up
+            self.fxp = shared_der.fup
+            self.fftp = shared_der.fftp
+            self.ifftp = shared_der.ifftp
+        else:
+            # Allocate own padded buffers and plans
+            self.xp = pyfftw.empty_aligned(nx_padded, np.float64)
+            self.fxp = pyfftw.empty_aligned(nk_padded, np.complex128)
 
-        self.ifftp = pyfftw.FFTW(
-            self.fxp,
-            self.xp,
-            direction="FFTW_BACKWARD",
-            flags=(fftw_planning,),
-            threads=fftw_threads,
-        )
+            self.fftp = pyfftw.FFTW(
+                self.xp,
+                self.fxp,
+                direction="FFTW_FORWARD",
+                flags=(fftw_planning,),
+                threads=fftw_threads,
+            )
+
+            self.ifftp = pyfftw.FFTW(
+                self.fxp,
+                self.xp,
+                direction="FFTW_BACKWARD",
+                flags=(fftw_planning,),
+                threads=fftw_threads,
+            )
 
     def compute(self, x: np.ndarray) -> np.ndarray:
         """Compute the dealiased product |x| * x.

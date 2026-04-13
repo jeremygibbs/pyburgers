@@ -3,10 +3,12 @@
     "title": "PyBurgers Namelist Configuration",
     "description": "Schema to validate the configuration namelist for PyBurgers v2.1.",
     "type": "object",
+    "additionalProperties": false,
     "properties": {
         "time": {
             "type": "object",
             "description": "Controls simulation duration.",
+            "additionalProperties": false,
             "properties": {
                 "duration": {
                     "type": "number",
@@ -19,6 +21,7 @@
         "grid": {
             "type": "object",
             "description": "Defines the computational domain and spatial resolution.",
+            "additionalProperties": false,
             "properties": {
                 "length": {
                     "type": "number",
@@ -29,10 +32,12 @@
                 "dns": {
                     "type": "object",
                     "default": {},
+                    "additionalProperties": false,
                     "properties": {
                         "points": {
                             "type": "integer",
                             "minimum": 2,
+                            "multipleOf": 2,
                             "default": 8192,
                             "description": "Number of grid points for DNS resolution (must be even)."
                         }
@@ -41,10 +46,12 @@
                 "les": {
                     "type": "object",
                     "default": {},
+                    "additionalProperties": false,
                     "properties": {
                         "points": {
                             "type": "integer",
                             "minimum": 2,
+                            "multipleOf": 2,
                             "default": 512,
                             "description": "Number of grid points for LES resolution (must be even)."
                         }
@@ -55,6 +62,7 @@
         "physics": {
             "type": "object",
             "description": "Defines the physical parameters of the Burgers equation.",
+            "additionalProperties": false,
             "properties": {
                 "viscosity": {
                     "type": "number",
@@ -78,6 +86,7 @@
                     "type": "object",
                     "default": {},
                     "description": "Stochastic forcing (fractional Brownian motion) parameters.",
+                    "additionalProperties": false,
                     "properties": {
                         "exponent": {
                             "type": "number",
@@ -104,6 +113,7 @@
             "type": "object",
             "default": {},
             "description": "Controls output file writing and progress reporting.",
+            "additionalProperties": false,
             "properties": {
                 "interval_save": {
                     "type": "number",
@@ -121,6 +131,7 @@
             "type": "object",
             "default": {},
             "description": "Configures runtime logging behavior.",
+            "additionalProperties": false,
             "properties": {
                 "level": {
                     "type": "string",
@@ -139,6 +150,7 @@
             "type": "object",
             "default": {},
             "description": "Configures FFTW planning and threading.",
+            "additionalProperties": false,
             "properties": {
                 "planning": {
                     "type": "string",

@@ -99,7 +99,6 @@ class Burgers(ABC):
 
         # Get mode-specific grid resolution
         self.nx = self._get_nx()
-        self.mp = self.nx // 2
         self.dx = self.domain_length / self.nx
 
         # Create time integrator early so its stability coefficients inform dt limits

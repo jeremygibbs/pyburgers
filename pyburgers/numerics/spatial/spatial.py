@@ -73,6 +73,9 @@ class SpatialOperator(ABC):
 
         Returns:
             Instance of the requested SpatialOperator subclass.
+
+        Raises:
+            ValueError: If scheme is not a valid option (1-3).
         """
         if scheme == 1:
             from .spatial_fd2 import FD2

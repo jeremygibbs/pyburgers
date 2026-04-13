@@ -85,9 +85,39 @@ PyBurgers v2.1 delivers dramatic performance improvements through real FFTs, opt
 |---------|-----|-----|
 | Original Matlab | ~35 min | ~16 min |
 | PyBurgers v1.0 | ~43 min | ~23 min |
-| **PyBurgers v2.1** | **~34 sec** | **~7 sec** |
+| **PyBurgers v2.1** | **~28 sec** | **~5 sec** |
 
 *Tested on a late 2023 MacBook Pro (M3 Max). Performance varies by system; results illustrate relative gains.*
+
+**Test suite timings by scheme combination (default namelist, M3 Max MacBook Pro)**
+
+DNS:
+
+| Time Scheme | Spatial Scheme | Time (s) |
+|:-----------:|:--------------:|:--------:|
+| AB2         | FD2            | 10.5     |
+| AB2         | FD4            | 12.8     |
+| AB2         | Spectral       | 33.7     |
+| AM2         | FD2            | 10.6     |
+| AM2         | FD4            | 12.5     |
+| AM2         | Spectral       | 34.1     |
+| RK3         | FD2            | 13.6     |
+| RK3         | FD4            | 15.1     |
+| RK3         | Spectral       | 27.5     |
+
+LES:
+
+| Time Scheme | Spatial Scheme | Smagorinsky | Dynamic Smag | Wong-Lilly | Deardorff |
+|:-----------:|:--------------:|:-----------:|:------------:|:----------:|:---------:|
+| AB2         | FD2            | 6.2         | 8.4          | 6.9        | 8.7       |
+| AB2         | FD4            | 7.0         | 9.2          | 7.5        | 9.7       |
+| AB2         | Spectral       | 7.2         | 9.4          | 7.9        | 9.5       |
+| AM2         | FD2            | 6.2         | 8.4          | 7.2        | 8.6       |
+| AM2         | FD4            | 6.7         | 8.8          | 7.4        | 9.3       |
+| AM2         | Spectral       | 6.9         | 9.0          | 7.6        | 9.3       |
+| RK3         | FD2            | 4.8         | 6.1          | 5.2        | 6.5       |
+| RK3         | FD4            | 5.1         | 6.5          | 5.7        | 6.8       |
+| RK3         | Spectral       | 5.3         | 6.6          | 5.6        | 7.7       |
 
 ## Requirements
 

@@ -149,6 +149,14 @@ class Input:
             les=LESConfig(points=int(grid_data["les"]["points"])),
         )
 
+        dns_pts = self.grid.dns.points
+        les_pts = self.grid.les.points
+        if dns_pts % les_pts != 0:
+            raise NamelistError(
+                f"grid.dns.points ({dns_pts}) must be divisible by "
+                f"grid.les.points ({les_pts})"
+            )
+
         # Physics configuration
         physics_data = namelist_data["physics"]
         noise_data = physics_data["noise"]
@@ -156,7 +164,7 @@ class Input:
             noise=NoiseConfig(
                 exponent=float(noise_data["exponent"]),
                 amplitude=float(noise_data["amplitude"]),
-                seed=noise_data["seed"],
+                seed=int(noise_data["seed"]) if noise_data["seed"] is not None else None,
             ),
             viscosity=float(physics_data["viscosity"]),
             subgrid_model=int(physics_data["subgrid_model"]),

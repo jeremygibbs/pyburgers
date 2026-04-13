@@ -57,6 +57,9 @@ class SGS:
 
         Returns:
             Instance of the requested SGS model subclass.
+
+        Raises:
+            ValueError: If model is not a valid option (1-4).
         """
         if model == 1:
             from .sgs_smagcon import SmagConstant

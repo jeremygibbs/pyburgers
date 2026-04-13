@@ -33,7 +33,7 @@ class LES(Burgers):
     """Large-eddy simulation solver for the Burgers equation.
 
     Solves the filtered 1D stochastic Burgers equation using Fourier
-    collocation for spatial derivatives, RK3 time integration,
+    collocation for spatial derivatives, pluggable time integration,
     and subgrid-scale models for unresolved turbulence.
 
     This class inherits common functionality from Burgers and implements

@@ -72,7 +72,7 @@ class SmagConstant(SGS):
 
         dudx2 = self.spectral.dealias.compute(dudx)
 
-        self.result["tau"] = -2 * cs2 * (self.dx**2) * dudx2
+        np.multiply(-2.0 * cs2 * self.dx**2, dudx2, out=self.result["tau"])
         self.result["coeff"] = cs
 
         return self.result

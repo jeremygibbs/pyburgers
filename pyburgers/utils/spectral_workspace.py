@@ -103,7 +103,12 @@ class SpectralWorkspace:
         # Dealias and Filter are only needed in LES mode (SGS models).
         # Skip creation in DNS mode to save memory and plan-building time.
         if nx2 is not None:
-            self.dealias = Dealias(nx=nx, fftw_planning=fftw_planning, fftw_threads=fftw_threads)
+            self.dealias = Dealias(
+                nx=nx,
+                fftw_planning=fftw_planning,
+                fftw_threads=fftw_threads,
+                shared_der=self.derivatives,
+            )
             self.filter = Filter(
                 nx=nx,
                 nx2=nx2,
@@ -134,11 +139,11 @@ class SpectralWorkspace:
         self.fu: np.ndarray = self.derivatives.fu
 
     def __repr__(self) -> str:
-        """String representation of the workspace."""
+        """Return a string representation of the workspace."""
         filter_info = f", nx2={self.nx2}" if self.nx2 else ""
         noise_info = (
             f", noise_beta={self.noise_beta}, noise_nx={self.noise_nx}"
-            if self.noise_beta
+            if self.noise_beta is not None
             else ""
         )
         return (
