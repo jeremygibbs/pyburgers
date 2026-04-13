@@ -179,22 +179,25 @@ class Derivatives:
         # Loop through requested derivative orders
         for key in orders:
             if key == 1 or key == "1":
-                self.fun[:] = 1j * self.k * fu
+                np.multiply(self.k, fu, out=self.fun)
+                self.fun *= 1j
                 self.ifft()
                 np.multiply(self.fac, self.der, out=self._out_1)
                 derivatives["1"] = self._out_1
             elif key == 2 or key == "2":
-                self.fun[:] = -self.k2 * fu
+                np.multiply(self.k2, fu, out=self.fun)
+                self.fun *= -1
                 self.ifft()
                 np.multiply(self.fac2, self.der, out=self._out_2)
                 derivatives["2"] = self._out_2
             elif key == 3 or key == "3":
-                self.fun[:] = -1j * self.k3 * fu
+                np.multiply(self.k3, fu, out=self.fun)
+                self.fun *= -1j
                 self.ifft()
                 np.multiply(self.fac3, self.der, out=self._out_3)
                 derivatives["3"] = self._out_3
             elif key == 4 or key == "4":
-                self.fun[:] = self.k4 * fu
+                np.multiply(self.k4, fu, out=self.fun)
                 self.ifft()
                 np.multiply(self.fac4, self.der, out=self._out_4)
                 derivatives["4"] = self._out_4
@@ -212,7 +215,8 @@ class Derivatives:
                 # Transform back to spectral space
                 self.fftp()
                 # Truncate to original modes and differentiate; self.k zeros Nyquist
-                self.fun[:] = 1j * self.k * (self.fup[0 : self.nk] / 1.5)
+                np.multiply(self.k, self.fup[0 : self.nk], out=self.fun)
+                self.fun *= (1j / 1.5)
                 self.ifft()
                 np.multiply(self.fac, self.der, out=self._out_sq)
                 derivatives["sq"] = self._out_sq
