@@ -146,11 +146,10 @@ And reference the underlying methodology:
 ```bibtex
 @article{basu2009,
   author = {Basu, Sukanta},
-  title = {High-resolution large-eddy simulations of stably stratified flows:
-           application to the Cooperative Atmosphere–Surface Exchange Study 1999 (CASES-99)},
+  title = {Can the dynamic eddy-viscosity class of subgrid-scale models capture inertial-range properties of Burgers turbulence?},
   journal = {Journal of Turbulence},
   volume = {10},
-  pages = {N12},
+  pages = {1--16},
   year = {2009},
   doi = {10.1080/14685240902852719}
 }

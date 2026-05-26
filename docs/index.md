@@ -207,6 +207,6 @@ For API documentation, check the [API Reference](reference.md).
 
 ## References
 
-Basu, S. (2009). High-resolution large-eddy simulations of stably stratified flows: application to the Cooperative Atmosphere–Surface Exchange Study 1999 (CASES-99). *Journal of Turbulence*, 10, N12. https://doi.org/10.1080/14685240902852719
+Basu, S. (2009). Can the dynamic eddy-viscosity class of subgrid-scale models capture inertial-range properties of Burgers turbulence?. *Journal of Turbulence*, 10(12), 1--16. https://doi.org/10.1080/14685240902852719
 
 Williamson, J.H. (1980). Low-storage Runge-Kutta schemes. *Journal of Computational Physics*, 35(1), 48-56. https://doi.org/10.1016/0021-9991(80)90033-9

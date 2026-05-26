@@ -28,6 +28,9 @@ docs = [
     "mkdocs-mermaid2-plugin>=1.1",
 ]
 
+[tool.setuptools.packages.find]
+include = ["pyburgers*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
