@@ -1,0 +1,696 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.2 20190208//EN"
+                  "JATS-publishing1.dtd">
+<article xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink" dtd-version="1.2" article-type="other">
+<front>
+<journal-meta>
+<journal-id></journal-id>
+<journal-title-group>
+<journal-title>Journal of Open Source Software</journal-title>
+<abbrev-journal-title>JOSS</abbrev-journal-title>
+</journal-title-group>
+<issn publication-format="electronic">2475-9066</issn>
+<publisher>
+<publisher-name>Open Journals</publisher-name>
+</publisher>
+</journal-meta>
+<article-meta>
+<article-id pub-id-type="publisher-id">0</article-id>
+<article-id pub-id-type="doi">N/A</article-id>
+<title-group>
+<article-title>PyBurgers: A Python testbed for direct and large-eddy
+simulation of stochastically forced one-dimensional Burgers
+turbulence</article-title>
+</title-group>
+<contrib-group>
+<contrib contrib-type="author">
+<contrib-id contrib-id-type="orcid">https://orcid.org/0000-0001-9340-2663</contrib-id>
+<name>
+<surname>Gibbs</surname>
+<given-names>Jeremy A.</given-names>
+</name>
+<xref ref-type="aff" rid="aff-1"/>
+</contrib>
+<aff id="aff-1">
+<institution-wrap>
+<institution>NOAA National Severe Storms Laboratory, Norman, OK,
+USA</institution>
+<institution-id institution-id-type="ROR">00gd1f947</institution-id>
+</institution-wrap>
+</aff>
+</contrib-group>
+<pub-date date-type="pub" publication-format="electronic" iso-8601-date="2026-05-26">
+<day>26</day>
+<month>5</month>
+<year>2026</year>
+</pub-date>
+<volume>¿VOL?</volume>
+<issue>¿ISSUE?</issue>
+<fpage>¿PAGE?</fpage>
+<permissions>
+<copyright-statement>Authors of papers retain copyright and release the
+work under a Creative Commons Attribution 4.0 International License (CC
+BY 4.0)</copyright-statement>
+<copyright-year>1970</copyright-year>
+<copyright-holder>The article authors</copyright-holder>
+<license license-type="open-access" xlink:href="https://creativecommons.org/licenses/by/4.0/">
+<license-p>Authors of papers retain copyright and release the work under
+a Creative Commons Attribution 4.0 International License (CC BY
+4.0)</license-p>
+</license>
+</permissions>
+<kwd-group kwd-group-type="author">
+<kwd>Python</kwd>
+<kwd>turbulence</kwd>
+<kwd>large-eddy simulation</kwd>
+<kwd>direct numerical simulation</kwd>
+<kwd>Burgers equation</kwd>
+<kwd>spectral methods</kwd>
+<kwd>subgrid-scale modeling</kwd>
+</kwd-group>
+</article-meta>
+</front>
+<body>
+<sec id="summary">
+  <title>Summary</title>
+  <p><monospace>PyBurgers</monospace> is an open-source Python solver
+  for the one-dimensional stochastically forced Burgers equation (1D
+  SBE). The software models complex fluid turbulence and energy
+  dissipation in a simplified, one-dimensional environment. It supports
+  both direct numerical simulation (DNS) and large-eddy simulation (LES)
+  on a periodic domain. PyBurgers is intended as a lightweight testbed
+  for studying turbulence phenomenology, evaluating subgrid-scale (SGS)
+  turbulence closures, and prototyping new numerical methods.</p>
+  <p>The Burgers equation was originally conceived by Dutch scientist
+  J.M. Burgers as one of the first attempts to arrive at a statistical
+  theory of turbulent fluid motion
+  (<xref alt="Burgers, 1939" rid="ref-burgers_1939" ref-type="bibr">Burgers,
+  1939</xref>). His equation represents a very simplified model that
+  describes the interaction of non-linear inertial terms and dissipation
+  in the motion of a fluid, and it shares many characteristics with the
+  Navier-Stokes equations: <bold>advective non-linearity</bold>,
+  <bold>diffusion</bold>, <bold>invariance</bold>, and
+  <bold>conservation.</bold> However, it is not ideal for the chaotic
+  nature of turbulence because it can be integrated explicitly and is
+  not sensitive to small changes in initial conditions.</p>
+  <p>A popular modification is the addition of a forcing term, the
+  so-called stochastic term, that accounts for these neglected effects.
+  This term perturbs the system with a stochastic process that is
+  stationary in time and space. The resulting governing 1D SBE is given
+  by</p>
+  <p><named-content id="eqU003Asbe" content-type="equation"><disp-formula><alternatives>
+  <tex-math><![CDATA[\frac{\partial u}{\partial t} + u\frac{\partial u}{\partial x} = \nu \frac{\partial^2 u}{\partial x^2} + \eta(x,t)\tag{1},]]></tex-math>
+  <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mfrac><mml:mrow><mml:mi>∂</mml:mi><mml:mi>u</mml:mi></mml:mrow><mml:mrow><mml:mi>∂</mml:mi><mml:mi>t</mml:mi></mml:mrow></mml:mfrac><mml:mo>+</mml:mo><mml:mi>u</mml:mi><mml:mfrac><mml:mrow><mml:mi>∂</mml:mi><mml:mi>u</mml:mi></mml:mrow><mml:mrow><mml:mi>∂</mml:mi><mml:mi>x</mml:mi></mml:mrow></mml:mfrac><mml:mo>=</mml:mo><mml:mi>ν</mml:mi><mml:mfrac><mml:mrow><mml:msup><mml:mi>∂</mml:mi><mml:mn>2</mml:mn></mml:msup><mml:mi>u</mml:mi></mml:mrow><mml:mrow><mml:mi>∂</mml:mi><mml:msup><mml:mi>x</mml:mi><mml:mn>2</mml:mn></mml:msup></mml:mrow></mml:mfrac><mml:mo>+</mml:mo><mml:mi>η</mml:mi><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mi>x</mml:mi><mml:mo>,</mml:mo><mml:mi>t</mml:mi><mml:mo stretchy="false" form="postfix">)</mml:mo><mml:mo>,</mml:mo></mml:mrow></mml:math></alternatives></disp-formula></named-content></p>
+  <p>where <inline-formula><alternatives>
+  <tex-math><![CDATA[u]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>u</mml:mi></mml:math></alternatives></inline-formula>
+  is velocity, <inline-formula><alternatives>
+  <tex-math><![CDATA[x]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>x</mml:mi></mml:math></alternatives></inline-formula>
+  is the spatial dimension, <inline-formula><alternatives>
+  <tex-math><![CDATA[\nu]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>ν</mml:mi></mml:math></alternatives></inline-formula>
+  is kinematic viscosity, and <inline-formula><alternatives>
+  <tex-math><![CDATA[\eta]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>η</mml:mi></mml:math></alternatives></inline-formula>
+  is the stochastic term. PyBurgers uses fractional Brownian motion
+  (FBM):</p>
+  <p><named-content id="eqU003Afbm" content-type="equation"><disp-formula><alternatives>
+  <tex-math><![CDATA[\eta(x,t) = \sqrt{\frac{2D_0}{\Delta t}} \mathfrak{F}^{-1} \left\lbrace|k|^{\beta/2}\hat{f}(k)\right\rbrace\tag{2},]]></tex-math>
+  <mml:math display="block" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mi>η</mml:mi><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mi>x</mml:mi><mml:mo>,</mml:mo><mml:mi>t</mml:mi><mml:mo stretchy="false" form="postfix">)</mml:mo><mml:mo>=</mml:mo><mml:msqrt><mml:mfrac><mml:mrow><mml:mn>2</mml:mn><mml:msub><mml:mi>D</mml:mi><mml:mn>0</mml:mn></mml:msub></mml:mrow><mml:mrow><mml:mi mathvariant="normal">Δ</mml:mi><mml:mi>t</mml:mi></mml:mrow></mml:mfrac></mml:msqrt><mml:msup><mml:mi>𝔉</mml:mi><mml:mrow><mml:mi>−</mml:mi><mml:mn>1</mml:mn></mml:mrow></mml:msup><mml:mrow><mml:mo stretchy="true" form="prefix">{</mml:mo><mml:mo stretchy="false" form="prefix">|</mml:mo><mml:mi>k</mml:mi><mml:msup><mml:mo stretchy="false" form="prefix">|</mml:mo><mml:mrow><mml:mi>β</mml:mi><mml:mi>/</mml:mi><mml:mn>2</mml:mn></mml:mrow></mml:msup><mml:mover><mml:mi>f</mml:mi><mml:mo accent="true">̂</mml:mo></mml:mover><mml:mo stretchy="false" form="prefix">(</mml:mo><mml:mi>k</mml:mi><mml:mo stretchy="false" form="postfix">)</mml:mo><mml:mo stretchy="true" form="postfix">}</mml:mo></mml:mrow><mml:mo>,</mml:mo></mml:mrow></mml:math></alternatives></disp-formula></named-content></p>
+  <p>where <inline-formula><alternatives>
+  <tex-math><![CDATA[D_0]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi>D</mml:mi><mml:mn>0</mml:mn></mml:msub></mml:math></alternatives></inline-formula>
+  is noise amplitude, <inline-formula><alternatives>
+  <tex-math><![CDATA[\Delta t]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mi mathvariant="normal">Δ</mml:mi><mml:mi>t</mml:mi></mml:mrow></mml:math></alternatives></inline-formula>
+  is the model time step, <inline-formula><alternatives>
+  <tex-math><![CDATA[\mathfrak{F}^{-1}]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msup><mml:mi>𝔉</mml:mi><mml:mrow><mml:mi>−</mml:mi><mml:mn>1</mml:mn></mml:mrow></mml:msup></mml:math></alternatives></inline-formula>
+  is the inverse Fourier transform, <inline-formula><alternatives>
+  <tex-math><![CDATA[\beta]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>β</mml:mi></mml:math></alternatives></inline-formula>
+  is the spectral slope of the noise, and <inline-formula><alternatives>
+  <tex-math><![CDATA[f]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>f</mml:mi></mml:math></alternatives></inline-formula>
+  is Gaussian random noise with mean = 0 and standard deviation =
+  <inline-formula><alternatives>
+  <tex-math><![CDATA[\sqrt{N}]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msqrt><mml:mi>N</mml:mi></mml:msqrt></mml:math></alternatives></inline-formula>,
+  where <inline-formula><alternatives>
+  <tex-math><![CDATA[N]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>N</mml:mi></mml:math></alternatives></inline-formula>
+  is the number of grid points. The 1D SBE is a canonical minimal
+  nonlinear partial differential equation that exhibits cascade-like
+  energy transfer and shock-like dissipation structures. Equation
+  (<xref alt="1" rid="eqU003Asbe">1</xref>) is widely used as a
+  one-dimensional surrogate for the Navier-Stokes equations
+  (<xref alt="Basu, 2009" rid="ref-basu_2009" ref-type="bibr">Basu,
+  2009</xref>; e.g.,
+  <xref alt="Bec &amp; Khanin, 2007" rid="ref-bec_khanin_2007" ref-type="bibr">Bec
+  &amp; Khanin, 2007</xref>).</p>
+  <p>The default spectral configuration uses Fourier collocation for
+  spatial derivatives and 3/2-rule dealiasing for the nonlinear term.
+  The same solver also supports second- and fourth-order
+  finite-difference spatial operators (FD2 and FD4, respectively). Both
+  spatial and temporal discretizations are runtime-selectable from a
+  JSON namelist, which is useful, e.g., for isolating discretization
+  effects in SGS-model evaluation. Output is written to a NetCDF
+  file.</p>
+  <p><monospace>PyBurgers</monospace> is distributed under the MIT
+  license at
+  <ext-link ext-link-type="uri" xlink:href="https://github.com/jeremygibbs/pyburgers">https://github.com/jeremygibbs/pyburgers</ext-link>
+  with full documentation at
+  <ext-link ext-link-type="uri" xlink:href="https://docs.gibbs.science/pyburgers">https://docs.gibbs.science/pyburgers</ext-link>.</p>
+</sec>
+<sec id="statement-of-need">
+  <title>Statement of need</title>
+  <p>The Burgers equation is a well-established model problem in
+  turbulence and LES research for several reasons, including: it is
+  cheap enough to resolve on a single workstation because it is
+  one-dimensional, and it is useful for testing SGS closures that target
+  unresolved advective and dissipative processes because its
+  non-linearity and forcing produce cascade-like transfer and
+  intermittent shocks
+  (<xref alt="Bec &amp; Khanin, 2007" rid="ref-bec_khanin_2007" ref-type="bibr">Bec
+  &amp; Khanin, 2007</xref>;
+  <xref alt="Love, 1980" rid="ref-love_1980" ref-type="bibr">Love,
+  1980</xref>). Burgers turbulence has, therefore, become a recurring
+  testbed for classical, implicit, and data-driven SGS closures
+  (<xref alt="LaBryer et al., 2015" rid="ref-labryer_etal_2015" ref-type="bibr">LaBryer
+  et al., 2015</xref>;
+  <xref alt="Li &amp; Wang, 2016" rid="ref-li_wang_2016" ref-type="bibr">Li
+  &amp; Wang, 2016</xref>;
+  <xref alt="Maulik &amp; San, 2018" rid="ref-maulik_san_2018" ref-type="bibr">Maulik
+  &amp; San, 2018</xref>;
+  <xref alt="Subel et al., 2021" rid="ref-subel_etal_2021" ref-type="bibr">Subel
+  et al., 2021</xref>).</p>
+  <p>However, available software occupies different niches despite this
+  persistence. General PDE frameworks solve Burgers-type equations,
+  while public teaching scripts often demonstrate a single deterministic
+  case (e.g.,
+  <xref alt="Binder, 2021" rid="ref-binder_2021" ref-type="bibr">Binder,
+  2021</xref>). Published Burgers LES studies also tend to emphasize a
+  particular discretization, closure model, or data-driven experiment
+  rather than a reusable package interface for stochastic DNS/LES
+  turbulence workflows. <monospace>PyBurgers</monospace> addresses this
+  narrower need: a maintained, documented, open-source Python package
+  for Burgers-turbulence studies without requiring users to re-derive
+  the spectral machinery or rebuild the DNS/LES workflow from
+  scratch.</p>
+  <p><monospace>PyBurgers</monospace> naturally targets three
+  audiences:</p>
+  <list list-type="order">
+    <list-item>
+      <p><bold>SGS-modeling researchers</bold> who need a controlled,
+      fast <italic>a priori</italic> / <italic>a posteriori</italic>
+      environment in which to evaluate closures against filtered DNS or
+      other sources of truth. Four classical SGS models ship with the
+      code: constant-coefficient Smagorinsky
+      (<xref alt="Smagorinsky, 1963" rid="ref-smagorinsky_1963" ref-type="bibr">Smagorinsky,
+      1963</xref>), dynamic Smagorinsky
+      (<xref alt="Germano et al., 1991" rid="ref-germano_etal_1991" ref-type="bibr">Germano
+      et al., 1991</xref>), dynamic Wong–Lilly
+      (<xref alt="Wong &amp; Lilly, 1994" rid="ref-wong_lilly_1994" ref-type="bibr">Wong
+      &amp; Lilly, 1994</xref>), and a prognostic 1.5-order TKE closure
+      after Deardorff
+      (<xref alt="Deardorff, 1980" rid="ref-deardorff_1980" ref-type="bibr">Deardorff,
+      1980</xref>). These serve as reference implementations for new
+      closures, including data-driven ones
+      (<xref alt="Subel et al., 2021" rid="ref-subel_etal_2021" ref-type="bibr">Subel
+      et al., 2021</xref>), which are easily implemented by subclassing
+      <monospace>SGS</monospace>.</p>
+    </list-item>
+    <list-item>
+      <p><bold>Numerical-methods researchers</bold> who want a small
+      benchmark on which to compare time integrators (Adams–Bashforth 2
+      (<xref alt="Bashforth &amp; Adams, 1883" rid="ref-bashforth_adams_1883" ref-type="bibr">Bashforth
+      &amp; Adams, 1883</xref>), Adams–Moulton 2 predictor–corrector
+      (<xref alt="Moulton, 1926" rid="ref-moulton_1926" ref-type="bibr">Moulton,
+      1926</xref>), Williamson low-storage Runge-Kutta 3
+      (<xref alt="Williamson, 1980" rid="ref-williamson_1980" ref-type="bibr">Williamson,
+      1980</xref>)) and spatial discretizations (spectral, and second-
+      and fourth-order finite differences) without conflating those
+      choices with modeling effects
+      (<xref alt="Durran, 2010" rid="ref-durran_2010" ref-type="bibr">Durran,
+      2010</xref>).</p>
+    </list-item>
+    <list-item>
+      <p><bold>Educators and students</bold> who want a detailed example
+      of a complete spectral turbulence solver at a scale that fits in a
+      course module. Relevant <monospace>PyBurgers</monospace> features
+      toward this end include, e.g., adaptive time-stepping, dealiasing,
+      hyperviscosity, FFTW wisdom caching, NetCDF output.</p>
+    </list-item>
+  </list>
+</sec>
+<sec id="state-of-the-field">
+  <title>State of the field</title>
+  <p>The relevant alternatives fall into complementary categories. The
+  first comprises demonstration scripts that integrate the deterministic
+  Burgers equation with a fixed scheme. This category is useful for
+  teaching, but not designed as extensible turbulence packages (e.g.,
+  <xref alt="Binder, 2021" rid="ref-binder_2021" ref-type="bibr">Binder,
+  2021</xref>). The second group consists of general PDE frameworks such
+  as <monospace>Dedalus</monospace>
+  (<xref alt="Burns et al., 2020" rid="ref-burns_etal_2020" ref-type="bibr">Burns
+  et al., 2020</xref>), <monospace>Nektar++</monospace>
+  (<xref alt="Cantwell et al., 2015" rid="ref-cantwell_etal_2015" ref-type="bibr">Cantwell
+  et al., 2015</xref>), and the
+  <monospace>SciML</monospace>/<monospace>DifferentialEquations.jl</monospace>
+  ecosystem
+  (<xref alt="Rackauckas &amp; Nie, 2017" rid="ref-rackauckas_nie_2017" ref-type="bibr">Rackauckas
+  &amp; Nie, 2017</xref>), in which Burgers or related equations can be
+  formulated as one problem among many. While these tools are powerful,
+  they do not provide a ready-made Burgers-turbulence workflow with
+  stochastic forcing, SGS closures, DNS/LES comparison, and NetCDF
+  diagnostics. The third group consists of published Burgers LES and
+  closure-modeling studies that develop or evaluate particular closures
+  and discretizations
+  (<xref alt="Li &amp; Wang, 2016" rid="ref-li_wang_2016" ref-type="bibr">Li
+  &amp; Wang, 2016</xref>; e.g.,
+  <xref alt="Love, 1980" rid="ref-love_1980" ref-type="bibr">Love,
+  1980</xref>;
+  <xref alt="Maulik &amp; San, 2018" rid="ref-maulik_san_2018" ref-type="bibr">Maulik
+  &amp; San, 2018</xref>;
+  <xref alt="Subel et al., 2021" rid="ref-subel_etal_2021" ref-type="bibr">Subel
+  et al., 2021</xref>). These works motivate the need for reusable
+  testbeds, but generally do not present maintained, standalone packages
+  toward that purpose.</p>
+  <p><monospace>PyBurgers</monospace> differs from these alternatives by
+  being narrow in scope (1D Burgers turbulence, DNS and LES),
+  opinionated about defaults (Fourier collocation, 3/2 dealiasing,
+  adaptive CFL), and pluggable along the axes that matter for research,
+  such as time integrators, spatial operators, and SGS closures. Its
+  contribution is not the novelty of Burgers solvers in general, but the
+  packaging of stochastic forcing, DNS/LES modes, multiple SGS closures,
+  configurable numerics, diagnostics, tests, and documentation into a
+  single Burgers-focused Python package.</p>
+</sec>
+<sec id="software-design">
+  <title>Software design</title>
+  <p>The core design goal is that <italic>the physics and the numerics
+  are independently swappable</italic>. This is enforced by three
+  factory interfaces:</p>
+  <list list-type="bullet">
+    <list-item>
+      <p><monospace>TemporalIntegrator.get_integrator(scheme_id, nx)</monospace>
+      returns an object implementing a uniform
+      <monospace>step(u, dt, compute_rhs, zero_nyquist)</monospace>
+      contract. Each integrator advertises its own dissipative stability
+      limit, which the solver uses to compute viscous and hyperviscous
+      CFL bounds. This makes the effective stable time step scheme-aware
+      without requiring scheme-specific code in the main loop.</p>
+    </list-item>
+    <list-item>
+      <p><monospace>SpatialOperator</monospace> selects between FD2,
+      FD4, and spectral derivatives. Hyperviscosity is normalized as
+      <inline-formula><alternatives>
+      <tex-math><![CDATA[\nu_4 = \pi^4 dx^4 / \lambda_\text{hyp}]]></tex-math>
+      <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:msub><mml:mi>ν</mml:mi><mml:mn>4</mml:mn></mml:msub><mml:mo>=</mml:mo><mml:msup><mml:mi>π</mml:mi><mml:mn>4</mml:mn></mml:msup><mml:mi>d</mml:mi><mml:msup><mml:mi>x</mml:mi><mml:mn>4</mml:mn></mml:msup><mml:mi>/</mml:mi><mml:msub><mml:mi>λ</mml:mi><mml:mtext mathvariant="normal">hyp</mml:mtext></mml:msub></mml:mrow></mml:math></alternatives></inline-formula>,
+      where <inline-formula><alternatives>
+      <tex-math><![CDATA[\lambda_\text{hyp}]]></tex-math>
+      <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msub><mml:mi>λ</mml:mi><mml:mtext mathvariant="normal">hyp</mml:mtext></mml:msub></mml:math></alternatives></inline-formula>
+      is the scheme’s maximum modified wavenumber magnitude. This
+      ensures that the Nyquist damping rate and the corresponding
+      time-step constraint are scheme-independent. This is essential
+      when comparing schemes because otherwise a finite-difference
+      simulation dissipates small scales at a different rate than a
+      spectral simulation with the same nominal coefficient, making it
+      potentially hard to attribute any differences in the solution.</p>
+    </list-item>
+    <list-item>
+      <p><monospace>SGS.get_model(model_id, ...)</monospace> returns an
+      SGS closure implementing
+      <monospace>compute(u, dudx, tke_sgs, dt)</monospace>. New closures
+      can be added by subclassing <monospace>SGS</monospace> and
+      registering an ID; the LES solver requires no other changes.</p>
+    </list-item>
+  </list>
+  <p>Performance is achieved through <monospace>pyFFTW</monospace> with
+  persistent wisdom caching, real-to-complex transforms, and
+  pre-allocated buffers in a <monospace>SpectralWorkspace</monospace>
+  that is shared between the derivative, dealiasing, and filter
+  operators. The default 8192-point DNS and 512-point LES configuration
+  runs to t=200 seconds in roughly 28 seconds and 5 seconds,
+  respectively, on a 2023 MacBook Pro. This efficiency makes parameter
+  sweeps practical without HPC resources.</p>
+  <p>Configuration is JSON with schema validation while output is
+  NetCDF. The package depends only on <monospace>numpy</monospace>,
+  <monospace>pyfftw</monospace>, <monospace>netCDF4</monospace>,
+  <monospace>filelock</monospace>, and
+  <monospace>jsonschema</monospace>. The codebase is type-annotated,
+  lints under <monospace>ruff</monospace>, and ships a
+  <monospace>pytest</monospace> suite covering temporal and spatial
+  operators, SGS closures, input validation, reproducibility, and
+  DNS/LES integration tests. Basic example Python comparison scripts are
+  also provided to explore model output.</p>
+</sec>
+<sec id="research-impact-statement">
+  <title>Research impact statement</title>
+  <p><monospace>PyBurgers</monospace> builds on an earlier MATLAB
+  implementation used in published work on dynamic eddy-viscosity model
+  assessment
+  (<xref alt="Basu, 2009" rid="ref-basu_2009" ref-type="bibr">Basu,
+  2009</xref>). This Python implementation greatly expands on that code,
+  and makes the Burgers-turbulence workflow easier to install, inspect,
+  extend, and combine with the broader scientific Python ecosystem. This
+  is particularly useful for <italic>a posteriori</italic> testing of
+  new SGS closures because researchers can add a closure while reusing
+  the existing DNS/LES solvers, forcing, diagnostics, and NetCDF output
+  pathway. The project has a public development history beginning in
+  2017, tagged releases, a change log, documentation, contribution
+  guidelines, tests, and Zenodo-indexed citable releases. The code has
+  been used in a graduate-level LES course in the Department of
+  Mechanical Engineering at the University of Utah, and is currently
+  used by the author and students at the National Severe Storms
+  Laboratory (NSSL) to help test newly developed SGS schemes. These
+  open-development, classroom-usage, and reproducibility signals support
+  its use as a community-facing research and teaching testbed rather
+  than a one-off analysis script.</p>
+</sec>
+<sec id="ai-usage-disclosure">
+  <title>AI usage disclosure</title>
+  <p>Portions of version 2, including the pluggable temporal/spatial
+  factory design, speed optimizations, and code documentation, were
+  prepared with the assistance of Anthropic’s Claude Code. All
+  algorithmic choices, scientific claims, validation results, and final
+  wording were reviewed and edited by the author, who takes full
+  responsibility for the content.</p>
+</sec>
+<sec id="acknowledgements">
+  <title>Acknowledgements</title>
+  <p>The author thanks Dr. Sukanta Basu for the original MATLAB
+  implementation on which PyBurgers is based, Dr. Rob Stoll for guidance
+  on the formulation and for the use of PyBurgers in his graduate
+  course, and Dr. Louis Wicker for several helpful conversations that
+  informed the direction of the code.</p>
+</sec>
+</body>
+<back>
+<ref-list>
+  <title></title>
+  <ref id="ref-bashforth_adams_1883">
+    <element-citation publication-type="book">
+      <person-group person-group-type="author">
+        <name><surname>Bashforth</surname><given-names>F.</given-names></name>
+        <name><surname>Adams</surname><given-names>J. C.</given-names></name>
+      </person-group>
+      <source>An attempt to test the theories of capillary action</source>
+      <publisher-name>Cambridge University Press</publisher-name>
+      <publisher-loc>Cambridge, UK</publisher-loc>
+      <year iso-8601-date="1883">1883</year>
+    </element-citation>
+  </ref>
+  <ref id="ref-basu_2009">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Basu</surname><given-names>Sukanta</given-names></name>
+      </person-group>
+      <article-title>Can the dynamic eddy-viscosity class of subgrid-scale models capture inertial-range properties of burgers turbulence?</article-title>
+      <source>Journal of Turbulence</source>
+      <year iso-8601-date="2009">2009</year>
+      <volume>10</volume>
+      <issue>12</issue>
+      <pub-id pub-id-type="doi">10.1080/14685240902852719</pub-id>
+      <fpage>1</fpage>
+      <lpage>16</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-bec_khanin_2007">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Bec</surname><given-names>J.</given-names></name>
+        <name><surname>Khanin</surname><given-names>K.</given-names></name>
+      </person-group>
+      <article-title>Burgers turbulence</article-title>
+      <source>Physics Reports</source>
+      <year iso-8601-date="2007">2007</year>
+      <volume>447</volume>
+      <issue>1</issue>
+      <pub-id pub-id-type="doi">10.1016/j.physrep.2007.04.002</pub-id>
+      <fpage>1</fpage>
+      <lpage>66</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-binder_2021">
+    <element-citation>
+      <person-group person-group-type="author">
+        <name><surname>Binder</surname><given-names>S.</given-names></name>
+      </person-group>
+      <article-title>Burgers’ equation simulation 1D (simulation de l’équation de burgers)</article-title>
+      <year iso-8601-date="2021">2021</year>
+      <date-in-citation content-type="access-date"><year iso-8601-date="2026-05-26">2026</year><month>05</month><day>26</day></date-in-citation>
+      <uri>https://github.com/sachabinder/Burgers_equation_simulation</uri>
+    </element-citation>
+  </ref>
+  <ref id="ref-burgers_1939">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Burgers</surname><given-names>J. M.</given-names></name>
+      </person-group>
+      <article-title>Mathematical examples illustrating relations occurring in the theory of turbulent fluid motion</article-title>
+      <source>Verhandelingen der Koninklijke Akademie van Wetenschappen, Afdeeling Natuurkunde</source>
+      <year iso-8601-date="1939">1939</year>
+      <volume>17, No. 2</volume>
+      <fpage>1</fpage>
+      <lpage>53</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-burns_etal_2020">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Burns</surname><given-names>K. J.</given-names></name>
+        <name><surname>Vasil</surname><given-names>G. M.</given-names></name>
+        <name><surname>Oishi</surname><given-names>J. S.</given-names></name>
+        <name><surname>Lecoanet</surname><given-names>D.</given-names></name>
+        <name><surname>Brown</surname><given-names>B. P.</given-names></name>
+      </person-group>
+      <article-title>Dedalus: A flexible framework for numerical simulations with spectral methods</article-title>
+      <source>Physical Review Research</source>
+      <year iso-8601-date="2020">2020</year>
+      <volume>2</volume>
+      <issue>2</issue>
+      <pub-id pub-id-type="doi">10.1103/PhysRevResearch.2.023068</pub-id>
+      <fpage>023068</fpage>
+      <lpage></lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-cantwell_etal_2015">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Cantwell</surname><given-names>C. D.</given-names></name>
+        <name><surname>Moxey</surname><given-names>D.</given-names></name>
+        <name><surname>Comerford</surname><given-names>A.</given-names></name>
+        <name><surname>others</surname></name>
+      </person-group>
+      <article-title>Nektar++: An open-source spectral/hp element framework</article-title>
+      <source>Computer Physics Communications</source>
+      <year iso-8601-date="2015">2015</year>
+      <volume>192</volume>
+      <pub-id pub-id-type="doi">10.1016/j.cpc.2015.02.008</pub-id>
+      <fpage>205</fpage>
+      <lpage>219</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-deardorff_1980">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Deardorff</surname><given-names>J. W.</given-names></name>
+      </person-group>
+      <article-title>Stratocumulus-capped mixed layers derived from a three-dimensional model</article-title>
+      <source>Boundary-Layer Meteorology</source>
+      <year iso-8601-date="1980">1980</year>
+      <volume>18</volume>
+      <pub-id pub-id-type="doi">10.1007/BF00119502</pub-id>
+      <fpage>495</fpage>
+      <lpage>527</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-durran_2010">
+    <element-citation publication-type="book">
+      <person-group person-group-type="author">
+        <name><surname>Durran</surname><given-names>Dale R.</given-names></name>
+      </person-group>
+      <source>Numerical methods for fluid dynamics: With applications to geophysics</source>
+      <publisher-name>Springer-Verlag</publisher-name>
+      <publisher-loc>New York, NY</publisher-loc>
+      <year iso-8601-date="2010">2010</year>
+      <volume>32</volume>
+      <edition>2</edition>
+      <pub-id pub-id-type="doi">10.1007/978-1-4419-6412-0</pub-id>
+    </element-citation>
+  </ref>
+  <ref id="ref-germano_etal_1991">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Germano</surname><given-names>M.</given-names></name>
+        <name><surname>Piomelli</surname><given-names>U.</given-names></name>
+        <name><surname>Moin</surname><given-names>P.</given-names></name>
+        <name><surname>Cabot</surname><given-names>W. H.</given-names></name>
+      </person-group>
+      <article-title>A dynamic subgrid-scale eddy viscosity model</article-title>
+      <source>Physics of Fluids A: Fluid Dynamics</source>
+      <year iso-8601-date="1991">1991</year>
+      <volume>3</volume>
+      <issue>7</issue>
+      <pub-id pub-id-type="doi">10.1063/1.857955</pub-id>
+      <fpage>1760</fpage>
+      <lpage>1765</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-labryer_etal_2015">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>LaBryer</surname><given-names>A.</given-names></name>
+        <name><surname>Attar</surname><given-names>P. J.</given-names></name>
+        <name><surname>Vedula</surname><given-names>P.</given-names></name>
+      </person-group>
+      <article-title>A framework for large eddy simulation of Burgers turbulence based upon spatial and temporal statistical information</article-title>
+      <source>Physics of Fluids</source>
+      <year iso-8601-date="2015">2015</year>
+      <volume>27</volume>
+      <issue>3</issue>
+      <pub-id pub-id-type="doi">10.1063/1.4916132</pub-id>
+      <fpage>035116</fpage>
+      <lpage></lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-li_wang_2016">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Li</surname><given-names>Y.</given-names></name>
+        <name><surname>Wang</surname><given-names>Z. J.</given-names></name>
+      </person-group>
+      <article-title>A priori and a posteriori evaluations of sub-grid scale models for the Burgers’ equation</article-title>
+      <source>Computers &amp; Fluids</source>
+      <year iso-8601-date="2016">2016</year>
+      <volume>139</volume>
+      <pub-id pub-id-type="doi">10.1016/j.compfluid.2016.04.015</pub-id>
+      <fpage>92</fpage>
+      <lpage>104</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-love_1980">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Love</surname><given-names>M. D.</given-names></name>
+      </person-group>
+      <article-title>Subgrid modelling studies with Burgers’ equation</article-title>
+      <source>Journal of Fluid Mechanics</source>
+      <year iso-8601-date="1980">1980</year>
+      <volume>100</volume>
+      <issue>1</issue>
+      <pub-id pub-id-type="doi">10.1017/S0022112080001024</pub-id>
+      <fpage>87</fpage>
+      <lpage>110</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-maulik_san_2018">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Maulik</surname><given-names>Romit</given-names></name>
+        <name><surname>San</surname><given-names>Omer</given-names></name>
+      </person-group>
+      <article-title>Explicit and implicit LES closures for Burgers turbulence</article-title>
+      <source>Journal of Computational and Applied Mathematics</source>
+      <year iso-8601-date="2018">2018</year>
+      <volume>327</volume>
+      <pub-id pub-id-type="doi">10.1016/j.cam.2017.06.003</pub-id>
+      <fpage>12</fpage>
+      <lpage>40</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-moulton_1926">
+    <element-citation publication-type="book">
+      <person-group person-group-type="author">
+        <name><surname>Moulton</surname><given-names>F. R.</given-names></name>
+      </person-group>
+      <source>New methods in exterior ballistics</source>
+      <publisher-name>University of Chicago Press</publisher-name>
+      <publisher-loc>Chicago</publisher-loc>
+      <year iso-8601-date="1926">1926</year>
+    </element-citation>
+  </ref>
+  <ref id="ref-rackauckas_nie_2017">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Rackauckas</surname><given-names>C.</given-names></name>
+        <name><surname>Nie</surname><given-names>Q.</given-names></name>
+      </person-group>
+      <article-title>DifferentialEquations.jl – a performant and feature-rich ecosystem for solving differential equations in Julia</article-title>
+      <source>Journal of Open Research Software</source>
+      <year iso-8601-date="2017">2017</year>
+      <volume>5</volume>
+      <issue>1</issue>
+      <pub-id pub-id-type="doi">10.5334/jors.151</pub-id>
+      <fpage>15</fpage>
+      <lpage></lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-smagorinsky_1963">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Smagorinsky</surname><given-names>J.</given-names></name>
+      </person-group>
+      <article-title>General circulation experiments with the primitive equations: I. The basic experiment</article-title>
+      <source>Monthly Weather Review</source>
+      <year iso-8601-date="1963">1963</year>
+      <volume>91</volume>
+      <pub-id pub-id-type="doi">10.1175/1520-0493(1963)091&lt;0099:GCEWTP&gt;2.3.CO;2</pub-id>
+      <fpage>99</fpage>
+      <lpage>164</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-subel_etal_2021">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Subel</surname><given-names>Adam</given-names></name>
+        <name><surname>Chattopadhyay</surname><given-names>Ashesh</given-names></name>
+        <name><surname>Guan</surname><given-names>Yifei</given-names></name>
+        <name><surname>Hassanzadeh</surname><given-names>Pedram</given-names></name>
+      </person-group>
+      <article-title>Data-driven subgrid-scale modeling of forced Burgers turbulence using deep learning with generalization to higher Reynolds numbers via transfer learning</article-title>
+      <source>Physics of Fluids</source>
+      <year iso-8601-date="2021">2021</year>
+      <volume>33</volume>
+      <issue>3</issue>
+      <pub-id pub-id-type="doi">10.1063/5.0040286</pub-id>
+      <fpage>031702</fpage>
+      <lpage></lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-williamson_1980">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Williamson</surname><given-names>J. H.</given-names></name>
+      </person-group>
+      <article-title>Low-storage Runge–Kutta schemes</article-title>
+      <source>Journal of Computational Physics</source>
+      <year iso-8601-date="1980">1980</year>
+      <volume>35</volume>
+      <issue>1</issue>
+      <pub-id pub-id-type="doi">10.1016/0021-9991(80)90033-9</pub-id>
+      <fpage>48</fpage>
+      <lpage>56</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-wong_lilly_1994">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Wong</surname><given-names>V. C.</given-names></name>
+        <name><surname>Lilly</surname><given-names>D. K.</given-names></name>
+      </person-group>
+      <article-title>A comparison of two dynamic subgrid closure methods for turbulent thermal convection</article-title>
+      <source>Physics of Fluids</source>
+      <year iso-8601-date="1994">1994</year>
+      <volume>6</volume>
+      <issue>2</issue>
+      <pub-id pub-id-type="doi">10.1063/1.868335</pub-id>
+      <fpage>1016</fpage>
+      <lpage>1023</lpage>
+    </element-citation>
+  </ref>
+</ref-list>
+</back>
+</article>
